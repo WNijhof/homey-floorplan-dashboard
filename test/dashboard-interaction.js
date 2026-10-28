@@ -75,11 +75,23 @@
       const rep = JSON.parse(box.value);
       const names = [...st().devices.values()].map((d) => d.name);
       report.diagnosis = rep.devices.total === st().devices.size && !names.some((n) => box.value.includes(`"${n}"`));
+      // Share on GitHub opens a new issue with the report in it.
+      const opened = { url: null };
+      const tab = { location: {}, close() {} };
+      const realOpen = window.open;
+      window.open = () => tab;
+      document.querySelector('[data-tb=report-github]').click();
+      for (let i = 0; i < 40 && !tab.location.href; i++) await wait(50);
+      window.open = realOpen;
+      opened.url = tab.location.href || '';
+      // The report is in the issue, or (when it is too long for a link) the request to paste it.
+      report.diagnosisGithub = opened.url.startsWith('https://github.com/WNijhof/homey-floorplan-dashboard/issues/new?title=') && /"devices"|\(Plak|\(Paste/.test(decodeURIComponent(opened.url));
       document.getElementById('sheet').hidden = true;
     }
     // 2D zoom with the wheel, and back to the whole level with the button.
     {
       const plan = document.getElementById('plan');
+      await wait(200); // let a redraw that is still pending finish first
       const r = plan.getBoundingClientRect();
       const vb0 = plan.getAttribute('viewBox');
       plan.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, deltaY: -400 }));
@@ -88,7 +100,7 @@
       const btn = document.querySelector('.fp-zoom-reset');
       const shown = btn && !btn.hidden;
       btn.click();
-      await wait(100);
+      await wait(300);
       report.zoom2d = zoomed && shown && !st().zoom && plan.getAttribute('viewBox') === vb0;
     }
 

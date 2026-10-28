@@ -11,7 +11,7 @@ test('the diagnosis has the kinds of devices and the plan, but no names', async 
   app.recentErrors = ['calendar failed for https://calendar.example.com/private/abc.ics at 192.168.1.20'];
   const { email, report } = await app.getDiagnosisReport();
   const json = JSON.stringify(report);
-  assert.strictEqual(email, null, 'a placeholder address is not offered');
+  assert.ok(email && !/example/.test(email), 'a placeholder address gives way to the contact address');
   assert.strictEqual(report.devices.total, sampleDevices().length);
   assert.ok(report.devices.kinds.light >= 1);
   assert.strictEqual(report.plans[0].levels[0].rooms, samplePlan().levels[0].rooms.length);

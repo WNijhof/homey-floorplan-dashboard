@@ -11,8 +11,12 @@ const Diagnosis = require('./lib/Diagnosis');
 const DEFAULT_PORT = 8687; // Energy Dashboard uses 8686
 // Sister apps with a dashboard web page of their own; the pages show a switch to each one that is installed.
 const SIBLINGS = [
-  // defaultPort: where an older version without /dashboard-link runs, unless its owner changed the port.
-  { appId: 'com.drpeppers.energydashboard', key: 'energy', icon: '⚡', name: { en: 'Energy', nl: 'Energie' }, defaultPort: 8686 },
+  // ports and manifestName: how to find an older version without /dashboard-link: its web page on one of
+  // these ports, recognised by the name in its web manifest (owners do change the default 8686).
+  {
+    appId: 'com.drpeppers.energydashboard', key: 'energy', icon: '⚡', name: { en: 'Energy', nl: 'Energie' },
+    ports: [8686, 8080, 8000, 8081, 8888, 9000, 3000], manifestName: /^Energ(y|ie) Dashboard$/,
+  },
 ];
 
 class FloorplanApp extends Homey.App {
@@ -215,7 +219,10 @@ class FloorplanApp extends Homey.App {
           link = null;
         }
         // Too old to answer: its page may still run on its default port.
-        if (!(link && link.port) && s.defaultPort && (await this.answers(s.defaultPort))) link = { running: true, port: s.defaultPort };
+        if (!(link && link.port) && s.ports) {
+          const port = await this.findDashboard(s.ports, s.manifestName);
+          if (port) link = { running: true, port };
+        }
         if (!link) note(s.key, 'installed, no dashboard found');
         else note(s.key, `port ${link.port}${link.running ? '' : ', not running'}`);
         if (link && link.running && link.port) list.push({ key: s.key, icon: s.icon, name: s.name, port: link.port });
@@ -228,20 +235,30 @@ class FloorplanApp extends Homey.App {
     return list;
   }
 
-  // Whether a web page answers on this port of the Homey (within 1.5 s), locally or on its LAN address
-  // (apps can run in containers of their own).
-  async answers(port) {
+  // The first of these ports where a web page with this manifest name answers, on the Homey itself or on
+  // its LAN address (apps can run in containers of their own). All ports are asked at once, 1.5 s each.
+  async findDashboard(ports, manifestName) {
     const hosts = ['127.0.0.1'];
     try { hosts.push(String(await this.homey.cloud.getLocalAddress()).split(':')[0]); } catch (err) { /* local only */ }
-    for (const host of hosts) {
-      const ok = await new Promise((resolve) => {
-        const req = http.get({ host, port, path: '/', timeout: 1500 }, (res) => { res.resume(); resolve(true); });
-        req.on('timeout', () => { req.destroy(); resolve(false); });
-        req.on('error', () => resolve(false));
+    const manifest = (host, port) => new Promise((resolve) => {
+      const req = http.get({ host, port, path: '/manifest.webmanifest', timeout: 1500 }, (res) => {
+        let body = '';
+        res.setEncoding('utf8');
+        res.on('data', (d) => { if (body.length < 20000) body += d; });
+        res.on('end', () => { try { resolve(JSON.parse(body)); } catch (err) { resolve(null); } });
       });
-      if (ok) return true;
+      req.on('timeout', () => { req.destroy(); resolve(null); });
+      req.on('error', () => resolve(null));
+    });
+    for (const host of hosts) {
+      const found = await Promise.all(ports.map(async (port) => {
+        const m = await manifest(host, port);
+        return m && manifestName.test(String(m.name || '')) ? port : null;
+      }));
+      const port = found.find(Boolean);
+      if (port) return port;
     }
-    return false;
+    return null;
   }
 
   async getPlanWithDevices(id) {

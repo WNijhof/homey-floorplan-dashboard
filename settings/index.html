@@ -63,6 +63,7 @@
     <p class="muted note" data-t="reportNote"></p>
     <label class="check"><input id="report-plan" type="checkbox"> <span data-t="reportPlan"></span></label>
     <button id="report-mail" class="btn" type="button" data-t="reportMail"></button>
+    <button id="report-github" class="btn secondary" type="button" data-t="reportGithub"></button>
     <button id="report-copy" class="btn secondary" type="button" data-t="reportCopy"></button>
     <p id="report-status" class="muted note"></p>
     <textarea id="report-text" readonly hidden></textarea>
@@ -80,9 +81,9 @@
         webTitle: 'Web page', access: 'Access code (optional)', accessHelp: 'Without a code, anyone in your home network can open the dashboard and switch devices. With a code, each browser asks for it once. Opening the link once with ?code=… in the address works too (handy for a wall tablet).',
         pin: 'Edit PIN (optional)', pinHelp: 'Asked before changing the floor plan or calendars on the web page.',
         port: 'Port', save: 'Save', saved: 'Saved', noAddress: 'The address of your Homey is not known yet.',
-        reportTitle: 'Report a problem', reportNote: 'Is a device missing, or does something look wrong? Send the maker a report: which kinds of devices the app finds and how your plan is built, without names, rooms or address. Nothing is sent until you send the e-mail.',
-        reportPlan: 'Include my floor plan (names replaced)', reportMail: 'Mail the report', reportCopy: 'Show and copy the report', making: 'Making the report…', failed: 'Could not make the report',
-        copied: 'The report is on your clipboard (or select it below). If it is not in the e-mail yet, paste it there.',
+        reportTitle: 'Report a problem', reportNote: 'Is a device missing, or does something look wrong? Send the maker a report: which kinds of devices the app finds and how your plan is built, without names, rooms or address. Nothing is sent until you send the e-mail or the issue.',
+        reportPlan: 'Include my floor plan (names replaced)', reportMail: 'Mail the report', reportGithub: 'Share on GitHub', reportCopy: 'Show and copy the report', making: 'Making the report…', failed: 'Could not make the report',
+        copied: 'The report is on your clipboard (or select it below). If it is not in the e-mail or the issue yet, paste it there.',
         ask: 'What does not work well? (for example: my thermostat shows no temperature)', paste: '(Paste the report here; it is on your clipboard.)',
       },
       nl: {
@@ -95,9 +96,9 @@
         webTitle: 'Webpagina', access: 'Toegangscode (optioneel)', accessHelp: 'Zonder code kan iedereen in je thuisnetwerk het dashboard openen en apparaten schakelen. Met een code vraagt elke browser er één keer om. De link één keer openen met ?code=… achter het adres werkt ook (handig voor een wandtablet).',
         pin: 'Bewerk-pincode (optioneel)', pinHelp: 'Wordt gevraagd voordat je op de webpagina de plattegrond of agenda’s wijzigt.',
         port: 'Poort', save: 'Opslaan', saved: 'Opgeslagen', noAddress: 'Het adres van je Homey is nog niet bekend.',
-        reportTitle: 'Probleem melden', reportNote: 'Ontbreekt er een apparaat of klopt er iets niet? Stuur de maker een rapport: welke soorten apparaten de app vindt en hoe je plattegrond is opgebouwd, zonder namen, kamers of adres. Er wordt niets verstuurd tot jij de mail verstuurt.',
-        reportPlan: 'Mijn plattegrond meesturen (namen vervangen)', reportMail: 'Rapport mailen', reportCopy: 'Rapport tonen en kopiëren', making: 'Rapport maken…', failed: 'Rapport maken mislukt',
-        copied: 'Het rapport staat op je klembord (of selecteer het hieronder). Staat het nog niet in de mail, plak het er dan in.',
+        reportTitle: 'Probleem melden', reportNote: 'Ontbreekt er een apparaat of klopt er iets niet? Stuur de maker een rapport: welke soorten apparaten de app vindt en hoe je plattegrond is opgebouwd, zonder namen, kamers of adres. Er wordt niets verstuurd tot jij de mail of het issue verstuurt.',
+        reportPlan: 'Mijn plattegrond meesturen (namen vervangen)', reportMail: 'Rapport mailen', reportGithub: 'Delen op GitHub', reportCopy: 'Rapport tonen en kopiëren', making: 'Rapport maken…', failed: 'Rapport maken mislukt',
+        copied: 'Het rapport staat op je klembord (of selecteer het hieronder). Staat het nog niet in de mail of het issue, plak het er dan in.',
         ask: 'Wat werkt er niet goed? (bijvoorbeeld: mijn thermostaat toont geen temperatuur)', paste: '(Plak hier het rapport; het staat op je klembord.)',
       },
     };
@@ -145,7 +146,8 @@
       });
 
       // Report a problem: the anonymous report, copied and put in an e-mail to the maker when it fits.
-      function report(mail) {
+      // kind: 'mail', 'github' or 'copy'.
+      function report(kind) {
         $('report-status').textContent = T.making;
         api('GET', '/diagnosis-report' + ($('report-plan').checked ? '?plan=1' : '')).then(function (shared) {
           var box = $('report-text');
@@ -154,16 +156,23 @@
           box.select();
           try { document.execCommand('copy'); } catch (e) { /* it can be selected by hand */ }
           $('report-status').textContent = T.copied;
-          if (mail && shared.email) {
+          var subject = 'Diagnose Plattegrond Dashboard ' + (shared.report.app || '');
+          var url = null;
+          if (kind === 'mail' && shared.email) {
             var full = T.ask + '\n\n\n' + JSON.stringify(shared.report) + '\n';
             var body = encodeURIComponent(full).length < 1800 ? full : T.ask + '\n\n\n' + T.paste + '\n';
-            var url = 'mailto:' + shared.email + '?subject=' + encodeURIComponent('Diagnose Plattegrond Dashboard ' + (shared.report.app || '')) + '&body=' + encodeURIComponent(body);
-            if (Homey.openURL) Homey.openURL(url); else location.href = url;
+            url = 'mailto:' + shared.email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+          } else if (kind === 'github') {
+            var issue = T.ask + '\n\n\n```json\n' + box.value + '\n```\n';
+            var text = encodeURIComponent(issue).length < 7000 ? issue : T.ask + '\n\n\n' + T.paste + '\n';
+            url = 'https://github.com/WNijhof/homey-floorplan-dashboard/issues/new?title=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(text);
           }
+          if (url) { if (Homey.openURL) Homey.openURL(url); else window.open(url, '_blank'); }
         }).catch(function (err) { $('report-status').textContent = T.failed + ': ' + String(err.message || err); });
       }
-      $('report-mail').addEventListener('click', function () { report(true); });
-      $('report-copy').addEventListener('click', function () { report(false); });
+      $('report-mail').addEventListener('click', function () { report('mail'); });
+      $('report-github').addEventListener('click', function () { report('github'); });
+      $('report-copy').addEventListener('click', function () { report('copy'); });
 
       api('GET', '/settings-info').then(show).catch(function (err) { $('status-text').textContent = String(err.message || err); });
       Homey.ready();

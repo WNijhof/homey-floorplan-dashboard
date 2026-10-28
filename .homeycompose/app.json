@@ -1,6 +1,6 @@
 {
   "id": "com.drpeppers.floorplandashboard",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": ["local"],
@@ -17,6 +17,7 @@
   "source": "https://github.com/WNijhof/homey-floorplan-dashboard",
   "support": "https://github.com/WNijhof/homey-floorplan-dashboard/issues",
   "bugs": { "url": "https://github.com/WNijhof/homey-floorplan-dashboard/issues" },
+  "homeyCommunityTopicId": 161491,
   "permissions": [
     "homey:manager:api",
     "homey:app:com.drpeppers.energydashboard"

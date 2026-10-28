@@ -15,8 +15,8 @@
       fullscreen: 'Full screen', note: 'These choices are kept on this screen only.', live: 'Live', connecting: 'Connecting…', offline: 'No connection',
       tap: 'Tapping a device', controls: 'Shows its controls', toggle: 'Switches it at once', names: 'Names on the plan', devices: 'Devices', all: 'Devices and furniture',
       report: 'Report a problem', reportNote: 'Is a device missing, or does something look wrong? Send the maker a report: which kinds of devices the app finds and how your plan is built, without names, rooms or address.',
-      reportPlan: 'Include my floor plan (names replaced)', reportMail: 'Mail the report', reportCopy: 'Copy the report', reportMaking: 'Making the report…',
-      reportFailed: 'Could not make the report', reportCopied: 'The report is on your clipboard. If it is not in the e-mail yet, paste it there.', reportCopiedOnly: 'The report is on your clipboard. Paste it in a message to the maker, or on the forum.',
+      reportPlan: 'Include my floor plan (names replaced)', reportMail: 'Mail the report', reportGithub: 'Share on GitHub', reportCopy: 'Copy the report', reportMaking: 'Making the report…',
+      reportFailed: 'Could not make the report', reportCopied: 'The report is on your clipboard. If it is not in the e-mail or the issue yet, paste it there.', reportCopiedOnly: 'The report is on your clipboard. Send it to the maker directly, for example in a private message on the forum.',
       reportAsk: 'What does not work well? (for example: my thermostat shows no temperature)', reportPaste: '(Paste the report here; it is on your clipboard.)',
     },
     nl: {
@@ -27,8 +27,8 @@
       fullscreen: 'Volledig scherm', note: 'Deze keuzes gelden alleen voor dit scherm.', live: 'Live', connecting: 'Verbinden…', offline: 'Geen verbinding',
       tap: 'Tikken op een apparaat', controls: 'Toont de bediening', toggle: 'Schakelt direct', names: 'Namen op de plattegrond', devices: 'Apparaten', all: 'Apparaten en meubels',
       report: 'Probleem melden', reportNote: 'Ontbreekt er een apparaat of klopt er iets niet? Stuur de maker een rapport: welke soorten apparaten de app vindt en hoe je plattegrond is opgebouwd, zonder namen, kamers of adres.',
-      reportPlan: 'Mijn plattegrond meesturen (namen vervangen)', reportMail: 'Rapport mailen', reportCopy: 'Rapport kopiëren', reportMaking: 'Rapport maken…',
-      reportFailed: 'Rapport maken mislukt', reportCopied: 'Het rapport staat op je klembord. Staat het nog niet in de mail, plak het er dan in.', reportCopiedOnly: 'Het rapport staat op je klembord. Plak het in een bericht aan de maker, of op het forum.',
+      reportPlan: 'Mijn plattegrond meesturen (namen vervangen)', reportMail: 'Rapport mailen', reportGithub: 'Delen op GitHub', reportCopy: 'Rapport kopiëren', reportMaking: 'Rapport maken…',
+      reportFailed: 'Rapport maken mislukt', reportCopied: 'Het rapport staat op je klembord. Staat het nog niet in de mail of het issue, plak het er dan in.', reportCopiedOnly: 'Het rapport staat op je klembord. Stuur het rechtstreeks naar de maker, bijvoorbeeld in een privébericht op het forum.',
       reportAsk: 'Wat werkt er niet goed? (bijvoorbeeld: mijn thermostaat toont geen temperatuur)', reportPaste: '(Plak hier het rapport; het staat op je klembord.)',
     },
   };
@@ -138,9 +138,17 @@
   // Makes the anonymous report, copies it, and opens an e-mail to the maker with it when it fits.
   // Nothing is sent until the user sends that e-mail.
   var MAIL_LIMIT = 1800;
+  var GITHUB_LIMIT = 7000;
+  var ISSUES = 'https://github.com/WNijhof/homey-floorplan-dashboard/issues/new';
 
   function copyText(text) {
-    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text).catch(function () { copyFallback(text); });
+    if (navigator.clipboard && window.isSecureContext) {
+      // Without focus the clipboard can wait forever; after half a second the old way is used.
+      var late = new Promise(function (resolve) { setTimeout(function () { resolve('late'); }, 500); });
+      return Promise.race([navigator.clipboard.writeText(text), late])
+        .then(function (r) { if (r === 'late') copyFallback(text); })
+        .catch(function () { copyFallback(text); });
+    }
     copyFallback(text);
     return Promise.resolve();
   }
@@ -161,30 +169,41 @@
     $('sheet-body').innerHTML = '<p class="fp-sub" style="text-transform:none;letter-spacing:0">' + esc(T.reportNote) + '</p>'
       + '<label class="fp-row"><span class="fp-name">' + esc(T.reportPlan) + '</span><input type="checkbox" id="report-plan"></label>'
       + '<button type="button" class="fp-btn primary" data-tb="report-mail">✉ ' + esc(T.reportMail) + '</button>'
+      + '<button type="button" class="fp-btn" data-tb="report-github">↗ ' + esc(T.reportGithub) + '</button>'
       + '<button type="button" class="fp-btn" data-tb="report-copy">' + esc(T.reportCopy) + '</button>'
       + '<p class="fp-sub" id="report-status" style="text-transform:none;letter-spacing:0"></p>'
       + '<textarea id="report-text" class="fp-report" readonly hidden></textarea>';
     $('sheet').hidden = false;
   }
 
-  function sendReport(mail) {
+  // kind: 'mail', 'github' or 'copy'.
+  function sendReport(kind) {
     var status = $('report-status');
     status.textContent = T.reportMaking;
+    // A window opened right away is not blocked; it gets its address once the report is made.
+    var tab = kind === 'github' ? window.open('about:blank', '_blank') : null;
     HomeyWeb.request('GET', '/diagnosis-report' + ($('report-plan').checked ? '?plan=1' : '')).then(function (shared) {
       var pretty = JSON.stringify(shared.report, null, 2);
       var box = $('report-text');
       box.value = pretty;
       box.hidden = false;
       return copyText(pretty).then(function () {
-        if (mail && shared.email) {
-          var compact = JSON.stringify(shared.report);
-          var full = T.reportAsk + '\n\n\n' + compact + '\n';
+        var subject = 'Diagnose Plattegrond Dashboard ' + (shared.report.app || '');
+        if (kind === 'mail' && shared.email) {
+          var full = T.reportAsk + '\n\n\n' + JSON.stringify(shared.report) + '\n';
           var body = encodeURIComponent(full).length < MAIL_LIMIT ? full : T.reportAsk + '\n\n\n' + T.reportPaste + '\n';
-          location.href = 'mailto:' + shared.email + '?subject=' + encodeURIComponent('Diagnose Plattegrond Dashboard ' + (shared.report.app || '')) + '&body=' + encodeURIComponent(body);
+          location.href = 'mailto:' + shared.email + '?subject=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(body);
+          status.textContent = T.reportCopied;
+        } else if (kind === 'github') {
+          var issue = T.reportAsk + '\n\n\n```json\n' + pretty + '\n```\n';
+          var text = encodeURIComponent(issue).length < GITHUB_LIMIT ? issue : T.reportAsk + '\n\n\n' + T.reportPaste + '\n';
+          var url = ISSUES + '?title=' + encodeURIComponent(subject) + '&body=' + encodeURIComponent(text);
+          if (tab) tab.location.href = url; else window.open(url, '_blank');
           status.textContent = T.reportCopied;
         } else status.textContent = T.reportCopiedOnly;
       });
     }).catch(function (err) {
+      if (tab) tab.close();
       status.textContent = T.reportFailed + ': ' + ((err && err.message) || err);
     });
   }
@@ -193,8 +212,9 @@
     var b = ev.target.closest('[data-tb]');
     if (!b) return;
     if (b.dataset.tb === 'report') openReport();
-    if (b.dataset.tb === 'report-mail') sendReport(true);
-    if (b.dataset.tb === 'report-copy') sendReport(false);
+    if (b.dataset.tb === 'report-mail') sendReport('mail');
+    if (b.dataset.tb === 'report-github') sendReport('github');
+    if (b.dataset.tb === 'report-copy') sendReport('copy');
     if (b.dataset.tb === 'settings') openSettings();
     if (b.dataset.tb === 'apply') applySettings();
     if (b.dataset.tb === 'full') {
