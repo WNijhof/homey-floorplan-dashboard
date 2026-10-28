@@ -17,7 +17,8 @@
     // Switch to the sister dashboard: same host, its own port.
     const pill = document.querySelector('[data-sibling="energy"]');
     report.switchLink = !!pill && pill.href === `${location.protocol}//${location.hostname}:8686/`;
-    report.editorLink = !!document.querySelector('#toolbar a[href="/editor"]');
+    // Relative, so it also works under a sub folder (the demo on GitHub Pages).
+    report.editorLink = [...document.querySelectorAll('#toolbar a')].some((a) => a.getAttribute('href') === 'editor' && new URL(a.href).pathname === '/editor');
     report.noWidgetFullButton = document.getElementById('btn-full').hidden;
 
     // A tap goes through the real API and comes back over Server-Sent Events.

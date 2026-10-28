@@ -28,7 +28,7 @@
   },
   "author": {
     "name": "DrPeppers",
-    "email": "you@example.com"
+    "email": "drpeppers@duck.com"
   },
   "api": {
     "getSettingsInfo": { "method": "GET", "path": "/settings-info" },
