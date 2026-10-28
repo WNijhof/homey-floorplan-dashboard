@@ -1,0 +1,40 @@
+/* 3D view (view3d.js): canvas plus a layer of HTML labels and badges. Used by the dashboard and the editor.
+   Colours come from the page (--card, --text, --muted, --accent, --hot) with fallbacks for the editor. */
+.ed-3d.fp3 { --card: var(--ed-panel); --text: var(--ed-text); --muted: var(--ed-dim); --accent: var(--ed-accent); --hot: #ff4d4f; --card-2: var(--ed-bg); }
+/* Own stacking context: three.js gives every label a z-index; they must stay under sheets and popovers. */
+.fp3 { position: absolute; top: 0; right: 0; bottom: 0; left: 0; z-index: 0; }
+.fp3[hidden] { display: none; }
+.fp3-canvas { display: block; touch-action: none; }
+.fp3-labels { position: absolute; top: 0; left: 0; pointer-events: none; }
+.fp3-room { pointer-events: auto; cursor: pointer; background: color-mix(in srgb, var(--card) 86%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-radius: 12px; padding: 4px 10px 5px; text-align: center; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12); line-height: 1.2; user-select: none; }
+.fp3-room b { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
+.fp3-room span { display: block; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.fp3-dev { pointer-events: auto; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; user-select: none; --dev: #ffd27a; }
+.fp3-dot { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--card); box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25); transition: transform 0.12s, background 0.2s; }
+.fp3-dot svg { width: 17px; height: 17px; fill: none; stroke: var(--text); stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.fp3-dev.on .fp3-dot { background: var(--accent); }
+.fp3-dev.on .fp3-dot svg { stroke: #fff; }
+.fp3-dev.is-light .fp3-dot { width: 24px; height: 24px; opacity: 0.85; }
+.fp3-dev.is-light .fp3-dot svg { width: 14px; height: 14px; }
+.fp3-dev.is-light.on .fp3-dot { background: var(--dev); box-shadow: 0 0 14px var(--dev); }
+.fp3-dev.is-light.on .fp3-dot svg { stroke: #3a2a10; }
+.fp3-dev.motion .fp3-dot { background: #f2c14e; }
+.fp3-dev.alarm .fp3-dot { background: var(--hot); }
+.fp3-dev.alarm .fp3-dot svg, .fp3-dev.motion .fp3-dot svg { stroke: #fff; }
+.fp3-dev.off { opacity: 0.45; }
+.fp3-dev.pressed .fp3-dot { transform: scale(0.88); }
+.fp3-val { background: color-mix(in srgb, var(--card) 88%, transparent); border-radius: 999px; padding: 2px 8px; font-size: 12px; font-weight: 600; font-variant-numeric: tabular-nums; box-shadow: 0 1px 6px rgba(0, 0, 0, 0.15); }
+
+
+/* Devices behind a wall fade out (and cannot be tapped) */
+.fp3-dev { transition: opacity 0.2s; }
+.fp3-dev.behind { opacity: 0; pointer-events: none; }
+
+/* Name tags */
+.fp3-dev { position: relative; }
+.fp3-name { position: absolute; top: 100%; left: 0; margin-top: 3px; transform: translateX(calc(-50% + 15px)); white-space: nowrap; font-size: 11px; font-weight: 600; color: var(--text); text-shadow: 0 0 3px var(--card), 0 0 3px var(--card), 0 0 2px var(--card); pointer-events: none; }
+.fp3-dev.is-light .fp3-name { transform: translateX(calc(-50% + 12px)); }
+.fp3-tag { font-size: 11px; color: var(--muted); text-shadow: 0 0 3px var(--card), 0 0 3px var(--card); white-space: nowrap; pointer-events: none; }
+
+/* Editor: the selected device */
+.fp3-dev.sel .fp3-dot { box-shadow: 0 0 0 3px #2e5bff; }

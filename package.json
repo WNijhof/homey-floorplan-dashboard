@@ -1,0 +1,18 @@
+{
+  "name": "com.drpeppers.floorplandashboard",
+  "version": "0.1.0",
+  "private": true,
+  "main": "app.js",
+  "scripts": {
+    "sync": "node scripts/sync-shared.js",
+    "test": "node scripts/sync-shared.js && node --test test/*.test.js",
+    "test:ui": "node scripts/ui-check.js editor && node scripts/ui-check.js dashboard && node scripts/ui-check.js widget",
+    "dev": "node scripts/dev-server.js",
+    "validate": "node scripts/sync-shared.js && homey app validate --level publish",
+    "run": "node scripts/sync-shared.js && homey app run",
+    "install-app": "node scripts/sync-shared.js && homey app install"
+  },
+  "dependencies": {
+    "homey-api": "^3.21.2"
+  }
+}

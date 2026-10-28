@@ -1,0 +1,173 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+  <style>
+    :root { --text: #1c1c1e; --muted: #8a8a8e; --line: rgba(60, 60, 67, 0.18); --card: #fff; --bg: #f2f2f7; --accent: #2e5bff; --ok: #34c759; --error: #ff3b30; }
+    @media (prefers-color-scheme: dark) { :root { --text: #f5f5f7; --muted: #98989f; --line: rgba(235, 235, 245, 0.16); --card: #1c1c1e; --bg: #000; } }
+    * { box-sizing: border-box; }
+    body { margin: 0; padding: 14px; font: 15px/1.45 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; color: var(--text); background: var(--bg); }
+    [hidden] { display: none !important; }
+    .card { background: var(--card); border-radius: 14px; padding: 14px 16px; margin-bottom: 14px; }
+    h1 { font-size: 20px; margin: 0 0 4px; }
+    h3 { font-size: 12px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--muted); margin: 0 0 10px; }
+    p { margin: 0 0 10px; }
+    .muted { color: var(--muted); font-size: 13px; }
+    .btn { display: block; text-align: center; text-decoration: none; font-weight: 600; padding: 11px; border-radius: 10px; background: var(--accent); color: #fff; margin: 8px 0; border: 0; width: 100%; font-size: 15px; cursor: pointer; }
+    .btn.secondary { background: transparent; color: var(--accent); border: 1px solid var(--line); }
+    .url { font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 13px; word-break: break-all; color: var(--muted); }
+    label { display: block; margin: 10px 0 4px; font-size: 13px; color: var(--muted); }
+    input { width: 100%; font: inherit; padding: 9px 10px; border-radius: 9px; border: 1px solid var(--line); background: transparent; color: var(--text); }
+    .status { display: flex; align-items: center; gap: 8px; font-size: 14px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: 0 0 auto; }
+    .dot.ok { background: var(--ok); } .dot.error { background: var(--error); }
+    .note { font-size: 13px; margin-top: 8px; }
+    label.check { display: flex; align-items: center; gap: 8px; color: var(--text); }
+    label.check input { width: auto; }
+    textarea { width: 100%; box-sizing: border-box; height: 140px; font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace; border-radius: 9px; border: 1px solid var(--line); background: transparent; color: var(--text); padding: 8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h1 data-t="title"></h1>
+    <p class="muted" data-t="intro"></p>
+    <a id="open-editor" class="btn" target="_blank" rel="noopener" data-t="editor"></a>
+    <a id="open-dashboard" class="btn secondary" target="_blank" rel="noopener" data-t="dashboard"></a>
+    <p class="url" id="url"></p>
+    <div class="status"><span id="status-dot" class="dot"></span><span id="status-text"></span></div>
+  </div>
+
+  <div class="card">
+    <h3 data-t="switchTitle"></h3>
+    <p id="siblings" class="muted"></p>
+  </div>
+
+  <div class="card">
+    <h3 data-t="webTitle"></h3>
+    <label for="access" data-t="access"></label>
+    <input id="access" type="text" autocomplete="off" spellcheck="false">
+    <p class="muted note" data-t="accessHelp"></p>
+    <label for="pin" data-t="pin"></label>
+    <input id="pin" type="text" inputmode="numeric" autocomplete="off">
+    <p class="muted note" data-t="pinHelp"></p>
+    <label for="port" data-t="port"></label>
+    <input id="port" type="number" min="1024" max="65535">
+    <button id="save" class="btn" type="button" data-t="save"></button>
+    <p id="saved" class="muted note"></p>
+  </div>
+
+  <div class="card">
+    <h3 data-t="reportTitle"></h3>
+    <p class="muted note" data-t="reportNote"></p>
+    <label class="check"><input id="report-plan" type="checkbox"> <span data-t="reportPlan"></span></label>
+    <button id="report-mail" class="btn" type="button" data-t="reportMail"></button>
+    <button id="report-copy" class="btn secondary" type="button" data-t="reportCopy"></button>
+    <p id="report-status" class="muted note"></p>
+    <textarea id="report-text" readonly hidden></textarea>
+  </div>
+
+  <script>
+    var STRINGS = {
+      en: {
+        title: 'Floor Plan Dashboard',
+        intro: 'Draw and furnish your home on a computer or tablet: the editor is a web page in your home network. The dashboard is a web page too, for a tablet on the wall, and there is a Floor plan widget for Homey dashboards.',
+        editor: 'Open the editor', dashboard: 'Open the dashboard',
+        running: 'Running on port {port}', stopped: 'Not running', portInUse: 'Port {port} is already in use by something else; choose another one.',
+        switchTitle: 'Switch to other dashboards', energyFound: 'Energy Dashboard found: both web pages show a switch at the top.',
+        energyMissing: 'With Energy Dashboard installed (version with switch support), both web pages show a switch at the top to go back and forth.',
+        webTitle: 'Web page', access: 'Access code (optional)', accessHelp: 'Without a code, anyone in your home network can open the dashboard and switch devices. With a code, each browser asks for it once. Opening the link once with ?code=… in the address works too (handy for a wall tablet).',
+        pin: 'Edit PIN (optional)', pinHelp: 'Asked before changing the floor plan or calendars on the web page.',
+        port: 'Port', save: 'Save', saved: 'Saved', noAddress: 'The address of your Homey is not known yet.',
+        reportTitle: 'Report a problem', reportNote: 'Is a device missing, or does something look wrong? Send the maker a report: which kinds of devices the app finds and how your plan is built, without names, rooms or address. Nothing is sent until you send the e-mail.',
+        reportPlan: 'Include my floor plan (names replaced)', reportMail: 'Mail the report', reportCopy: 'Show and copy the report', making: 'Making the report…', failed: 'Could not make the report',
+        copied: 'The report is on your clipboard (or select it below). If it is not in the e-mail yet, paste it there.',
+        ask: 'What does not work well? (for example: my thermostat shows no temperature)', paste: '(Paste the report here; it is on your clipboard.)',
+      },
+      nl: {
+        title: 'Plattegrond Dashboard',
+        intro: 'Teken en richt je huis in op een computer of tablet: de editor is een webpagina in je thuisnetwerk. Het dashboard is ook een webpagina, voor een tablet aan de muur, en er is een Plattegrond-widget voor Homey-dashboards.',
+        editor: 'Editor openen', dashboard: 'Dashboard openen',
+        running: 'Draait op poort {port}', stopped: 'Draait niet', portInUse: 'Poort {port} is al in gebruik door iets anders; kies een andere.',
+        switchTitle: 'Wisselen met andere dashboards', energyFound: 'Energie Dashboard gevonden: beide webpagina’s tonen bovenaan een wisselknop.',
+        energyMissing: 'Met Energie Dashboard geïnstalleerd (versie met wisselknop) tonen beide webpagina’s bovenaan een knop om heen en weer te gaan.',
+        webTitle: 'Webpagina', access: 'Toegangscode (optioneel)', accessHelp: 'Zonder code kan iedereen in je thuisnetwerk het dashboard openen en apparaten schakelen. Met een code vraagt elke browser er één keer om. De link één keer openen met ?code=… achter het adres werkt ook (handig voor een wandtablet).',
+        pin: 'Bewerk-pincode (optioneel)', pinHelp: 'Wordt gevraagd voordat je op de webpagina de plattegrond of agenda’s wijzigt.',
+        port: 'Poort', save: 'Opslaan', saved: 'Opgeslagen', noAddress: 'Het adres van je Homey is nog niet bekend.',
+        reportTitle: 'Probleem melden', reportNote: 'Ontbreekt er een apparaat of klopt er iets niet? Stuur de maker een rapport: welke soorten apparaten de app vindt en hoe je plattegrond is opgebouwd, zonder namen, kamers of adres. Er wordt niets verstuurd tot jij de mail verstuurt.',
+        reportPlan: 'Mijn plattegrond meesturen (namen vervangen)', reportMail: 'Rapport mailen', reportCopy: 'Rapport tonen en kopiëren', making: 'Rapport maken…', failed: 'Rapport maken mislukt',
+        copied: 'Het rapport staat op je klembord (of selecteer het hieronder). Staat het nog niet in de mail, plak het er dan in.',
+        ask: 'Wat werkt er niet goed? (bijvoorbeeld: mijn thermostaat toont geen temperatuur)', paste: '(Plak hier het rapport; het staat op je klembord.)',
+      },
+    };
+
+    function onHomeyReady(Homey) {
+      var lang = (Homey.i18n && Homey.i18n.getLanguage && Homey.i18n.getLanguage()) || (navigator.language || 'en').slice(0, 2);
+      var T = STRINGS[lang] || STRINGS.en;
+      var $ = function (id) { return document.getElementById(id); };
+      Array.prototype.forEach.call(document.querySelectorAll('[data-t]'), function (el) { el.textContent = T[el.dataset.t] || ''; });
+
+      function api(method, path, body) {
+        return new Promise(function (resolve, reject) {
+          Homey.api(method, path, body || null, function (err, res) { if (err) reject(err); else resolve(res); });
+        });
+      }
+
+      function show(info) {
+        var links = info.links || {};
+        $('open-editor').hidden = !links.editor;
+        $('open-dashboard').hidden = !links.dashboard;
+        if (links.editor) $('open-editor').href = links.editor;
+        if (links.dashboard) $('open-dashboard').href = links.dashboard;
+        $('url').textContent = links.dashboard || T.noAddress;
+        var st = info.status || {};
+        $('status-dot').className = 'dot ' + (st.running ? 'ok' : 'error');
+        $('status-text').textContent = (st.running ? T.running : st.reason === 'portInUse' ? T.portInUse : T.stopped).replace('{port}', st.port || info.config.port);
+        $('siblings').textContent = (info.siblings || []).some(function (s) { return s.key === 'energy'; }) ? T.energyFound : T.energyMissing;
+        if (document.activeElement.tagName !== 'INPUT') {
+          $('access').value = info.config.accessCode;
+          $('pin').value = info.config.editPin;
+          $('port').value = info.config.port;
+        }
+      }
+
+      $('save').addEventListener('click', function () {
+        $('saved').textContent = '';
+        api('PUT', '/config', { accessCode: $('access').value, editPin: $('pin').value, port: Number($('port').value) })
+          .then(function (info) {
+            $('saved').textContent = T.saved;
+            // The server restarts on the new port; ask again shortly for its status.
+            setTimeout(function () { api('GET', '/settings-info').then(show); }, 800);
+            show(info);
+          })
+          .catch(function (err) { $('saved').textContent = String(err.message || err); });
+      });
+
+      // Report a problem: the anonymous report, copied and put in an e-mail to the maker when it fits.
+      function report(mail) {
+        $('report-status').textContent = T.making;
+        api('GET', '/diagnosis-report' + ($('report-plan').checked ? '?plan=1' : '')).then(function (shared) {
+          var box = $('report-text');
+          box.value = JSON.stringify(shared.report, null, 2);
+          box.hidden = false;
+          box.select();
+          try { document.execCommand('copy'); } catch (e) { /* it can be selected by hand */ }
+          $('report-status').textContent = T.copied;
+          if (mail && shared.email) {
+            var full = T.ask + '\n\n\n' + JSON.stringify(shared.report) + '\n';
+            var body = encodeURIComponent(full).length < 1800 ? full : T.ask + '\n\n\n' + T.paste + '\n';
+            var url = 'mailto:' + shared.email + '?subject=' + encodeURIComponent('Diagnose Plattegrond Dashboard ' + (shared.report.app || '')) + '&body=' + encodeURIComponent(body);
+            if (Homey.openURL) Homey.openURL(url); else location.href = url;
+          }
+        }).catch(function (err) { $('report-status').textContent = T.failed + ': ' + String(err.message || err); });
+      }
+      $('report-mail').addEventListener('click', function () { report(true); });
+      $('report-copy').addEventListener('click', function () { report(false); });
+
+      api('GET', '/settings-info').then(show).catch(function (err) { $('status-text').textContent = String(err.message || err); });
+      Homey.ready();
+    }
+  </script>
+</body>
+</html>

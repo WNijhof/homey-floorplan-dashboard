@@ -1,0 +1,8 @@
+test/
+scripts/
+*.md
+.gitignore
+*.pdf
+docs/
+site/
+.github/

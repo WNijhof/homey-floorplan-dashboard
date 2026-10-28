@@ -1,0 +1,135 @@
+{
+  "name": {
+    "en": "Floor plan",
+    "nl": "Plattegrond"
+  },
+  "transparent": false,
+  "settings": [
+    {
+      "id": "plan",
+      "type": "autocomplete",
+      "title": { "en": "Plan", "nl": "Plattegrond" }
+    },
+    {
+      "id": "level",
+      "type": "autocomplete",
+      "title": { "en": "Level", "nl": "Verdieping" }
+    },
+    {
+      "id": "view",
+      "type": "dropdown",
+      "title": { "en": "View", "nl": "Weergave" },
+      "value": "2d",
+      "values": [
+        { "id": "2d", "title": { "en": "2D", "nl": "2D" } },
+        { "id": "iso", "title": { "en": "2.5D isometric (35°)", "nl": "2.5D isometrisch (35°)" } },
+        { "id": "game", "title": { "en": "2.5D game-style (30°)", "nl": "2.5D game-stijl (30°)" } },
+        { "id": "steep", "title": { "en": "2.5D steep (50°)", "nl": "2.5D steil (50°)" } }
+      ]
+    },
+    {
+      "id": "turn",
+      "type": "dropdown",
+      "title": { "en": "Turn", "nl": "Draaien" },
+      "value": "0",
+      "values": [
+        { "id": "0", "title": { "en": "0°" } },
+        { "id": "1", "title": { "en": "90°" } },
+        { "id": "2", "title": { "en": "180°" } },
+        { "id": "3", "title": { "en": "270°" } }
+      ]
+    },
+    {
+      "id": "glow",
+      "type": "dropdown",
+      "title": { "en": "Light glow", "nl": "Lichtgloed" },
+      "value": "soft",
+      "values": [
+        { "id": "soft", "title": { "en": "Soft", "nl": "Zacht" } },
+        { "id": "bright", "title": { "en": "Bright", "nl": "Fel" } },
+        { "id": "off", "title": { "en": "Off", "nl": "Uit" } }
+      ]
+    },
+    {
+      "id": "tint",
+      "type": "dropdown",
+      "title": { "en": "Tint rooms by", "nl": "Kamers kleuren op" },
+      "value": "none",
+      "values": [
+        { "id": "none", "title": { "en": "Nothing", "nl": "Niets" } },
+        { "id": "temperature", "title": { "en": "Temperature", "nl": "Temperatuur" } },
+        { "id": "humidity", "title": { "en": "Humidity", "nl": "Luchtvochtigheid" } }
+      ]
+    },
+    {
+      "id": "furniture",
+      "type": "checkbox",
+      "title": { "en": "Show furniture", "nl": "Meubels tonen" },
+      "value": true
+    },
+    {
+      "id": "tapAction",
+      "type": "dropdown",
+      "title": { "en": "Tapping a device", "nl": "Tikken op een apparaat" },
+      "value": "controls",
+      "values": [
+        { "id": "controls", "title": { "en": "Shows its controls", "nl": "Toont de bediening" } },
+        { "id": "toggle", "title": { "en": "Switches it at once", "nl": "Schakelt direct" } }
+      ]
+    },
+    {
+      "id": "names",
+      "type": "dropdown",
+      "title": { "en": "Names on the plan", "nl": "Namen op de plattegrond" },
+      "value": "devices",
+      "values": [
+        { "id": "none", "title": { "en": "None", "nl": "Geen" } },
+        { "id": "devices", "title": { "en": "Devices", "nl": "Apparaten" } },
+        { "id": "all", "title": { "en": "Devices and furniture", "nl": "Apparaten en meubels" } }
+      ]
+    },
+    {
+      "id": "values",
+      "type": "checkbox",
+      "title": { "en": "Show values beside devices", "nl": "Waarden naast apparaten tonen" },
+      "value": true
+    },
+    {
+      "id": "sidebar",
+      "type": "dropdown",
+      "title": { "en": "Side panel", "nl": "Zijpaneel" },
+      "value": "none",
+      "values": [
+        { "id": "none", "title": { "en": "None", "nl": "Geen" } },
+        { "id": "right", "title": { "en": "Right", "nl": "Rechts" } },
+        { "id": "bottom", "title": { "en": "Below", "nl": "Onder" } }
+      ]
+    },
+    {
+      "id": "sideWeather",
+      "type": "checkbox",
+      "title": { "en": "Side panel: weather", "nl": "Zijpaneel: weer" },
+      "value": true
+    },
+    {
+      "id": "sideAgenda",
+      "type": "checkbox",
+      "title": { "en": "Side panel: calendar (links are set in the app settings)", "nl": "Zijpaneel: agenda (links stel je in bij de app-instellingen)" },
+      "value": true
+    },
+    {
+      "id": "aspect",
+      "type": "number",
+      "title": { "en": "Height (% of width)", "nl": "Hoogte (% van breedte)" },
+      "value": 75,
+      "min": 30,
+      "max": 200
+    }
+  ],
+  "api": {
+    "getPlan": { "method": "GET", "path": "/plan" },
+    "getWeather": { "method": "GET", "path": "/weather" },
+    "getAgenda": { "method": "GET", "path": "/agenda" },
+    "setCapability": { "method": "POST", "path": "/capability" }
+  }
+}

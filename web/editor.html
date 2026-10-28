@@ -1,0 +1,64 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Plattegrond bewerken</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="editor.css">
+  <link rel="stylesheet" href="view3d.css">
+  <script type="importmap">{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }</script>
+</head>
+<body>
+  <div id="ed" class="ed">
+    <header class="ed-top">
+      <a class="ed-btn" href="./" id="back-dashboard">← Dashboard</a>
+      <select id="plan-select" class="ed-select" aria-label="Plan"></select>
+      <button id="plan-new" class="ed-btn" type="button" data-i18n="newPlan">New plan</button>
+      <div id="level-tabs" class="ed-tabs" role="tablist"></div>
+      <button id="level-add" class="ed-icon" type="button" title="Add level">+</button>
+      <div class="ed-spacer"></div>
+      <button id="undo" class="ed-icon" type="button" title="Undo (Ctrl+Z)">↶</button>
+      <button id="redo" class="ed-icon" type="button" title="Redo (Ctrl+Y)">↷</button>
+      <button id="snap" class="ed-icon on" type="button" title="Snapping (hold Shift to toggle)">🧲</button>
+      <button id="toggle-grid" class="ed-icon on" type="button" title="Grid">#</button>
+      <button id="toggle-furniture" class="ed-icon on" type="button" title="Furniture">🛋</button>
+      <button id="lock-layout" class="ed-icon" type="button" title="Fix rooms and walls in place">🔒</button>
+      <div class="ed-seg" role="group" aria-label="View">
+        <button id="view-2d" type="button" class="on">2D</button>
+        <button id="view-3d" type="button">3D</button>
+      </div>
+      <button id="turn" class="ed-icon" type="button" title="Turn">⟲</button>
+      <span id="save-state" class="ed-save"></span>
+    </header>
+    <nav id="tools" class="ed-tools">
+      <button type="button" data-tool="select" class="on" title="Select and move (V)">➤</button>
+      <button type="button" data-tool="room" title="Room (drag a rectangle) (Q)">▭</button>
+      <button type="button" data-tool="wall" title="Draw walls (W)">✎</button>
+      <button type="button" data-tool="door" title="Doors (D)">🚪</button>
+      <button type="button" data-tool="window" title="Windows (N)">⊞</button>
+      <button type="button" data-tool="furniture" title="Furniture (F)">🛋</button>
+      <button type="button" data-tool="device" title="Devices (E)">💡</button>
+      <button type="button" data-tool="measure" title="Measure (M)">📏</button>
+      <button type="button" data-tool="picture" title="Trace a picture">🖼</button>
+      <button type="button" data-tool="calendar" title="Calendars on the dashboard">📅</button>
+      <div class="ed-spacer"></div>
+      <button type="button" id="zoom-in" title="Zoom in">＋</button>
+      <button type="button" id="zoom-out" title="Zoom out">－</button>
+      <button type="button" id="zoom-fit" title="Show whole level">⤢</button>
+    </nav>
+    <main class="ed-canvas-wrap">
+      <svg id="canvas" class="ed-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+      <div id="ed-3d" class="ed-3d fp3" hidden></div>
+      <div id="hint" class="ed-hint"></div>
+    </main>
+    <aside id="panel" class="ed-panel"></aside>
+  </div>
+  <script src="models.js"></script>
+  <script src="floorplan-core.js"></script>
+  <script src="plan-detect.js"></script>
+  <script src="editor.js"></script>
+  <script src="homey-web.js"></script>
+  <script type="module" src="view3d.js"></script>
+</body>
+</html>

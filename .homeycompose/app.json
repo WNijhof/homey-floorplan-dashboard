@@ -1,0 +1,47 @@
+{
+  "id": "com.drpeppers.floorplandashboard",
+  "version": "0.1.0",
+  "compatibility": ">=12.3.0",
+  "sdk": 3,
+  "platforms": ["local"],
+  "name": {
+    "en": "Floor Plan Dashboard",
+    "nl": "Plattegrond Dashboard"
+  },
+  "description": {
+    "en": "Your home as a live floor plan, for any screen in your home",
+    "nl": "Je huis als live plattegrond, voor elk scherm in huis"
+  },
+  "category": ["tools"],
+  "brandColor": "#2E5BFF",
+  "source": "https://github.com/WNijhof/homey-floorplan-dashboard",
+  "support": "https://github.com/WNijhof/homey-floorplan-dashboard/issues",
+  "bugs": { "url": "https://github.com/WNijhof/homey-floorplan-dashboard/issues" },
+  "permissions": [
+    "homey:manager:api",
+    "homey:app:com.drpeppers.energydashboard"
+  ],
+  "images": {
+    "small": "/assets/images/small.png",
+    "large": "/assets/images/large.png",
+    "xlarge": "/assets/images/xlarge.png"
+  },
+  "author": {
+    "name": "DrPeppers",
+    "email": "you@example.com"
+  },
+  "api": {
+    "getSettingsInfo": { "method": "GET", "path": "/settings-info" },
+    "setConfig": { "method": "PUT", "path": "/config" },
+    "getDashboardLink": { "method": "GET", "path": "/dashboard-link" },
+    "getData": { "method": "GET", "path": "/data" },
+    "getPlans": { "method": "GET", "path": "/plans" },
+    "savePlan": { "method": "PUT", "path": "/plans/:id" },
+    "deletePlan": { "method": "DELETE", "path": "/plans/:id" },
+    "setCapability": { "method": "POST", "path": "/capability" },
+    "getCalendars": { "method": "GET", "path": "/calendars" },
+    "setCalendars": { "method": "PUT", "path": "/calendars" },
+    "getAgenda": { "method": "GET", "path": "/agenda" },
+    "getDiagnosisReport": { "method": "GET", "path": "/diagnosis-report" }
+  }
+}

@@ -1,0 +1,92 @@
+/* The web dashboard in the style of Energy Dashboard: iOS-like cards on a grey (light) or black (dark) page. */
+:root {
+  --bg: #f2f2f7;
+  --card: #ffffff;
+  --card-2: #f5f5f8;
+  --text: #1c1c1e;
+  --muted: #8a8a8e;
+  --line: rgba(60, 60, 67, 0.12);
+  --shadow: 0 1px 2px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(0, 0, 0, 0.05);
+  --accent: #0a84ff;
+  --ok: #30d158;
+  --hot: #ff4d4f;
+  --radius: 22px;
+  /* the widget's own variables follow */
+  --fp-bg: var(--bg); --fp-card: var(--card); --fp-text: var(--text); --fp-dim: var(--muted); --fp-line: var(--line); --fp-accent: var(--accent); --fp-danger: var(--hot);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000; --card: #1c1c1e; --card-2: #2c2c2e; --text: #f5f5f7; --muted: #98989f; --line: rgba(235, 235, 245, 0.12); --shadow: none;
+    color-scheme: dark;
+  }
+}
+html.fp-dark { --fp-bg: var(--bg); --fp-card: var(--card); --fp-text: var(--text); --fp-dim: var(--muted); --fp-line: var(--line); --fp-accent: var(--accent); }
+
+html, body { height: 100%; }
+body.fp-web {
+  margin: 0; background: var(--bg); color: var(--text);
+  font: 15px/1.4 -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased; overflow: hidden;
+}
+.fp-web .fp-app {
+  display: flex; flex-direction: column; height: 100vh; height: 100dvh;
+  padding: max(16px, env(safe-area-inset-top)) max(16px, env(safe-area-inset-right)) max(16px, env(safe-area-inset-bottom)) max(16px, env(safe-area-inset-left));
+  gap: 14px; max-width: 1800px; margin: 0 auto;
+}
+
+/* Header */
+.top { display: flex; align-items: flex-end; justify-content: space-between; gap: 8px 16px; flex-wrap: wrap; flex: 0 0 auto; }
+.top h1 { margin: 0; font-size: 34px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.1; }
+.subtitle { margin: 2px 0 0; color: var(--muted); display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.status { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; }
+.status i { width: 8px; height: 8px; border-radius: 50%; background: var(--muted); }
+.status.live i { background: var(--ok); animation: fp-pulse 2s infinite; }
+.status.error i { background: var(--hot); }
+@keyframes fp-pulse { 0% { box-shadow: 0 0 0 0 rgba(48, 209, 88, 0.6); } 70% { box-shadow: 0 0 0 6px rgba(48, 209, 88, 0); } 100% { box-shadow: 0 0 0 0 rgba(48, 209, 88, 0); } }
+.header-actions { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 8px; }
+.toolbar { display: contents; }
+
+.segmented { display: inline-flex; background: rgba(118, 118, 128, 0.12); border-radius: 10px; padding: 2px; }
+.segmented[hidden] { display: none; }
+.segmented button, .segmented a { border: 0; background: transparent; color: var(--text); font: inherit; font-size: 14px; font-weight: 500; padding: 6px 14px; border-radius: 8px; cursor: pointer; text-decoration: none; white-space: nowrap; }
+.segmented button.active { background: var(--card); box-shadow: 0 1px 4px rgba(0, 0, 0, 0.12); font-weight: 600; cursor: default; }
+@media (prefers-color-scheme: dark) { .segmented button.active { background: #636366; } }
+.segmented a:hover { background: rgba(118, 118, 128, 0.12); }
+
+.icon-button { width: 34px; height: 34px; display: inline-grid; place-items: center; border: 0; border-radius: 10px; background: rgba(118, 118, 128, 0.12); color: var(--text); cursor: pointer; text-decoration: none; font: inherit; font-size: 13px; font-weight: 600; }
+.icon-button.wide { width: auto; padding: 0 12px; }
+.icon-button:hover { background: rgba(118, 118, 128, 0.2); }
+
+/* Layout: the plan card fills the page, the side column holds clock, weather and calendar */
+.layout { flex: 1 1 auto; min-height: 0; display: flex; gap: 14px; }
+.side-bottom .layout { flex-direction: column; }
+.card { background: var(--card); border-radius: var(--radius); box-shadow: var(--shadow); min-width: 0; }
+.plan-card { flex: 1 1 auto; min-width: 0; min-height: 0; overflow: hidden; position: relative; }
+.plan-card .fp-stage { position: absolute; top: 0; right: 0; bottom: 0; left: 0; }
+
+.fp-web .fp-side { flex: 0 0 300px; display: flex; flex-direction: column; gap: 14px; padding: 0; border: 0; overflow-y: auto; }
+.side-bottom .fp-side { flex: 0 0 auto; flex-direction: row; overflow-x: auto; }
+.side-card { padding: 16px 18px; }
+.side-bottom .side-card { flex: 1 0 220px; }
+.fp-web .fp-time { font-size: 48px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
+.fp-web .fp-date { color: var(--muted); font-size: 15px; margin-top: 6px; }
+.fp-web .fp-hour { background: var(--card-2); border-radius: 12px; }
+.fp-web .fp-wtemp { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
+.fp-web .side-bottom .fp-weather { flex-direction: column; align-items: stretch; }
+.agenda-card:empty, .agenda-card:has(.fp-agenda:empty) { display: none; }
+
+/* Sheets in the page style */
+.fp-web .fp-sheet-card { border-radius: var(--radius); background: var(--card); }
+.fp-sheet-body select { font: inherit; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card-2); color: var(--text); max-width: 60%; }
+.fp-sheet-body input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
+
+@media (max-width: 760px) {
+  .top h1 { font-size: 28px; }
+  .layout { flex-direction: column; }
+  .fp-web .fp-side { flex: 0 0 auto; flex-direction: row; overflow-x: auto; }
+  .side-card { flex: 1 0 220px; }
+}
+
+/* The report shown after "Report a problem", so it can also be selected by hand */
+.fp-report { width: 100%; box-sizing: border-box; height: 160px; margin-top: 8px; font: 11px/1.4 ui-monospace, monospace; border-radius: 10px; border: 1px solid var(--line, rgba(127, 127, 127, 0.3)); background: transparent; color: inherit; padding: 8px; }

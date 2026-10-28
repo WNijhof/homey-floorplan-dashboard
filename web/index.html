@@ -1,0 +1,63 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Huis</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon-192.png">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <link rel="stylesheet" href="widget.css">
+  <link rel="stylesheet" href="dashboard.css">
+  <link rel="stylesheet" href="view3d.css">
+  <script type="importmap">{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }</script>
+</head>
+<body class="fp-web">
+  <div id="app" class="fp-app">
+    <header class="top">
+      <div>
+        <h1 id="title">Huis</h1>
+        <p class="subtitle"><span id="today-label"></span><span id="status" class="status"><i></i><span></span></span></p>
+      </div>
+      <div class="header-actions">
+        <nav id="app-switch" class="segmented app-switch" aria-label="Dashboards" hidden></nav>
+        <nav id="levels" class="segmented" aria-label="Levels" hidden></nav>
+        <button id="btn-view" class="icon-button wide" type="button" title="2D / 3D">2D</button>
+        <button id="btn-turn" class="icon-button" type="button" title="Draaien / Turn"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+        <button id="btn-full" type="button" hidden></button>
+        <span id="toolbar" class="toolbar"></span>
+      </div>
+    </header>
+    <main class="layout">
+      <section class="card plan-card">
+        <div class="fp-stage">
+          <svg id="plan" class="fp-svg" xmlns="http://www.w3.org/2000/svg"></svg>
+          <div id="view3d" class="fp3" hidden></div>
+          <div id="empty" class="fp-empty" hidden></div>
+        </div>
+      </section>
+      <aside id="side" class="fp-side" hidden>
+        <div class="card side-card fp-clock"><div id="clock-time" class="fp-time"></div><div id="clock-date" class="fp-date"></div></div>
+        <div class="card side-card"><div id="weather" class="fp-weather"></div></div>
+        <div class="card side-card agenda-card"><div id="agenda" class="fp-agenda"></div></div>
+      </aside>
+    </main>
+    <div id="sheet" class="fp-sheet" hidden>
+      <div class="fp-sheet-card" role="dialog">
+        <div class="fp-sheet-head"><div id="sheet-title" class="fp-sheet-title"></div><button id="sheet-close" class="fp-x" type="button" aria-label="Close">✕</button></div>
+        <div id="sheet-body" class="fp-sheet-body"></div>
+      </div>
+    </div>
+  </div>
+  <script src="models.js"></script>
+  <script src="floorplan-core.js"></script>
+  <script src="widget.js"></script>
+  <script src="homey-web.js"></script>
+  <script src="dashboard.js"></script>
+  <script type="module" src="view3d.js"></script>
+</body>
+</html>
