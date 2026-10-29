@@ -14,7 +14,7 @@
     en: {
       newPlan: 'New plan', saved: 'Saved', saving: 'Saving…', unsaved: 'Not saved', saveFailed: 'Save failed',
       level: 'Level', name: 'Name', wallHeight: 'Wall height (cm)', wallThickness: 'Wall thickness (cm)', zone: 'Homey zone', none: '— none —',
-      roomsFromZones: 'Rooms from Homey', place: 'Place', allPlaced: 'Every zone has a room on this level.',
+      otherLevel: 'Other', roomsFromZones: 'Rooms from Homey', place: 'Place', allPlaced: 'Every zone already has a room on the plan.',
       plan: 'Plan', deleteLevel: 'Delete level', deletePlan: 'Delete plan', confirmAgain: 'Click again to confirm',
       startFromZones: 'Start from Homey zones', startBlank: 'Start blank', startNote: 'Zones with sub-zones become levels; their sub-zones become rooms you can drag into place.',
       room: 'Room', floorColour: 'Floor colour', themeColour: 'Theme colour', tempFrom: 'Temperature from', humFrom: 'Humidity from', climate: 'Thermostat',
@@ -59,7 +59,7 @@
     nl: {
       newPlan: 'Nieuwe plattegrond', saved: 'Opgeslagen', saving: 'Opslaan…', unsaved: 'Niet opgeslagen', saveFailed: 'Opslaan mislukt',
       level: 'Verdieping', name: 'Naam', wallHeight: 'Muurhoogte (cm)', wallThickness: 'Muurdikte (cm)', zone: 'Homey-zone', none: '— geen —',
-      roomsFromZones: 'Kamers uit Homey', place: 'Plaatsen', allPlaced: 'Elke zone heeft een kamer op deze verdieping.',
+      otherLevel: 'Overig', roomsFromZones: 'Kamers uit Homey', place: 'Plaatsen', allPlaced: 'Elke zone heeft al een kamer op de plattegrond.',
       plan: 'Plattegrond', deleteLevel: 'Verdieping verwijderen', deletePlan: 'Plattegrond verwijderen', confirmAgain: 'Klik nogmaals om te bevestigen',
       startFromZones: 'Beginnen vanuit Homey-zones', startBlank: 'Leeg beginnen', startNote: 'Zones met subzones worden verdiepingen; hun subzones worden kamers die je op hun plek sleept.',
       room: 'Kamer', floorColour: 'Vloerkleur', themeColour: 'Themakleur', tempFrom: 'Temperatuur van', humFrom: 'Luchtvochtigheid van', climate: 'Thermostaat',
@@ -234,7 +234,8 @@
       for (const r of lv.rooms) pts.push(...r.points);
       for (const w of lv.walls) pts.push(w.a, w.b);
       for (const i of lv.items) pts.push([i.x, i.y]);
-      if (lv.background) pts.push([lv.background.x, lv.background.y], [lv.background.x + lv.background.w, lv.background.y + lv.background.h]);
+      // The background picture only counts until something is drawn; after that the house is framed.
+      if (lv.background && !pts.length) pts.push([lv.background.x, lv.background.y], [lv.background.x + lv.background.w, lv.background.y + lv.background.h]);
     }
     if (!pts.length) pts.push([0, 0], [1000, 700]);
     const b = G.bbox(pts);
@@ -1246,7 +1247,9 @@
   }
 
   function levelPanel(lv) {
-    const used = new Set(lv.rooms.map((r) => r.zoneId).filter(Boolean));
+    // Without a floor zone every room zone is offered, except those already on any level of the plan.
+    const rooms = lv.zoneId ? lv.rooms : S.plan.levels.flatMap((l) => l.rooms);
+    const used = new Set(rooms.map((r) => r.zoneId).filter(Boolean));
     const children = lv.zoneId ? S.zones.filter((z) => z.parent === lv.zoneId) : S.zones.filter((z) => z.parent && !S.zones.some((c) => c.parent === z.id));
     const free = children.filter((z) => !used.has(z.id));
     const zoneList = S.zones.map((z) => ({ id: z.id, name: z.name }));
@@ -1608,7 +1611,7 @@
       case 'create-zones': case 'create-blank': {
         const plan = core.newPlan(($('new-name') && $('new-name').value) || T.plan);
         if (action === 'create-zones') {
-          const levels = core.levelsFromZones(S.zones);
+          const levels = core.levelsFromZones(S.zones, T.otherLevel);
           if (levels.length) plan.levels = levels;
         }
         S.plan = plan; S.levelId = plan.levels[0].id; S.creating = false; S.undo = []; S.redo = []; S.sel = null;

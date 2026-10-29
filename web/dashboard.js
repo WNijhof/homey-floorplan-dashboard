@@ -97,6 +97,9 @@
 
   function openSettings() {
     var s = Homey.getSettings();
+    // View and turn as they are on screen now, so Done keeps what the 2D/3D and turn buttons chose
+    var now = window.__widgetState && window.__widgetState();
+    if (now) { s.view = now.view; s.turn = String(now.turn); }
     var can3d = !!(window.FloorplanView3D && window.FloorplanView3D.supported);
     HomeyWeb.request('GET', '/plans').then(function (plans) {
       var planId = s.plan && s.plan.id;

@@ -706,7 +706,7 @@
     if (touched) scheduleRender();
   }
 
-  // Read-only hook for the browser interaction test (test/widget-interaction.js).
+  // Read-only hook for the browser interaction test (test/widget-interaction.js) and the web page's settings.
   window.__widgetState = () => state;
 
   window.onHomeyReady = async function onHomeyReady(Homey) {

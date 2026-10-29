@@ -696,7 +696,9 @@
     }
     const sb = bbox(screenPts);
     const span = Math.max(sb.w, sb.h, 200);
-    const marker = opts.markerSize || Math.max(12, Math.min(28, span / 40));
+    // Markers grow with the plan up to 28 cm; on very large levels (an attic, a garden) they keep at least
+    // 1/70 of the span, so they stay as readable on screen as on a normal level.
+    const marker = opts.markerSize || Math.max(12, span / 70, Math.min(28, span / 40));
     const pad = marker * 2.2;
     const viewBox = opts.viewBox || [sb.minX - pad, sb.minY - pad, sb.w + pad * 2, sb.h + pad * 2];
 
@@ -1090,9 +1092,10 @@
 
   /**
    * Builds levels from Homey zones: zones with child zones become levels, their children rooms.
-   * Rooms are laid out in a grid so they can be dragged into place.
+   * Rooms are laid out in a grid so they can be dragged into place. Rooms not in a floor zone go on
+   * one more level, named otherName (in the user's language).
    */
-  function levelsFromZones(zones) {
+  function levelsFromZones(zones, otherName = 'Other') {
     const byParent = new Map();
     for (const z of zones) {
       const k = z.parent || '__root';
@@ -1106,7 +1109,7 @@
       .map((z) => ({ name: z.name, rooms: byParent.get(z.id) }));
     const loose = top.filter((z) => !(byParent.get(z.id) || []).length);
     if (!groups.length) groups = [{ name: root.name, rooms: loose }];
-    else if (loose.length) groups.push({ name: 'Other', rooms: loose });
+    else if (loose.length) groups.push({ name: otherName, rooms: loose });
 
     return groups.map((g) => {
       const level = newLevel(g.name);

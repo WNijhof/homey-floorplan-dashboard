@@ -72,6 +72,8 @@ body.fp-web {
 .fp-web .fp-time { font-size: 48px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; }
 .fp-web .fp-date { color: var(--muted); font-size: 15px; margin-top: 6px; }
 .fp-web .fp-hour { background: var(--card-2); border-radius: 12px; }
+/* Hours and days stay on one row, also in a narrow card */
+.fp-web .fp-hours { grid-template-columns: none; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
 .fp-web .fp-wtemp { font-size: 34px; font-weight: 700; letter-spacing: -0.02em; }
 .fp-web .side-bottom .fp-weather { flex-direction: column; align-items: stretch; }
 .agenda-card:empty, .agenda-card:has(.fp-agenda:empty) { display: none; }
@@ -81,7 +83,8 @@ body.fp-web {
 .fp-sheet-body select { font: inherit; padding: 5px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--card-2); color: var(--text); max-width: 60%; }
 .fp-sheet-body input[type="checkbox"] { width: 20px; height: 20px; accent-color: var(--accent); }
 
-@media (max-width: 760px) {
+/* Narrow or upright screens (phone, tablet held upright): the side cards go below the plan */
+@media (max-width: 760px), (max-aspect-ratio: 4/5) {
   .top h1 { font-size: 28px; }
   .layout { flex-direction: column; }
   .fp-web .fp-side { flex: 0 0 auto; flex-direction: row; overflow-x: auto; }
