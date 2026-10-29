@@ -439,7 +439,7 @@
     const k = scale();
     const out = core.render({
       plan: S.plan, level: lv, devices: S.devices, view: { mode: '2d' }, palette: pal,
-      furniture: S.showFurniture, showBackground: true, viewBox: S.cam, markerSize: 13 * k, modelBase: 'models/', names: 'devices',
+      furniture: S.showFurniture, showBackground: true, viewBox: S.cam, markerSize: 13 * k, modelBase: 'models/', names: 'devices', fixtureOutlines: true,
       selected: new Set(S.sel ? [S.sel.id] : []), idPrefix: 'e',
     });
     svg.setAttribute('viewBox', S.cam.map(f1).join(' '));
@@ -448,16 +448,16 @@
   }
 
   // Dragging the selected piece or device in the 3D view: on a 5 cm grid, against walls like in 2D.
-  function drag3d(id, x, y, first) {
+  // Moving in 3D: over the floor, or along one arrow (z: the height in cm). Pieces keep their turn here;
+  // turning is done in the side panel or in 2D.
+  function drag3d(id, x, y, first, z) {
     const it = level().items.find((i) => i.id === id);
     if (!it) return null;
     if (first) snapshot();
     const step = S.snap ? 5 : 1;
     it.x = Math.round(x / step) * step; it.y = Math.round(y / step) * step;
-    const entry = MODELS.get(it.kind === 'device' ? it.fixture : it.type);
-    if (it.kind === 'furniture' && !(entry && (entry.mount === 'surface' || entry.mount === 'ceiling'))) faceWall(it, null);
-    if (it.kind === 'device') faceWall(it, null);
-    return { x: it.x, y: it.y, rot: it.rot != null ? it.rot : null };
+    if (z != null) it.z = Math.max(0, Math.round(z / step) * step);
+    return { x: it.x, y: it.y, z: z != null ? it.z : null };
   }
 
   function gridSvg(k, pal) {

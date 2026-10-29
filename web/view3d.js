@@ -238,6 +238,7 @@ class View3D {
       const orbiting = this.controls.update();
       const walls = this.walls ? this.stepWalls(0.16) : false;
       const moving = orbiting || walls;
+      if (this.gizmo) this.gizmo.scale.setScalar(this.camera.position.distanceTo(this.gizmo.position) * 0.09);
       this.renderer.render(this.scene, this.camera);
       this.updateOcclusion();
       this.labels.render(this.scene, this.camera);
@@ -588,6 +589,7 @@ class View3D {
   // Editor: an outline around the selected piece, device or room.
   select(id) {
     if (this.selBox) { this.root.remove(this.selBox); this.selBox.geometry.dispose(); this.selBox = null; }
+    this.removeGizmo();
     this.selectedId = id || null;
     for (const b of this.badges || []) b.el.classList.toggle('sel', b.item.id === this.selectedId);
     const level = this.level;
@@ -607,6 +609,9 @@ class View3D {
         obj.position.y += ceiling ? -h / 2 : h / 2;
         obj.rotation.y = holder.rotation.y;
       }
+      // Height only for furniture standing on something; devices and ceiling pieces keep theirs.
+      const lift = item.kind === 'furniture' && !(entry && entry.mount === 'ceiling');
+      if (holder && this.hooks.drag) this.addGizmo(holder, obj ? obj.position.y - holder.position.y : 0.15, lift);
     } else if (room) {
       const pts = room.points.map(([x, y]) => new THREE.Vector3(x * CM, 0.02, y * CM));
       obj = new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(pts), lineMat);
@@ -618,6 +623,39 @@ class View3D {
       this.root.add(obj);
     }
     this.request();
+  }
+
+  // Editor: three arrows on the selected piece. Dragging an arrow moves the piece along that axis only:
+  // red left-right, blue front-back, green up-down. Drawn on top and kept the same size on screen.
+  addGizmo(holder, up, lift) {
+    const g = new THREE.Group();
+    g.position.copy(holder.position);
+    g.position.y += up;
+    const axes = [['x', '#e5484d', [0, 0, -Math.PI / 2]], ['z', '#2e5bff', [Math.PI / 2, 0, 0]]];
+    if (lift) axes.push(['y', '#30a46c', [0, 0, 0]]);
+    for (const [axis, color, rot] of axes) {
+      const arrow = new THREE.Group();
+      const mat = new THREE.MeshBasicMaterial({ color, depthTest: false, depthWrite: false, transparent: true });
+      const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.02, 0.8, 8), mat);
+      shaft.position.y = 0.4;
+      const head = new THREE.Mesh(new THREE.ConeGeometry(0.07, 0.2, 16), mat);
+      head.position.y = 0.9;
+      // A thicker, invisible grip so the arrow is easy to catch.
+      const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.1, 0.1, 1.05, 8), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthTest: false, depthWrite: false }));
+      grip.position.y = 0.5;
+      for (const m of [shaft, head, grip]) { m.renderOrder = 30; m.userData.axis = axis; arrow.add(m); }
+      arrow.rotation.set(rot[0], rot[1], rot[2]);
+      g.add(arrow);
+    }
+    this.gizmo = g;
+    this.scene.add(g);
+  }
+
+  removeGizmo() {
+    if (!this.gizmo) return;
+    this.scene.remove(this.gizmo);
+    this.gizmo.traverse((o) => { if (o.geometry) o.geometry.dispose(); if (o.material) o.material.dispose(); });
+    this.gizmo = null;
   }
 
   // Editor: drag the selected piece or device over the floor. hooks.drag(id, x, y, first) gets the plan
@@ -635,9 +673,32 @@ class View3D {
       const p = new THREE.Vector3();
       return ray.ray.intersectPlane(new THREE.Plane(new THREE.Vector3(0, 1, 0), -y), p) ? p : null;
     };
+    // Where along the line origin + t * dir the pointer ray passes closest (null when they run parallel).
+    const alongAxis = (origin, dir) => {
+      const w0 = new THREE.Vector3().subVectors(origin, ray.ray.origin);
+      const b = dir.dot(ray.ray.direction); const d = dir.dot(w0); const e = ray.ray.direction.dot(w0);
+      const denom = 1 - b * b;
+      return Math.abs(denom) < 1e-4 ? null : (b * e - d) / denom;
+    };
     // Capture on the container, so the camera controls do not start turning when a piece is grabbed.
     this.el.addEventListener('pointerdown', (ev) => {
       if (!this.selectedId || ev.button !== 0) return;
+      if (this.gizmo && !(ev.target.closest && ev.target.closest('.fp3-dev, .fp3-room'))) {
+        aim(ev);
+        const hit = ray.intersectObjects(this.gizmo.children, true)[0];
+        const grabbed = hit && this.holderOf(this.selectedId);
+        if (grabbed) {
+          const axis = hit.object.userData.axis;
+          const dir = new THREE.Vector3(axis === 'x' ? 1 : 0, axis === 'y' ? 1 : 0, axis === 'z' ? 1 : 0);
+          const origin = grabbed.position.clone();
+          const t0 = alongAxis(origin, dir);
+          if (t0 == null) return;
+          drag = { holder: grabbed, id: this.selectedId, axis, dir, origin, t0, moved: false, x: ev.clientX, y: ev.clientY };
+          this.controls.enabled = false;
+          ev.stopPropagation();
+          return;
+        }
+      }
       let holder = null;
       const badge = ev.target.closest && ev.target.closest('.fp3-dev');
       if (badge) {
@@ -661,14 +722,27 @@ class View3D {
     window.addEventListener('pointermove', (ev) => {
       if (!drag) return;
       if (!drag.moved && Math.hypot(ev.clientX - drag.x, ev.clientY - drag.y) < 4) return;
-      const p = onPlane(ev, drag.holder.position.y);
-      if (!p) return;
-      p.add(drag.offset);
-      const to = this.hooks.drag(drag.id, p.x / CM, p.z / CM, !drag.moved) || { x: p.x / CM, y: p.z / CM };
+      let to;
+      if (drag.axis) {
+        aim(ev);
+        const t = alongAxis(drag.origin, drag.dir);
+        if (t == null) return;
+        const p = drag.origin.clone().addScaledVector(drag.dir, t - drag.t0);
+        to = drag.axis === 'y'
+          ? this.hooks.drag(drag.id, drag.origin.x / CM, drag.origin.z / CM, !drag.moved, Math.max(0, p.y / CM))
+          : this.hooks.drag(drag.id, p.x / CM, p.z / CM, !drag.moved);
+        to = to || { x: p.x / CM, y: p.z / CM };
+      } else {
+        const p = onPlane(ev, drag.holder.position.y);
+        if (!p) return;
+        p.add(drag.offset);
+        to = this.hooks.drag(drag.id, p.x / CM, p.z / CM, !drag.moved) || { x: p.x / CM, y: p.z / CM };
+      }
       drag.moved = true;
       const dx = to.x * CM - drag.holder.position.x; const dz = to.y * CM - drag.holder.position.z;
-      const follow = [drag.holder, this.selBox, ...this.badges.filter((b) => b.item.id === drag.id).map((b) => b.obj)];
-      for (const o of follow) if (o) { o.position.x += dx; o.position.z += dz; }
+      const dy = to.z != null ? to.z * CM - drag.holder.position.y : 0;
+      const follow = [drag.holder, this.selBox, this.gizmo, ...this.badges.filter((b) => b.item.id === drag.id).map((b) => b.obj)];
+      for (const o of follow) if (o) { o.position.x += dx; o.position.y += dy; o.position.z += dz; }
       if (to.rot != null) for (const o of [drag.holder, this.selBox]) if (o) o.rotation.y = -THREE.MathUtils.degToRad(to.rot);
       this.request();
     });

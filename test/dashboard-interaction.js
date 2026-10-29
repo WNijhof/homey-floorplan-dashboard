@@ -95,12 +95,13 @@
       const r = plan.getBoundingClientRect();
       const vb0 = plan.getAttribute('viewBox');
       plan.dispatchEvent(new WheelEvent('wheel', { bubbles: true, cancelable: true, clientX: r.left + r.width / 2, clientY: r.top + r.height / 2, deltaY: -400 }));
-      await wait(100);
+      // Wait for the redraw (a frame or two; slower on a busy machine).
+      for (let i = 0; i < 20 && !(st().zoom && plan.getAttribute('viewBox') !== vb0); i++) await wait(50);
       const zoomed = !!st().zoom && st().zoom.k > 1.5 && plan.getAttribute('viewBox') !== vb0;
       const btn = document.querySelector('.fp-zoom-reset');
       const shown = btn && !btn.hidden;
       btn.click();
-      await wait(300);
+      for (let i = 0; i < 20 && (st().zoom || plan.getAttribute('viewBox') !== vb0); i++) await wait(50);
       report.zoom2d = zoomed && shown && !st().zoom && plan.getAttribute('viewBox') === vb0;
     }
 
