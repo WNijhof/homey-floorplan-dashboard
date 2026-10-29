@@ -88,6 +88,7 @@ test('value text beside devices', () => {
   assert.strictEqual(core.deviceValueText({ cls: 'light', caps: { onoff: true, dim: 0.42 } }), '42%');
   assert.strictEqual(core.deviceValueText({ cls: 'light', caps: { onoff: false, dim: 0.42 } }), null);
   assert.strictEqual(core.deviceValueText({ cls: 'sensor', caps: { measure_temperature: 19.94, measure_humidity: 51.2 } }), '19.9° · 51%');
+  assert.strictEqual(core.deviceValueText({ cls: 'thermostat', caps: { measure_temperature: 20.94, target_temperature: 21 } }), '20.9° → 21°');
 });
 
 test('cover state', () => {

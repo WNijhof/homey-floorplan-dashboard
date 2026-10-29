@@ -36,6 +36,14 @@
   var T = STRINGS[lang] || STRINGS.en;
   var Homey = HomeyWeb.Homey;
   var $ = function (id) { return document.getElementById(id); };
+  var LEVEL_KEY = 'fp-level-after-settings';
+
+  // Screen settings reload the page: come back on the level that was on screen.
+  (function restoreLevel() {
+    var id = null;
+    try { id = sessionStorage.getItem(LEVEL_KEY); sessionStorage.removeItem(LEVEL_KEY); } catch (e) { /* private mode */ }
+    if (id && window.__widgetState) window.__widgetState().levelId = id;
+  }());
 
   function esc(s) {
     return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; });
@@ -133,6 +141,8 @@
     });
     if (values.plan) values.plan = { id: values.plan };
     Homey.setSettings(values);
+    var now = window.__widgetState && window.__widgetState();
+    try { if (now && now.levelId) sessionStorage.setItem(LEVEL_KEY, now.levelId); } catch (e) { /* private mode */ }
     location.reload();
   }
 

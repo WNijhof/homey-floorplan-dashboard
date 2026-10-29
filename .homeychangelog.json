@@ -1,4 +1,8 @@
 {
+  "0.1.4": {
+    "en": "In 3D, name tags that would cover other devices or room labels are hidden, so busy rooms stay readable. After the screen settings the dashboard stays on the level you were looking at. Thermostats read \"20.9° → 21°\", like the room labels.",
+    "nl": "In 3D worden namen verborgen die andere apparaten of kamernamen zouden bedekken, zodat drukke kamers leesbaar blijven. Na de scherminstellingen blijft het dashboard op de verdieping die je bekeek. Thermostaten tonen \"20.9° → 21°\", net als de kamernamen."
+  },
   "0.1.3": {
     "en": "Screen settings keep the view and turn you chose with the buttons. Upright tablets show the plan full width with the side cards below it. Device markers stay readable on very large levels. The editor frames your drawn house instead of the whole background picture, and only offers Homey rooms that are not on the plan yet.",
     "nl": "De scherminstellingen houden de weergave en draaiing die je met de knoppen koos. Staande tablets tonen de plattegrond over de volle breedte met de zijkaarten eronder. Apparaten blijven leesbaar op heel grote verdiepingen. De editor zoomt in op je getekende huis in plaats van de hele achtergrondafbeelding, en biedt alleen Homey-kamers aan die nog niet op de plattegrond staan."

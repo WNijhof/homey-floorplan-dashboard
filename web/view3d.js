@@ -242,6 +242,7 @@ class View3D {
       this.updateOcclusion();
       this.labels.render(this.scene, this.camera);
       if (moving) this.request();
+      else this.declutterNames();
     });
   }
 
@@ -824,6 +825,34 @@ class View3D {
       this.occluder.far = Math.max(0, dist - 0.1);
       const behind = walls.length > 0 && this.occluder.intersectObjects(walls, false).length > 0;
       if (behind !== b.behind) { b.behind = behind; b.el.classList.toggle('behind', behind); }
+    }
+  }
+
+  // With many devices close together their name tags pile up. Once the view stands still, a name that
+  // would cover another name, a device or a room label is hidden; lit lamps and devices nearer the
+  // front keep theirs first. Markers and values always stay.
+  declutterNames() {
+    if (!this.badges || !this.badges.length) return;
+    const tags = [];
+    for (const b of this.badges) {
+      const name = b.el.querySelector('.fp3-name');
+      if (!name) continue;
+      name.style.visibility = '';
+      if (!b.behind) tags.push({ b, name });
+    }
+    const hit = (a, r) => a.left < r.right && r.left < a.right && a.top < r.bottom && r.top < a.bottom;
+    const taken = [];
+    for (const b of this.badges) {
+      if (b.behind) continue;
+      for (const el of b.el.querySelectorAll('.fp3-dot, .fp3-val')) taken.push(el.getBoundingClientRect());
+    }
+    for (const l of this.roomLabels) taken.push(l.el.getBoundingClientRect());
+    for (const t of tags) t.r = t.name.getBoundingClientRect();
+    const lit = (t) => (t.b.el.classList.contains('on') ? 1 : 0);
+    tags.sort((x, y) => lit(y) - lit(x) || y.r.bottom - x.r.bottom);
+    for (const t of tags) {
+      if (taken.some((r) => hit(t.r, r))) { t.name.style.visibility = 'hidden'; continue; }
+      taken.push(t.r);
     }
   }
 
