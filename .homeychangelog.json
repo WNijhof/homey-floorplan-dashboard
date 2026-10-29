@@ -1,4 +1,8 @@
 {
+  "0.1.7": {
+    "en": "Every lamp type now shows a top view in 2D: ceiling light, pendant, spot, wall light and LED strip each have their own look; in the editor the lamp badge is smaller so the top view shows. In 3D, device names no longer blink: names that are showing keep their place, and a name only comes back when there is clear room.",
+    "nl": "Elk lamptype toont nu een bovenaanzicht in 2D: plafondlamp, hanglamp, spot, wandlamp en ledstrip hebben elk een eigen uiterlijk; in de editor is het lampsymbool kleiner zodat het bovenaanzicht zichtbaar is. In 3D knipperen apparaatnamen niet meer: zichtbare namen houden hun plek, en een naam komt pas terug als er duidelijk ruimte is."
+  },
   "0.1.6": {
     "en": "Editor: in 3D a selected piece gets three arrows to move it along one axis only (left-right, front-back, and for furniture up-down), and pieces no longer turn by themselves while you move them. In 2D, ceiling and wall lamps show their shape as a dashed outline.",
     "nl": "Editor: in 3D krijgt een geselecteerd onderdeel drie pijlen om het langs één as te verplaatsen (links-rechts, voor-achter en bij meubels omhoog-omlaag), en onderdelen draaien niet meer vanzelf mee tijdens het verplaatsen. In 2D tonen plafond- en wandlampen hun vorm als stippellijn."

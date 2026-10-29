@@ -439,7 +439,7 @@
     const k = scale();
     const out = core.render({
       plan: S.plan, level: lv, devices: S.devices, view: { mode: '2d' }, palette: pal,
-      furniture: S.showFurniture, showBackground: true, viewBox: S.cam, markerSize: 13 * k, modelBase: 'models/', names: 'devices', fixtureOutlines: true,
+      furniture: S.showFurniture, showBackground: true, viewBox: S.cam, markerSize: 13 * k, modelBase: 'models/', names: 'devices', lampsAroundBadge: true,
       selected: new Set(S.sel ? [S.sel.id] : []), idPrefix: 'e',
     });
     svg.setAttribute('viewBox', S.cam.map(f1).join(' '));

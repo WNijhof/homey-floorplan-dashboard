@@ -788,6 +788,9 @@ class View3D {
       b.el.style.setProperty('--dev', color || '');
       const name = this.names === 'devices' || this.names === 'all' ? (b.item.label || (dev && dev.name) || '') : '';
       b.el.innerHTML = `<span class="fp3-dot"><svg viewBox="0 0 24 24"><path d="${glyph}"/></svg></span>${value ? `<span class="fp3-val">${esc(value)}</span>` : ''}${name ? `<span class="fp3-name">${esc(name)}</span>` : ''}`;
+      // Keep the last decision until the next tidy-up, so a live update does not flash every name.
+      const tag = this.shownNames && b.el.querySelector('.fp3-name');
+      if (tag && !this.shownNames.has(b.item.id)) tag.style.visibility = 'hidden';
     }
     for (const l of this.roomLabels) {
       const vals = labels.get(l).values;
@@ -898,7 +901,13 @@ class View3D {
       this.occluder.set(from, dir.normalize());
       this.occluder.far = Math.max(0, dist - 0.1);
       const behind = walls.length > 0 && this.occluder.intersectObjects(walls, false).length > 0;
-      if (behind !== b.behind) { b.behind = behind; b.el.classList.toggle('behind', behind); }
+      if (behind !== b.behind) {
+        b.behind = behind;
+        b.el.classList.toggle('behind', behind);
+        // Out from behind a wall: its name waits for the next tidy-up instead of showing at once.
+        const tag = !behind && b.el.querySelector('.fp3-name');
+        if (tag && this.shownNames) { tag.style.visibility = 'hidden'; this.shownNames.delete(b.item.id); }
+      }
     }
   }
 
@@ -915,19 +924,29 @@ class View3D {
       if (!b.behind) tags.push({ b, name });
     }
     const hit = (a, r) => a.left < r.right && r.left < a.right && a.top < r.bottom && r.top < a.bottom;
+    // What a name must keep clear of, with its owner: a name never collides with its own badge.
     const taken = [];
     for (const b of this.badges) {
       if (b.behind) continue;
-      for (const el of b.el.querySelectorAll('.fp3-dot, .fp3-val')) taken.push(el.getBoundingClientRect());
+      for (const el of b.el.querySelectorAll('.fp3-dot, .fp3-val')) taken.push({ r: el.getBoundingClientRect(), id: b.item.id });
     }
-    for (const l of this.roomLabels) taken.push(l.el.getBoundingClientRect());
+    for (const l of this.roomLabels) taken.push({ r: l.el.getBoundingClientRect(), id: null });
     for (const t of tags) t.r = t.name.getBoundingClientRect();
+    // Names that were showing go first and get a few pixels of slack, hidden ones need clear room:
+    // a small turn of the camera or a value that changes width does not make names blink.
+    const shown = this.shownNames || new Set();
+    const was = (t) => (shown.has(t.b.item.id) ? 1 : 0);
     const lit = (t) => (t.b.el.classList.contains('on') ? 1 : 0);
-    tags.sort((x, y) => lit(y) - lit(x) || y.r.bottom - x.r.bottom);
+    tags.sort((x, y) => was(y) - was(x) || lit(y) - lit(x) || y.r.bottom - x.r.bottom);
+    const next = new Set();
     for (const t of tags) {
-      if (taken.some((r) => hit(t.r, r))) { t.name.style.visibility = 'hidden'; continue; }
-      taken.push(t.r);
+      const m = was(t) ? 4 : -4;
+      const r = { left: t.r.left + m, right: t.r.right - m, top: t.r.top + m, bottom: t.r.bottom - m };
+      if (taken.some((o) => o.id !== t.b.item.id && hit(r, o.r))) { t.name.style.visibility = 'hidden'; continue; }
+      taken.push({ r: t.r, id: null });
+      next.add(t.b.item.id);
     }
+    this.shownNames = next;
   }
 
   // Exterior walls between the camera and the house drop to a low rim so the rooms stay visible.
