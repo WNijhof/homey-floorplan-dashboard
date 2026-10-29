@@ -50,5 +50,5 @@ Vóór publicatie: het e-mailadres van de auteur invullen in `.homeycompose/app.
 
 ## Nog niet gebouwd
 
-- 3D-dollhouse (nu 2D en 2.5D), meerdere selectie, uitlijnhulplijnen, eigen 3D-modellen.
+- Meerdere selectie, eigen 3D-modellen uploaden.
 - Acties per object (flows/moods), heatmap over de afgelopen 24 uur.
