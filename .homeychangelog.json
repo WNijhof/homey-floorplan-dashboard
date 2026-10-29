@@ -1,4 +1,8 @@
 {
+  "0.1.5": {
+    "en": "In 3D, room labels with their temperature always stay on top of device badges.",
+    "nl": "In 3D blijven kamernamen met hun temperatuur altijd boven de apparaten staan."
+  },
   "0.1.4": {
     "en": "In 3D, name tags that would cover other devices or room labels are hidden, so busy rooms stay readable. After the screen settings the dashboard stays on the level you were looking at. Thermostats read \"20.9° → 21°\", like the room labels.",
     "nl": "In 3D worden namen verborgen die andere apparaten of kamernamen zouden bedekken, zodat drukke kamers leesbaar blijven. Na de scherminstellingen blijft het dashboard op de verdieping die je bekeek. Thermostaten tonen \"20.9° → 21°\", net als de kamernamen."

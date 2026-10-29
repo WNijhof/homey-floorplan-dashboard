@@ -7,6 +7,8 @@
 .fp3-canvas { display: block; touch-action: none; }
 .fp3-labels { position: absolute; top: 0; left: 0; pointer-events: none; }
 .fp3-room { pointer-events: auto; cursor: pointer; background: color-mix(in srgb, var(--card) 86%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); border-radius: 12px; padding: 4px 10px 5px; text-align: center; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.12); line-height: 1.2; user-select: none; }
+/* Room labels carry the temperature: they stay on top of device badges, whatever the depth order */
+.fp3-labels .fp3-room { z-index: 2147483000 !important; }
 .fp3-room b { display: block; font-size: 12px; font-weight: 600; color: var(--muted); }
 .fp3-room span { display: block; font-size: 16px; font-weight: 700; font-variant-numeric: tabular-nums; }
 .fp3-dev { pointer-events: auto; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; user-select: none; --dev: #ffd27a; }
