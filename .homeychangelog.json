@@ -1,4 +1,8 @@
 {
+  "0.1.2": {
+    "en": "In the widget the buttons at the bottom right no longer cover labels on the plan, and the side panel shows four hours of weather on one row.",
+    "nl": "In de widget bedekken de knoppen rechtsonder geen labels op de plattegrond meer, en het zijpaneel toont vier uren weer op één rij."
+  },
   "0.1.1": {
     "en": "The switch to Energy Dashboard also finds it when it runs on another port. Report a problem can now also open a GitHub issue, and mailing the report works on installed apps.",
     "nl": "De wisselknop vindt Energie Dashboard ook als die op een andere poort draait. Probleem melden kan nu ook een GitHub-issue openen, en het rapport mailen werkt ook bij geïnstalleerde apps."

@@ -30,6 +30,8 @@ button { font: inherit; color: inherit; }
 .fp-svg .fp-device { transition: transform 0.12s ease; transform-box: fill-box; transform-origin: center; }
 .fp-svg .fp-device.pressed { transform: scale(0.88); }
 
+/* In the widget the buttons float over the plan: keep a strip free below it so they cover no labels */
+.fp-app > .fp-stage > .fp-svg { box-sizing: border-box; padding-bottom: 46px; }
 .fp-corner { position: absolute; right: 8px; bottom: 8px; display: flex; gap: 6px; }
 .fp-round { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--fp-line); background: var(--fp-card); font-size: 12px; font-weight: 600; cursor: pointer; opacity: 0.9; }
 
@@ -50,6 +52,9 @@ button { font: inherit; color: inherit; }
 .fp-wdesc { font-size: 13px; color: var(--fp-dim); }
 .fp-hours { display: grid; grid-template-columns: repeat(auto-fit, minmax(38px, 1fr)); gap: 6px; }
 .side-bottom .fp-hours { display: flex; }
+/* The narrow side panel of the widget fits four a row: four hours, so none end up alone on a second row */
+.fp-app:not(.side-bottom) > .fp-side .fp-hours { grid-template-columns: repeat(4, 1fr); }
+.fp-app:not(.side-bottom) > .fp-side .fp-hour:nth-child(n+5) { display: none; }
 .fp-hour { text-align: center; font-size: 12px; background: var(--fp-card); border-radius: 8px; padding: 4px 2px; }
 .fp-hour b { display: block; font-size: 13px; }
 .fp-hour span { color: var(--fp-dim); }
