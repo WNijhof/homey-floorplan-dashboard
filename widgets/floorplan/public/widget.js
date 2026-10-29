@@ -15,6 +15,10 @@
       unavailable: 'Unavailable', failed: 'Could not reach the device', more: 'More',
       today: 'Today', tomorrow: 'Tomorrow', allDay: 'All day', agendaError: 'Calendar could not be loaded',
       zoomReset: 'Show the whole level',
+      house: 'House', home: 'House', solar: 'Solar panels', grid: 'Grid', gridIn: 'From the grid', gridOut: 'To the grid', battery: 'Battery',
+      charging: 'Charging', discharging: 'Supplying', idle: 'Resting', car: 'Car', heatpump: 'Heat pump', airco: 'Air conditioning', off: 'Off',
+      now: 'Now', session: 'This session', soc: 'Charge', use: 'Use', noEnergy: 'No reading yet',
+      solarToHome: 'Used in the house', solarToGrid: 'To the grid', solarToBattery: 'Into the battery',
     },
     nl: {
       noPlan: 'Nog geen plattegrond. Teken er een in de editor van HomeDeck.',
@@ -26,6 +30,10 @@
       unavailable: 'Niet beschikbaar', failed: 'Apparaat niet bereikbaar', more: 'Meer',
       today: 'Vandaag', tomorrow: 'Morgen', allDay: 'Hele dag', agendaError: 'Agenda kon niet worden geladen',
       zoomReset: 'Hele verdieping tonen',
+      house: 'Huis', home: 'Huis', solar: 'Zonnepanelen', grid: 'Net', gridIn: 'Van het net', gridOut: 'Naar het net', battery: 'Accu',
+      charging: 'Laden', discharging: 'Levert', idle: 'In rust', car: 'Auto', heatpump: 'Warmtepomp', airco: 'Airco', off: 'Uit',
+      now: 'Nu', session: 'Deze sessie', soc: 'Lading', use: 'Verbruik', noEnergy: 'Nog geen meting',
+      solarToHome: 'In huis gebruikt', solarToGrid: 'Naar het net', solarToBattery: 'In de accu',
     },
   };
   const lang = (navigator.language || 'en').slice(0, 2);
@@ -46,7 +54,9 @@
     unlockArmed: null,
     zoom: null, // web page: { key, k, c } zoom factor and centre of the 2D / 2.5D view
     baseCenter: null,
+    energy: null, // web page: the power of sun, grid, battery and car for the house view (GET /energy)
   };
+  const HOUSE = 'house'; // the levelId of the house view
 
   function isDark() {
     const root = document.documentElement;
@@ -72,6 +82,18 @@
     return !!($('view3d') && window.FloorplanView3D && window.FloorplanView3D.supported);
   }
 
+  // The house from outside (web page only, house3d.js), above the storeys.
+  function hasHouse() {
+    return !!($('house3d') && window.FloorplanHouse3D && window.FloorplanHouse3D.supported && window.HouseCore);
+  }
+  function inHouse() {
+    return state.levelId === HOUSE && hasHouse();
+  }
+  // The web page starts on the house, unless this screen chose to start on a storey or pinned one.
+  function startOnHouse() {
+    return hasHouse() && state.settings.start !== 'level' && !(state.settings.level && state.settings.level.id);
+  }
+
   function render() {
     const dark = isDark();
     document.documentElement.classList.toggle('fp-dark', dark);
@@ -86,6 +108,20 @@
     const s = state.settings;
     // The 3D view (web page only, view3d.js) when chosen and available; otherwise the SVG views.
     const box3d = $('view3d');
+    const houseBox = $('house3d');
+    const house = inHouse();
+    if (houseBox) houseBox.hidden = !house;
+    $('btn-view').hidden = house;
+    $('btn-turn').hidden = house;
+    if (house) {
+      if (box3d) box3d.hidden = true;
+      svg.style.display = 'none';
+      if (!state.house) state.house = window.FloorplanHouse3D.create(houseBox, { tap: houseTap });
+      state.house.sync({ plan: state.plan, energy: state.energy, devices: state.devices, dark, lang, texts: T });
+      renderLevels();
+      if (state.sheet) renderSheet();
+      return;
+    }
     const can3d = has3d();
     const use3d = state.view === '3d' && can3d;
     if (box3d) box3d.hidden = !use3d;
@@ -139,9 +175,86 @@
     const box = $('levels');
     const levels = state.plan ? state.plan.levels : [];
     const pinned = state.settings.level && state.settings.level.id;
-    box.hidden = levels.length < 2 || !!pinned;
+    const house = hasHouse();
+    box.hidden = levels.length + (house ? 1 : 0) < 2 || !!pinned;
     if (box.hidden) return;
-    box.innerHTML = levels.map((l) => `<button type="button" data-level="${esc(l.id)}" class="${l.id === (currentLevel() || {}).id ? 'active' : ''}">${esc(l.name)}</button>`).join('');
+    const active = inHouse() ? HOUSE : (currentLevel() || {}).id;
+    const buttons = (house ? [{ id: HOUSE, name: `🏠 ${T.house}` }] : []).concat(levels);
+    box.innerHTML = buttons.map((l) => `<button type="button" data-level="${esc(l.id)}" class="${l.id === active ? 'active' : ''}">${esc(l.name)}</button>`).join('');
+  }
+
+  /* ---------------------------------------------------------------- house */
+
+  // Taps on the house: a storey opens that level in 3D, the panels, battery, car and so on their details.
+  function houseTap(kind, id) {
+    if (state.Homey.hapticFeedback) state.Homey.hapticFeedback();
+    if (kind === 'level') {
+      if (!id || !state.plan.levels.some((l) => l.id === id)) return;
+      state.levelId = id;
+      if (has3d()) state.view = '3d';
+      closeSheet();
+      scheduleRender();
+      return;
+    }
+    openSheet({ type: 'energy', id: kind });
+  }
+
+  async function loadEnergy() {
+    try {
+      state.energy = await state.Homey.api('GET', '/energy');
+      if (inHouse()) scheduleRender();
+    } catch (err) { /* the house shows without values */ }
+  }
+
+  function fmtW(w) {
+    if (typeof w !== 'number') return '–';
+    const a = Math.abs(w);
+    return a >= 1000 ? `${(a / 1000).toLocaleString(lang, { minimumFractionDigits: 1, maximumFractionDigits: 1 })} kW` : `${Math.round(a)} W`;
+  }
+  const row = (name, value) => `<div class="fp-row"><span class="fp-name">${esc(name)}</span><span class="fp-val">${esc(value)}</span></div>`;
+  const degrees = (v) => `${v.toLocaleString(lang)}°`;
+
+  // The details of a part of the house; the full pages with history and forecast come later.
+  function energySheet(kind) {
+    const e = state.energy;
+    const title = T[kind] || T.house;
+    if (!e) return { title, body: `<p class="fp-sub">${esc(T.noEnergy)}</p>` };
+    const rows = [];
+    if (kind === 'solar') {
+      rows.push(row(T.now, fmtW(e.solarW)));
+      if (e.flows) {
+        rows.push(row(T.solarToHome, fmtW(e.flows.solarToHome)));
+        if (e.battery) rows.push(row(T.solarToBattery, fmtW(e.flows.solarToBattery)));
+        rows.push(row(T.solarToGrid, fmtW(e.flows.solarToGrid)));
+      }
+    } else if (kind === 'grid') {
+      rows.push(row(typeof e.gridW === 'number' && e.gridW < 0 ? T.gridOut : T.gridIn, fmtW(e.gridW)));
+    } else if (kind === 'battery' && e.battery) {
+      if (typeof e.battery.soc === 'number') rows.push(row(T.soc, `${Math.round(e.battery.soc)}%`));
+      const w = e.battery.watts;
+      rows.push(row(Math.abs(w) < 20 ? T.idle : w > 0 ? T.charging : T.discharging, fmtW(w)));
+    } else if (kind === 'car' && e.ev) {
+      rows.push(row(e.ev.charging ? T.charging : T.now, fmtW(e.ev.watts)));
+      if (e.ev.state) rows.push(row(T.car, e.ev.state));
+      if (e.ev.session && typeof e.ev.session.kWh === 'number') rows.push(row(T.session, `${e.ev.session.kWh.toLocaleString(lang)} kWh`));
+      if (e.ev.car && typeof e.ev.car.soc === 'number') rows.push(row(T.soc, `${Math.round(e.ev.car.soc)}%`));
+    } else if (kind === 'heatpump' && e.heating) {
+      for (const h of e.heating.devices) {
+        rows.push(row(h.name, fmtW(h.watts)));
+        if (typeof h.temperature === 'number') rows.push(row(T.temperature, degrees(h.temperature)));
+      }
+    } else if (kind === 'airco' && e.airco) {
+      for (const a of e.airco) {
+        rows.push(row(a.name, a.on ? fmtW(a.watts) : T.off));
+        if (typeof a.temperature === 'number') rows.push(row(T.temperature, degrees(a.temperature)));
+      }
+    } else if (kind === 'home') {
+      rows.push(row(T.use, fmtW(e.homeW)));
+      if (typeof e.solarW === 'number') rows.push(row(T.solar, fmtW(e.solarW)));
+      if (typeof e.gridW === 'number') rows.push(row(e.gridW < 0 ? T.gridOut : T.gridIn, fmtW(e.gridW)));
+      if (e.battery) rows.push(row(T.battery, `${fmtW(e.battery.watts)}${typeof e.battery.soc === 'number' ? ` · ${Math.round(e.battery.soc)}%` : ''}`));
+    }
+    return { title, body: rows.join('') || `<p class="fp-sub">${esc(T.noEnergy)}</p>` };
   }
 
   /* -------------------------------------------------------------- devices */
@@ -234,6 +347,12 @@
     const level = currentLevel();
     if (!level || !state.sheet) return closeSheet();
     const { type, id } = state.sheet;
+    if (type === 'energy') {
+      const out = energySheet(id);
+      $('sheet-title').textContent = out.title;
+      $('sheet-body').innerHTML = out.body;
+      return;
+    }
     let title = ''; let body = '';
     if (type === 'device') {
       const item = level.items.find((i) => i.id === id);
@@ -689,8 +808,9 @@
     $('btn-full').hidden = !!state.Homey.isWeb || !(state.links && state.links.dashboard);
     state.devices = new Map((res.devices || []).map((d) => [d.id, d]));
     const pinned = s.level && s.level.id;
-    if (state.plan && (!state.levelId || !state.plan.levels.some((l) => l.id === state.levelId))) {
-      state.levelId = pinned && state.plan.levels.some((l) => l.id === pinned) ? pinned : (state.plan.levels[0] || {}).id;
+    const known = state.levelId === HOUSE ? hasHouse() : state.plan && state.plan.levels.some((l) => l.id === state.levelId);
+    if (state.plan && (!state.levelId || !known)) {
+      state.levelId = startOnHouse() ? HOUSE : pinned && state.plan.levels.some((l) => l.id === pinned) ? pinned : (state.plan.levels[0] || {}).id;
     }
     scheduleRender();
   }
@@ -720,7 +840,15 @@
 
     setupGestures($('plan'));
     if (Homey.isWeb) setupZoom($('plan'));
-    window.addEventListener('fp3d-ready', scheduleRender);
+    window.addEventListener('fp3d-ready', () => {
+      // house3d.js may load after the plan: start on the house once it is there
+      if (state.plan && !state.picked && state.levelId !== HOUSE && startOnHouse()) state.levelId = HOUSE;
+      scheduleRender();
+    });
+    if ($('house3d')) {
+      loadEnergy();
+      setInterval(() => { if (!document.hidden) loadEnergy(); }, 10000);
+    }
     setupSide();
     $('btn-view').addEventListener('click', () => {
       // 2D <-> 3D on the web page (when the browser can), 2D <-> 2.5D elsewhere.
@@ -737,7 +865,7 @@
     });
     $('levels').addEventListener('click', (ev) => {
       const b = ev.target.closest('[data-level]');
-      if (b) { state.levelId = b.dataset.level; closeSheet(); scheduleRender(); }
+      if (b) { state.levelId = b.dataset.level; state.picked = true; closeSheet(); scheduleRender(); }
     });
     $('sheet').addEventListener('click', (ev) => { if (ev.target === $('sheet')) closeSheet(); });
     $('sheet-close').addEventListener('click', closeSheet);

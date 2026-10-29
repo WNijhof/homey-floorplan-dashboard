@@ -83,7 +83,10 @@ ${testCode}`;
     // Wait until the page has loaded its plan, then start the test.
     const ready = target === 'editor'
       ? '!!(window.__editorState && window.__editorState().plan)'
-      : '!!(window.__widgetState && window.__widgetState().plan && document.querySelector(".fp-device"))';
+      // The web page starts on the house view; the widget on the plan
+      : target === 'dashboard'
+        ? '!!(window.__widgetState && window.__widgetState().plan && document.querySelector(".h3-card"))'
+        : '!!(window.__widgetState && window.__widgetState().plan && document.querySelector(".fp-device"))';
     let ok = false;
     for (let i = 0; i < 50 && !ok; i++) { await sleep(200); ok = await evaluate(ready); }
     if (!ok) throw new Error('Page did not load its plan');

@@ -61,6 +61,7 @@
       return { plan: plan, devices: devices, links: { dashboard: './', editor: 'editor' } };
     }
     if (method === 'GET' && p === '/data') return { devices: devices, zones: data.zones };
+    if (method === 'GET' && p === '/energy') return Object.assign({}, data.energy[new Date().getHours()], { updated: new Date().toISOString() });
     if (method === 'GET' && p === '/weather') return weather();
     if (method === 'GET' && p === '/agenda') return agenda();
     if (method === 'GET' && p === '/siblings') return [];

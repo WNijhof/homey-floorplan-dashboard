@@ -3,6 +3,7 @@
 const http = require('http');
 const Homey = require('homey');
 const DeviceHub = require('./lib/DeviceHub');
+const { EnergyHub } = require('./lib/EnergyHub');
 const PlanStore = require('./lib/PlanStore');
 const Calendar = require('./lib/Calendar');
 const { WebServer } = require('./lib/WebServer');
@@ -36,6 +37,7 @@ class FloorplanApp extends Homey.App {
     const emit = (event, data) => this.emit(event, data);
     this.plans = new PlanStore(this.homey, emit);
     this.hub = new DeviceHub(this.homey, emit);
+    this.energy = new EnergyHub(this.hub);
     this.hubReady = this.hub.init().catch((err) => {
       this.error('Could not connect to the Homey Web API', err);
       throw err;
@@ -289,6 +291,12 @@ class FloorplanApp extends Homey.App {
     };
     this.weatherCache = { at: Date.now(), data };
     return data;
+  }
+
+  // Power of the sun, grid, battery, car and house for the house view, with Energy Dashboard's own calculation.
+  async getEnergy() {
+    await this.hubReady;
+    return this.energy.getLive();
   }
 
   getCalendars() {

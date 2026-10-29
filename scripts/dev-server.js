@@ -8,13 +8,15 @@ const Diagnosis = require('../lib/Diagnosis');
 const { WebServer } = require('../lib/WebServer');
 const { samplePlan, sampleDevices } = require('../test/sample');
 const demo = require('../test/demo-house');
+const { demoEnergyDevices } = require('../test/demo-energy');
+const { summarize } = require('../lib/EnergyHub');
 
 const arg = (name, fallback) => {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
   return hit ? hit.slice(name.length + 3) : fallback;
 };
 
-function createDevApp({ port, code = '', pin = '', siblingPort = null, demoLang = null } = {}) {
+function createDevApp({ port, code = '', pin = '', siblingPort = null, demoLang = null, demoHour = null } = {}) {
   const store = new Map();
   const homey = { settings: { get: (k) => store.get(k), set: (k, v) => store.set(k, v) }, manifest: { version: 'dev', author: { name: 'Dev', email: 'you@example.com' } }, version: 'dev', platform: 'local' };
   const devices = demoLang ? demo.demoDevices(demoLang) : sampleDevices();
@@ -32,6 +34,12 @@ function createDevApp({ port, code = '', pin = '', siblingPort = null, demoLang 
     async getPlanWithDevices(id) {
       const plan = (id && app.plans.get(id)) || app.plans.list()[0] || null;
       return { plan, devices, links: { dashboard: `http://localhost:${port}/`, editor: `http://localhost:${port}/editor`, port } };
+    },
+    async getEnergy() {
+      // --hour=13 shows the energy of that hour of the day
+      const at = new Date();
+      if (demoHour !== null) at.setHours(demoHour, 0, 0, 0);
+      return summarize(demoEnergyDevices(demoLang || 'nl', at));
     },
     async getWeather() {
       const t = Math.round(Date.now() / 1000);
@@ -91,6 +99,6 @@ module.exports = { createDevApp };
 
 if (require.main === module) {
   const port = Number(arg('port', 8687));
-  const app = createDevApp({ port, code: arg('code', ''), pin: arg('pin', ''), siblingPort: arg('sibling-port', null) && Number(arg('sibling-port')), demoLang: arg('demo', null) });
+  const app = createDevApp({ port, code: arg('code', ''), pin: arg('pin', ''), siblingPort: arg('sibling-port', null) && Number(arg('sibling-port')), demoLang: arg('demo', null), demoHour: arg('hour', null) === null ? null : Number(arg('hour')) });
   app.webServer.start(port).then(() => console.log(`Dashboard: http://localhost:${port}/   Editor: http://localhost:${port}/editor`));
 }

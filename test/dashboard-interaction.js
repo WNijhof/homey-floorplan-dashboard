@@ -14,6 +14,23 @@
       (document.elementFromPoint(o.clientX, o.clientY) || el).dispatchEvent(new PointerEvent('pointerup', o));
     };
 
+    // The page starts on the house: cards with the power of each part, a storey tag that opens its level
+    for (let i = 0; i < 40 && !(st().energy && /kW|W/.test((document.querySelector('.h3-home em') || {}).textContent || '')); i++) await wait(100);
+    report.houseStart = st().levelId === 'house' && !document.getElementById('house3d').hidden && document.getElementById('plan').style.display === 'none';
+    report.houseCards = ['solar', 'grid', 'battery', 'car', 'heatpump', 'airco', 'home'].every((k) => document.querySelector(`.h3-${k}`)) && /W/.test(document.querySelector('.h3-home em').textContent);
+    document.querySelector('.h3-battery').click();
+    await wait(150);
+    report.houseSheet = !document.getElementById('sheet').hidden && /%/.test(document.getElementById('sheet-body').textContent);
+    document.getElementById('sheet-close').click();
+    const firstLevel = st().plan.levels[0].id;
+    document.querySelector(`.h3-floor[data-id="${firstLevel}"]`).click();
+    await wait(200);
+    report.houseOpensLevel = st().levelId === firstLevel && document.getElementById('house3d').hidden && document.querySelector('#levels [data-level="house"]') !== null;
+    // The rest of the test starts on the plan in 2D
+    st().view = '2d';
+    document.querySelector(`#levels [data-level="${firstLevel}"]`).click();
+    for (let i = 0; i < 40 && !document.querySelector('.fp-device'); i++) await wait(100);
+
     // Switch to the sister dashboard: same host, its own port.
     const pill = document.querySelector('[data-sibling="energy"]');
     report.switchLink = !!pill && pill.href === `${location.protocol}//${location.hostname}:8686/`;
@@ -35,7 +52,7 @@
 
     // 3D view: real canvas, badges for devices, room labels, and a tap on a badge switches the device.
     document.getElementById('btn-view').click();
-    for (let i = 0; i < 40 && !document.querySelector('.fp3-dev'); i++) await wait(100);
+    for (let i = 0; i < 40 && (!document.querySelector('.fp3-dev') || document.getElementById('view3d').hidden); i++) await wait(100);
     report.view3d = !document.getElementById('view3d').hidden && !!document.querySelector('.fp3-canvas') && document.querySelectorAll('.fp3-dev').length === 10 && document.querySelectorAll('.fp3-room').length === 6;
     // Badges of devices behind a wall are hidden; others stay visible and can be tapped.
     await wait(300);

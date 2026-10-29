@@ -40,3 +40,24 @@
 
 /* Editor: the selected device */
 .fp3-dev.sel .fp3-dot { box-shadow: 0 0 0 3px #2e5bff; }
+
+/* House view (house3d.js): cards with the power of each part, name tags of the storeys */
+.h3-card { pointer-events: auto; cursor: pointer; display: flex; align-items: center; gap: 8px; padding: 6px 12px 6px 6px; margin-bottom: 6px; border-radius: 14px; background: color-mix(in srgb, var(--card) 88%, transparent); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px); box-shadow: 0 3px 14px rgba(0, 0, 0, 0.16); user-select: none; white-space: nowrap; transition: opacity 0.2s, transform 0.12s; }
+.h3-card:active { transform: scale(0.96); }
+.h3-card i { width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; background: var(--h3, var(--accent)); flex: none; }
+.h3-card svg { width: 17px; height: 17px; fill: none; stroke: #fff; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.h3-card b { display: block; font-size: 11px; font-weight: 600; color: var(--muted); line-height: 1.2; }
+.h3-card em { display: block; font-style: normal; font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--text); line-height: 1.2; }
+.h3-card.idle { opacity: 0.72; }
+.h3-card.idle i { background: color-mix(in srgb, var(--muted) 55%, transparent); }
+.h3-solar { --h3: #f5a700; }
+.h3-grid { --h3: #6f86a8; }
+.h3-battery { --h3: #2fb350; }
+.h3-car { --h3: #3a7bd5; }
+.h3-heatpump { --h3: #e0663a; }
+.h3-airco { --h3: #3fb6c8; }
+.h3-home { --h3: var(--accent); }
+.h3-floor { pointer-events: auto; cursor: pointer; margin-right: 8px; padding: 3px 10px; border-radius: 999px; font-size: 12px; font-weight: 600; color: var(--text); background: color-mix(in srgb, var(--card) 80%, transparent); box-shadow: 0 1px 6px rgba(0, 0, 0, 0.12); white-space: nowrap; user-select: none; }
+.h3-floor:hover { background: var(--accent); color: #fff; }
+.h3-anchor { pointer-events: none; }
+.h3-card { transition: opacity 0.2s, transform 0.25s; }
