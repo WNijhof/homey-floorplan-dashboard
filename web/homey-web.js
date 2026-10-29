@@ -7,8 +7,8 @@
   'use strict';
 
   var STRINGS = {
-    en: { pinTitle: 'Edit PIN', pinPrompt: 'Changing the floor plan needs the edit PIN. You can find or change it in the Homey app, in the settings of Floor Plan Dashboard.', open: 'Unlock', cancel: 'Cancel', wrong: 'Wrong PIN.', locked: 'Too many wrong tries. Try again later.' },
-    nl: { pinTitle: 'Bewerk-pincode', pinPrompt: 'Voor het wijzigen van de plattegrond is de bewerk-pincode nodig. Je vindt of wijzigt hem in de Homey-app bij de instellingen van Plattegrond Dashboard.', open: 'Ontgrendelen', cancel: 'Annuleren', wrong: 'Verkeerde pincode.', locked: 'Te vaak fout. Probeer het straks opnieuw.' },
+    en: { pinTitle: 'Edit PIN', pinPrompt: 'Changing the floor plan needs the edit PIN. You can find or change it in the Homey app, in the settings of HomeDeck.', open: 'Unlock', cancel: 'Cancel', wrong: 'Wrong PIN.', locked: 'Too many wrong tries. Try again later.' },
+    nl: { pinTitle: 'Bewerk-pincode', pinPrompt: 'Voor het wijzigen van de plattegrond is de bewerk-pincode nodig. Je vindt of wijzigt hem in de Homey-app bij de instellingen van HomeDeck.', open: 'Ontgrendelen', cancel: 'Annuleren', wrong: 'Verkeerde pincode.', locked: 'Te vaak fout. Probeer het straks opnieuw.' },
   };
   var T = STRINGS[(navigator.language || 'en').slice(0, 2)] || STRINGS.en;
 

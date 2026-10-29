@@ -6,7 +6,7 @@
 
   const STRINGS = {
     en: {
-      noPlan: 'No floor plan yet. Draw one in the app settings of Floorplan Live.',
+      noPlan: 'No floor plan yet. Draw one in the HomeDeck editor.',
       on: 'On', brightness: 'Brightness', position: 'Position', open: 'Open', close: 'Close', stop: 'Stop',
       target: 'Target', temperature: 'Temperature', humidity: 'Humidity', power: 'Power',
       locked: 'Locked', unlocked: 'Unlocked', lock: 'Lock', unlock: 'Unlock', confirmUnlock: 'Tap again to unlock',
@@ -17,7 +17,7 @@
       zoomReset: 'Show the whole level',
     },
     nl: {
-      noPlan: 'Nog geen plattegrond. Teken er een in de app-instellingen van Plattegrond Live.',
+      noPlan: 'Nog geen plattegrond. Teken er een in de editor van HomeDeck.',
       on: 'Aan', brightness: 'Helderheid', position: 'Stand', open: 'Open', close: 'Dicht', stop: 'Stop',
       target: 'Doel', temperature: 'Temperatuur', humidity: 'Luchtvochtigheid', power: 'Vermogen',
       locked: 'Op slot', unlocked: 'Niet op slot', lock: 'Op slot doen', unlock: 'Ontgrendelen', confirmUnlock: 'Tik nogmaals om te ontgrendelen',

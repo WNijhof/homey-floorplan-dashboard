@@ -1,4 +1,4 @@
-Plattegrond Dashboard toont je huis als live plattegrond. Lampen gloeien waar ze hangen, kamers tonen hun temperatuur, zonwering en deuren hun stand, en naast elk apparaat staat de waarde die ertoe doet (°C, %, W). Tik op een apparaat voor de bediening. Met klok, weer en agenda ernaast is het een compleet dashboard voor een tablet aan de muur.
+HomeDeck toont je huis als live plattegrond. Lampen gloeien waar ze hangen, kamers tonen hun temperatuur, zonwering en deuren hun stand, en naast elk apparaat staat de waarde die ertoe doet (°C, %, W). Tik op een apparaat voor de bediening. Met klok, weer en agenda ernaast is het een compleet dashboard voor een tablet aan de muur.
 
 Homey zet het dashboard en de editor als webpagina's in je eigen thuisnetwerk, dus een wandtablet, laptop of telefoon heeft alleen een browser nodig. Geen cloudaccount en geen extra computer.
 

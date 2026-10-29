@@ -5,8 +5,8 @@
   "sdk": 3,
   "platforms": ["local"],
   "name": {
-    "en": "Floor Plan Dashboard",
-    "nl": "Plattegrond Dashboard"
+    "en": "HomeDeck",
+    "nl": "HomeDeck"
   },
   "description": {
     "en": "Your home as a live floor plan, for any screen in your home",

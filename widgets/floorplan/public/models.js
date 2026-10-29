@@ -31,7 +31,7 @@
     kenney: { name: 'Kenney Furniture Pack', author: 'Kenney', url: 'https://kenney.nl', license: 'CC0 1.0' },
     kaykit: { name: 'KayKit Furniture Bits', author: 'Kay Lousberg', url: 'https://www.kaylousberg.com', license: 'CC0 1.0' },
     quaternius: { name: 'Furniture Pack', author: 'Quaternius', url: 'https://quaternius.com', license: 'CC0 1.0' },
-    own: { name: 'Plattegrond Dashboard', author: '', url: '', license: '' },
+    own: { name: 'HomeDeck', author: '', url: '', license: '' },
   };
 
   // Turn (degrees) so a model's front faces +Z (towards the room, the plan's +y).

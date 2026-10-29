@@ -63,7 +63,7 @@ class FloorplanApp extends Homey.App {
       }))).filter((l) => l.name.toLowerCase().includes(query.toLowerCase()));
     });
 
-    this.log('Floor Plan Dashboard started');
+    this.log('HomeDeck started');
     if (Homey.env && Homey.env.FP_DIAGNOSTICS === '1') this.diagnose().catch((err) => this.error('diagnostics failed', err));
     if (Homey.env && Homey.env.FP_SEED_PLAN === '1') this.seedPlan().catch((err) => this.error('seeding failed', err));
   }

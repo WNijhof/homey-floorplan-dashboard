@@ -1,4 +1,4 @@
-# Plattegrond Dashboard (Floor Plan Dashboard) voor Homey Pro
+# HomeDeck voor Homey Pro (voorheen Plattegrond Dashboard)
 
 Je huis als live plattegrond in 2D en 3D: lampen gloeien waar ze hangen, kamers tonen hun temperatuur, zonwering en deuren hun stand, en naast elk apparaat staat de waarde die ertoe doet (°C, %, W). Tik op een apparaat voor de bediening. Met klok, weer en agenda ernaast is het een compleet dashboard voor een tablet aan de muur.
 
@@ -10,7 +10,7 @@ Zusje van **Energie Dashboard**: als beide geïnstalleerd zijn, staat bovenaan e
 
 ## Gebruiken
 
-1. Installeer de app en open in de Homey-app *Apps → Plattegrond Dashboard → Instellingen*.
+1. Installeer de app en open in de Homey-app *Apps → HomeDeck → Instellingen*.
 2. Kies **Editor openen**: de editor is een webpagina in je thuisnetwerk (`http://<homey>:8687/editor`). Teken je huis daar op een computer of tablet; dat werkt veel prettiger dan in de Homey-app.
 3. Open het **dashboard** (`http://<homey>:8687/`) op een tablet, of zet de widget **Plattegrond** op een Homey-dashboard.
 

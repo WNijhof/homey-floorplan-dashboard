@@ -72,7 +72,7 @@
   <script>
     var STRINGS = {
       en: {
-        title: 'Floor Plan Dashboard',
+        title: 'HomeDeck',
         intro: 'Draw and furnish your home on a computer or tablet: the editor is a web page in your home network. The dashboard is a web page too, for a tablet on the wall, and there is a Floor plan widget for Homey dashboards.',
         editor: 'Open the editor', dashboard: 'Open the dashboard',
         running: 'Running on port {port}', stopped: 'Not running', portInUse: 'Port {port} is already in use by something else; choose another one.',
@@ -87,7 +87,7 @@
         ask: 'What does not work well? (for example: my thermostat shows no temperature)', paste: '(Paste the report here; it is on your clipboard.)',
       },
       nl: {
-        title: 'Plattegrond Dashboard',
+        title: 'HomeDeck',
         intro: 'Teken en richt je huis in op een computer of tablet: de editor is een webpagina in je thuisnetwerk. Het dashboard is ook een webpagina, voor een tablet aan de muur, en er is een Plattegrond-widget voor Homey-dashboards.',
         editor: 'Editor openen', dashboard: 'Dashboard openen',
         running: 'Draait op poort {port}', stopped: 'Draait niet', portInUse: 'Poort {port} is al in gebruik door iets anders; kies een andere.',
@@ -156,7 +156,7 @@
           box.select();
           try { document.execCommand('copy'); } catch (e) { /* it can be selected by hand */ }
           $('report-status').textContent = T.copied;
-          var subject = 'Diagnose Plattegrond Dashboard ' + (shared.report.app || '');
+          var subject = 'Diagnose HomeDeck ' + (shared.report.app || '');
           var url = null;
           if (kind === 'mail' && shared.email) {
             var full = T.ask + '\n\n\n' + JSON.stringify(shared.report) + '\n';

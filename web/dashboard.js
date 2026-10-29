@@ -201,7 +201,7 @@
       box.value = pretty;
       box.hidden = false;
       return copyText(pretty).then(function () {
-        var subject = 'Diagnose Plattegrond Dashboard ' + (shared.report.app || '');
+        var subject = 'Diagnose HomeDeck ' + (shared.report.app || '');
         if (kind === 'mail' && shared.email) {
           var full = T.reportAsk + '\n\n\n' + JSON.stringify(shared.report) + '\n';
           var body = encodeURIComponent(full).length < MAIL_LIMIT ? full : T.reportAsk + '\n\n\n' + T.reportPaste + '\n';

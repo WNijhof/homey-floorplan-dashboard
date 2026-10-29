@@ -1,6 +1,6 @@
 {
-  "name": "Plattegrond Dashboard",
-  "short_name": "Plattegrond",
+  "name": "HomeDeck",
+  "short_name": "HomeDeck",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#151515",

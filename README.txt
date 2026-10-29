@@ -1,4 +1,4 @@
-Floor Plan Dashboard shows your home as a live floor plan. Lamps glow where they hang, rooms show their temperature, blinds and doors their state, and next to each device is the value that matters (°C, %, W). Tap a device for its controls. With a clock, weather and calendar beside it, it is a complete dashboard for a tablet on the wall.
+HomeDeck shows your home as a live floor plan. Lamps glow where they hang, rooms show their temperature, blinds and doors their state, and next to each device is the value that matters (°C, %, W). Tap a device for its controls. With a clock, weather and calendar beside it, it is a complete dashboard for a tablet on the wall.
 
 Homey serves the dashboard and the editor as web pages in your own home network, so a wall tablet, laptop or phone only needs a browser. No cloud account and no extra computer.
 
