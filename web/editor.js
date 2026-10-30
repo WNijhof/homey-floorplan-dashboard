@@ -16,7 +16,7 @@
       level: 'Level', name: 'Name', wallHeight: 'Wall height (cm)', wallThickness: 'Wall thickness (cm)', zone: 'Homey zone', none: '— none —',
       otherLevel: 'Other', roomsFromZones: 'Rooms from Homey', place: 'Place', allPlaced: 'Every zone already has a room on the plan.',
       plan: 'Plan', deleteLevel: 'Delete level', deletePlan: 'Delete plan', confirmAgain: 'Click again to confirm',
-      startFromZones: 'Start from Homey zones', startBlank: 'Start blank', startNote: 'Zones with sub-zones become levels; their sub-zones become rooms you can drag into place.',
+      startFromZones: 'Quick start from Homey zones', startBlank: 'Start blank', startNote: 'Your zones become levels and rooms with their devices in them, ready to drag into place. Then you set up the look of the house.',
       room: 'Room', floorColour: 'Floor colour', themeColour: 'Theme colour', tempFrom: 'Temperature from', humFrom: 'Humidity from', climate: 'Thermostat',
       zoneAverage: 'Average of the zone', area: 'Area', delete: 'Delete',
       device: 'Device', shape: 'Shape', auto: 'Automatic', mount: 'Sits', ceiling: 'Ceiling', wall: 'Wall', floor: 'Floor',
@@ -33,7 +33,8 @@
       picture: 'Trace a picture', pictureNote: 'Add a scan or photo of a floor plan, then measure a line of known length to set its scale.',
       addPicture: 'Add picture', opacity: 'Opacity', setScale: 'Set scale by measuring', removePicture: 'Remove picture',
       realLength: 'Real length of the measured line (cm)', apply: 'Apply', measured: 'Measured',
-      hintSelect: 'Click: select · drag: move · double-click an edge: add a corner · Alt-click a corner: remove it · Ctrl+C / Ctrl+V: copy and paste · Delete: remove · Space+drag: pan',
+      addCorner: 'Pull to add a corner', lShape: 'Make L-shaped', shapeNote: 'Any shape is possible: pull a blue plus on an edge to add a corner, or pull a white corner to move it. Alt-click a corner removes it.',
+      hintSelect: 'Click: select · drag: move · pull a blue plus: add a corner · Alt-click a corner: remove it · Ctrl+C / Ctrl+V: copy and paste · Delete: remove · Space+drag: pan',
       hintRoom: 'Drag to draw a room. Rooms placed against each other share a wall.',
       hintWall: 'Click to place corners. Type a length and press Enter for an exact wall. Esc or double-click finishes.',
       hintPlace: 'Click on the plan to place it. Esc cancels.',
@@ -55,13 +56,35 @@
       checkDraft: 'Check the draft on the plan, choose the Homey zone per room, then use it. You can change everything afterwards.',
       calendars: 'Calendars', calendarsNote: 'Paste an iCal link (for Google Calendar: Settings → your calendar → "Secret address in iCal format"). The widget shows upcoming events in its side panel. Links stay on your Homey.',
       addCalendar: 'Add calendar', calendarUrl: 'iCal link', save: 'Save', calendarsSaved: 'Calendars saved', remove: 'Remove',
+      backupTitle: 'Backup', backupNote: 'One file with your plans, calendars, lists and screens, to keep or to take to another Homey. Before every update the app also makes a copy itself. Removing the app deletes everything but your own file.', backupExport: 'Export', backupImport: 'Import', backupFrom: 'Before the update of', backupRestore: 'Put back', backupBad: 'This file cannot be read.',
+      toolSelect: 'Select', toolRoom: 'Room', toolWall: 'Walls', toolDoor: 'Doors', toolWindow: 'Windows', toolFurniture: 'Furniture', toolDevice: 'Devices', toolMeasure: 'Measure', toolPicture: 'Picture', toolCalendar: 'Calendar', toolHouse: 'House',
+      scene: 'Around the house', sceneStudio: 'Nothing: calm', sceneGarden: 'Garden, path and driveway',
+      forecastOn: 'Solar forecast from Forecast.Solar (this service then knows roughly where your house is)',
+      variablesTitle: 'Variables on the dashboard', variablesNote: 'Logic variables to see and change there.', variablesNone: 'No Logic variables yet.', roomVacuum: 'Flow that vacuums this room',
+      actionsTitle: 'Buttons on the dashboard', actionsNote: 'Moods and Flows you can start with one tap.', actionsNone: 'No moods or Flows that can be started.',
+      front: 'Front of the house on the plan', frontBottom: 'At the bottom', frontTop: 'At the top', frontLeft: 'On the left', frontRight: 'On the right',
+      outdoorLamps: 'Outdoor lamps', outdoorNote: 'Lamps with a name like garden, driveway or front door are found by themselves. They burn on the house when the real lamp is on, and tapping them switches it.', place_door: 'Beside the front door', place_path: 'Along the path', place_drive: 'Along the driveway', place_garden: 'In the garden',
+      photo: 'Own photo', photoNote: 'Use a photo of your house instead of the 3D house. It stays in your Homey and is never part of a problem report.', photoPick: 'Choose a photo', photoReplace: 'Other photo', photoRemove: 'Remove photo',
+      photoAreas: 'Draw what can be tapped', photoAreasNote: 'Choose a part and click its corners on the photo. Click the first corner again, or press Enter, to finish; Esc stops.', drawArea: 'Draw', redrawArea: 'Again', drawingArea: 'Drawing…', partHouse: 'The whole house',
+      house: 'The house from outside', houseNote: 'The dashboard opens on the whole house. It is the same house for everyone, set up to look like yours: tap a storey to go inside. Parts such as solar panels or a car appear when Homey has such a device (Automatic).',
+      houseType: 'House', detached: 'Detached', semi: 'Semi-detached', terraced: 'Terraced', neighbourSide: 'Neighbours on the', left: 'Left', right: 'Right',
+      roof: 'Roof', gable: 'Gable roof', hip: 'Hip roof', flat: 'Flat roof', ridge: 'Ridge', ridgeWidth: 'Along the front', ridgeDepth: 'Front to back', pitch: 'Roof pitch (°)',
+      facing: 'The front faces', dormer: 'Dormer at the back', extension: 'Extension', back: 'At the back', side: 'At the side', carport: 'Carport',
+      houseParts: 'On and around the house', showAuto: 'Automatic', showOn: 'Always', showOff: 'Never', panels: 'Number of panels (0: as many as fit)',
+      batteryPlace: 'Battery stands', underCarport: 'Under the carport', againstWall: 'Against the wall', noHouse3d: 'This browser cannot show the house in 3D.',
+      facade: 'Facade', brick: 'Red brick', darkbrick: 'Dark brick', yellowbrick: 'Yellow brick', plaster: 'White plaster', darkplaster: 'Dark plaster',
+      roofColor: 'Roof tiles', anthracite: 'Anthracite', red: 'Red', black: 'Black', white: 'White', frames: 'Window frames', doorColor: 'Front door',
+      solarLayout: 'Place of the panels', solarSunny: 'On the sunny side of the roof', solarBoth: 'On both roof halves (such as east-west)',
+      kwp: 'Peak power for the forecast (kWp)', kwpAuto: 'from the panels (0.42 kWp each)',
+      partSolar: 'Solar panels', partGrid: 'Grid connection', partBattery: 'Home battery', partCar: 'Car and charger', partHeatpump: 'Heat pump', partAirco: 'Air conditioner',
+      north: 'North', northEast: 'North-east', east: 'East', southEast: 'South-east', south: 'South', southWest: 'South-west', west: 'West', northWest: 'North-west',
     },
     nl: {
       newPlan: 'Nieuwe plattegrond', saved: 'Opgeslagen', saving: 'Opslaan…', unsaved: 'Niet opgeslagen', saveFailed: 'Opslaan mislukt',
       level: 'Verdieping', name: 'Naam', wallHeight: 'Muurhoogte (cm)', wallThickness: 'Muurdikte (cm)', zone: 'Homey-zone', none: '— geen —',
       otherLevel: 'Overig', roomsFromZones: 'Kamers uit Homey', place: 'Plaatsen', allPlaced: 'Elke zone heeft al een kamer op de plattegrond.',
       plan: 'Plattegrond', deleteLevel: 'Verdieping verwijderen', deletePlan: 'Plattegrond verwijderen', confirmAgain: 'Klik nogmaals om te bevestigen',
-      startFromZones: 'Beginnen vanuit Homey-zones', startBlank: 'Leeg beginnen', startNote: 'Zones met subzones worden verdiepingen; hun subzones worden kamers die je op hun plek sleept.',
+      startFromZones: 'Snelle start vanuit Homey-zones', startBlank: 'Leeg beginnen', startNote: 'Je zones worden verdiepingen en kamers met hun apparaten erin, klaar om op hun plek te slepen. Daarna stel je het uiterlijk van het huis in.',
       room: 'Kamer', floorColour: 'Vloerkleur', themeColour: 'Themakleur', tempFrom: 'Temperatuur van', humFrom: 'Luchtvochtigheid van', climate: 'Thermostaat',
       zoneAverage: 'Gemiddelde van de zone', area: 'Oppervlakte', delete: 'Verwijderen',
       device: 'Apparaat', shape: 'Vorm', auto: 'Automatisch', mount: 'Zit', ceiling: 'Plafond', wall: 'Muur', floor: 'Vloer',
@@ -78,7 +101,8 @@
       picture: 'Afbeelding overtrekken', pictureNote: 'Voeg een scan of foto van een plattegrond toe en meet daarna een lijn met bekende lengte om de schaal te zetten.',
       addPicture: 'Afbeelding toevoegen', opacity: 'Doorzichtigheid', setScale: 'Schaal zetten door te meten', removePicture: 'Afbeelding verwijderen',
       realLength: 'Echte lengte van de gemeten lijn (cm)', apply: 'Toepassen', measured: 'Gemeten',
-      hintSelect: 'Klik: selecteren · slepen: verplaatsen · dubbelklik op een rand: hoek toevoegen · Alt-klik op een hoek: verwijderen · Ctrl+C / Ctrl+V: kopiëren en plakken · Delete: verwijderen · Spatie+slepen: verschuiven',
+      addCorner: 'Trek om een hoek toe te voegen', lShape: 'Maak L-vorm', shapeNote: 'Elke vorm kan: trek aan een blauwe plus op een rand om een hoek toe te voegen, of aan een witte hoek om hem te verplaatsen. Alt-klik op een hoek verwijdert hem.',
+      hintSelect: 'Klik: selecteren · slepen: verplaatsen · trek aan een blauwe plus: hoek toevoegen · Alt-klik op een hoek: verwijderen · Ctrl+C / Ctrl+V: kopiëren en plakken · Delete: verwijderen · Spatie+slepen: verschuiven',
       hintRoom: 'Sleep om een kamer te tekenen. Kamers die tegen elkaar liggen delen een muur.',
       hintWall: 'Klik om hoeken te zetten. Typ een lengte en druk Enter voor een exacte muur. Esc of dubbelklik stopt.',
       hintPlace: 'Klik op de plattegrond om te plaatsen. Esc annuleert.',
@@ -100,6 +124,28 @@
       checkDraft: 'Bekijk het concept op de plattegrond, kies per kamer de Homey-zone en gebruik het. Je kunt daarna alles nog aanpassen.',
       calendars: "Agenda's", calendarsNote: 'Plak een iCal-link (Google Agenda: Instellingen → je agenda → "Geheim adres in iCal-indeling"). De widget toont de komende afspraken in het zijpaneel. Links blijven op je Homey.',
       addCalendar: 'Agenda toevoegen', calendarUrl: 'iCal-link', save: 'Opslaan', calendarsSaved: "Agenda's opgeslagen", remove: 'Verwijderen',
+      backupTitle: 'Back-up', backupNote: 'Eén bestand met je plattegronden, agenda\'s, lijstjes en schermen, om te bewaren of mee te nemen naar een andere Homey. Vóór elke update maakt de app ook zelf een kopie. Verwijder je de app, dan is alles weg behalve je eigen bestand.', backupExport: 'Exporteren', backupImport: 'Importeren', backupFrom: 'Van vóór de update van', backupRestore: 'Terugzetten', backupBad: 'Dit bestand kan niet worden gelezen.',
+      toolSelect: 'Selecteren', toolRoom: 'Kamer', toolWall: 'Muren', toolDoor: 'Deuren', toolWindow: 'Ramen', toolFurniture: 'Meubels', toolDevice: 'Apparaten', toolMeasure: 'Meten', toolPicture: 'Afbeelding', toolCalendar: 'Agenda', toolHouse: 'Huis',
+      scene: 'Rond het huis', sceneStudio: 'Niets: rustig', sceneGarden: 'Tuin, pad en oprit',
+      forecastOn: 'Zonneverwachting van Forecast.Solar (die dienst weet dan ongeveer waar je huis staat)',
+      variablesTitle: 'Variabelen op het dashboard', variablesNote: 'Logic-variabelen om daar te zien en te wijzigen.', variablesNone: 'Nog geen Logic-variabelen.', roomVacuum: 'Flow die deze kamer stofzuigt',
+      actionsTitle: 'Knoppen op het dashboard', actionsNote: 'Moods en Flows die je met één tik start.', actionsNone: 'Geen moods of Flows die je kunt starten.',
+      front: 'Voorkant van het huis op de plattegrond', frontBottom: 'Onder', frontTop: 'Boven', frontLeft: 'Links', frontRight: 'Rechts',
+      outdoorLamps: 'Buitenlampen', outdoorNote: 'Lampen met een naam als tuin, oprit of voordeur worden vanzelf gevonden. Ze branden op het huis als de echte lamp aan is, en tikken schakelt hem.', place_door: 'Naast de voordeur', place_path: 'Langs het pad', place_drive: 'Langs de oprit', place_garden: 'In de tuin',
+      photo: 'Eigen foto', photoNote: 'Gebruik een foto van je huis in plaats van het 3D-huis. Hij blijft in je Homey en gaat nooit mee in een probleemrapport.', photoPick: 'Foto kiezen', photoReplace: 'Andere foto', photoRemove: 'Foto verwijderen',
+      photoAreas: 'Teken waar je op kunt tikken', photoAreasNote: 'Kies een onderdeel en klik de hoeken aan op de foto. Klik de eerste hoek nog eens, of druk op Enter, om af te ronden; Esc stopt.', drawArea: 'Tekenen', redrawArea: 'Opnieuw', drawingArea: 'Bezig…', partHouse: 'Het hele huis',
+      house: 'Het huis van buiten', houseNote: "Het dashboard opent op het hele huis. Het is voor iedereen hetzelfde huis, zo ingesteld dat het op het jouwe lijkt: tik op een verdieping om naar binnen te gaan. Onderdelen zoals zonnepanelen of een auto verschijnen als Homey zo'n apparaat heeft (Automatisch).",
+      houseType: 'Woning', detached: 'Vrijstaand', semi: 'Twee-onder-een-kap', terraced: 'Tussenwoning', neighbourSide: 'Buren aan de', left: 'Linkerkant', right: 'Rechterkant',
+      roof: 'Dak', gable: 'Zadeldak', hip: 'Schilddak', flat: 'Plat dak', ridge: 'Nok', ridgeWidth: 'Langs de voorkant', ridgeDepth: 'Van voor naar achter', pitch: 'Dakhelling (°)',
+      facing: 'De voorkant ligt op het', dormer: 'Dakkapel aan de achterkant', extension: 'Aanbouw', back: 'Aan de achterkant', side: 'Aan de zijkant', carport: 'Carport',
+      houseParts: 'Op en rond het huis', showAuto: 'Automatisch', showOn: 'Altijd', showOff: 'Nooit', panels: 'Aantal panelen (0: zoveel als past)',
+      batteryPlace: 'Accu staat', underCarport: 'Onder de carport', againstWall: 'Tegen de muur', noHouse3d: 'Deze browser kan het huis niet in 3D tonen.',
+      facade: 'Gevel', brick: 'Rode baksteen', darkbrick: 'Donkere baksteen', yellowbrick: 'Gele baksteen', plaster: 'Wit stucwerk', darkplaster: 'Donker stucwerk',
+      roofColor: 'Dakpannen', anthracite: 'Antraciet', red: 'Rood', black: 'Zwart', white: 'Wit', frames: 'Kozijnen', doorColor: 'Voordeur',
+      solarLayout: 'Plaats van de panelen', solarSunny: 'Op de zonnigste dakhelft', solarBoth: 'Op beide dakhelften (zoals oost-west)',
+      kwp: 'Piekvermogen voor de verwachting (kWp)', kwpAuto: 'uit de panelen (0,42 kWp per stuk)',
+      partSolar: 'Zonnepanelen', partGrid: 'Netaansluiting', partBattery: 'Thuisaccu', partCar: 'Auto en laadpaal', partHeatpump: 'Warmtepomp', partAirco: 'Airco',
+      north: 'Noorden', northEast: 'Noordoosten', east: 'Oosten', southEast: 'Zuidoosten', south: 'Zuiden', southWest: 'Zuidwesten', west: 'Westen', northWest: 'Noordwesten',
     },
   };
   const T = STRINGS[(navigator.language || 'en').slice(0, 2)] || STRINGS.en;
@@ -123,7 +169,7 @@
     snap: true,
     grid: true,
     showFurniture: true,
-    preview: null, // null or 'iso'
+    preview: null, // null or 'steep'
     turn: 0,
     undo: [],
     redo: [],
@@ -396,7 +442,7 @@
 
   /* -------------------------------------------------------------- drawing */
 
-  const isDark = () => window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const isDark = () => (window.FpTheme ? window.FpTheme.isDark() : window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches);
   const f1 = (n) => (Math.round(n * 10) / 10).toString();
   const fmtLen = (cm) => (cm >= 100 ? `${(cm / 100).toFixed(2)} m` : `${Math.round(cm)} cm`);
 
@@ -405,6 +451,28 @@
     svg.className.baseVal = `ed-canvas tool-${S.tool}${S.pendingFurniture || S.pendingDevice ? ' placing' : ''}${S.drag && S.drag.type === 'pan' ? ' panning' : ''}`;
     if (!lv) { svg.innerHTML = ''; return; }
     const pal = isDark() ? core.DARK_PALETTE : core.LIGHT_PALETTE;
+    // The house tool shows the whole house as the dashboard will
+    const houseBox = $('ed-house');
+    const h3 = window.FloorplanHouse3D;
+    const photoBox = $('ed-photo');
+    const photo = S.tool === 'house' && window.HouseCore ? window.HouseCore.settings(S.plan).photo : null;
+    if (photoBox) photoBox.hidden = !photo;
+    if (photo) {
+      if (houseBox) houseBox.hidden = true;
+      $('ed-3d').hidden = true;
+      svg.style.display = 'none';
+      drawPhoto();
+      return;
+    }
+    if (S.tool === 'house' && houseBox && h3 && h3.supported) {
+      houseBox.hidden = false;
+      $('ed-3d').hidden = true;
+      svg.style.display = 'none';
+      if (!S.house) S.house = h3.create(houseBox, { tap: openFromHouse });
+      S.house.sync({ plan: S.plan, energy: S.energy, devices: S.devices, dark: isDark(), lang: (navigator.language || 'en').slice(0, 2), texts: HOUSE_TEXTS });
+      return;
+    }
+    if (houseBox) houseBox.hidden = true;
     const box3d = $('ed-3d');
     const v3 = window.FloorplanView3D;
     if (S.preview && box3d && v3 && v3.supported) {
@@ -496,6 +564,12 @@
         if (!room.locked) {
           room.points.forEach((p, i) => {
             parts.push(`<circle data-handle="v:${i}" cx="${f1(p[0])}" cy="${f1(p[1])}" r="${f1(6 * k)}" fill="#fff" stroke="${accent}" stroke-width="${f1(2 * k)}" style="cursor:move"/>`);
+            // A plus halfway along each edge: pull it to make a corner (an L-shape, a bay)
+            const q = room.points[(i + 1) % room.points.length];
+            if (G.dist(p, q) * (1 / k) > 60) {
+              const mx = (p[0] + q[0]) / 2; const my = (p[1] + q[1]) / 2; const s = 3 * k;
+              parts.push(`<g data-handle="m:${i}" style="cursor:copy"><title>${esc(T.addCorner)}</title><circle cx="${f1(mx)}" cy="${f1(my)}" r="${f1(6 * k)}" fill="${accent}" stroke="#fff" stroke-width="${f1(1.5 * k)}"/><path d="M${f1(mx - s)} ${f1(my)}H${f1(mx + s)}M${f1(mx)} ${f1(my - s)}V${f1(my + s)}" stroke="#fff" stroke-width="${f1(1.6 * k)}" pointer-events="none"/></g>`);
+            }
           });
         }
       }
@@ -721,6 +795,15 @@
       if (S.sel.kind === 'room') {
         const index = Number(hit.handle.split(':')[1]);
         const room = lv.rooms.find((r) => r.id === S.sel.id);
+        if (hit.handle.startsWith('m:')) {
+          // A new corner halfway the edge, moved at once
+          snapshot();
+          const a = room.points[index]; const b = room.points[(index + 1) % room.points.length];
+          room.points.splice(index + 1, 0, [Math.round((a[0] + b[0]) / 2), Math.round((a[1] + b[1]) / 2)]);
+          S.drag = { type: 'vertex', room, index: index + 1 };
+          draw();
+          return;
+        }
         if (ev.altKey && room.points.length > 3) { commit(() => room.points.splice(index, 1)); return; }
         snapshot();
         S.drag = { type: 'vertex', room, index };
@@ -977,6 +1060,8 @@
         return;
       }
     }
+    if (S.photoDraft && ev.key === 'Enter') { finishArea(); return; }
+    if (S.photoDraft && ev.key === 'Escape') { S.photoDraft = null; draw(); renderPanel(); return; }
     if (ev.key === 'Escape') {
       S.wallDraft = null; S.pendingFurniture = null; S.pendingDevice = null; S.measure = null; S.calibrating = false;
       if (S.tool !== 'select') setTool('select'); else select(null);
@@ -1172,6 +1257,8 @@
 
   function setTool(tool) {
     S.tool = tool;
+    // The house preview shows the parts Homey has, with their values
+    if (tool === 'house' && !S.energy) api('GET', '/energy').then((e) => { S.energy = e; if (S.tool === 'house') draw(); }).catch(() => {});
     S.wallDraft = null; S.ghost = null; S.pendingFurniture = null; S.pendingDevice = null;
     if (tool !== 'measure' && tool !== 'picture') { S.measure = null; S.calibrating = false; }
     for (const b of document.querySelectorAll('#tools [data-tool]')) b.classList.toggle('on', b.dataset.tool === tool);
@@ -1209,6 +1296,7 @@
     else if (S.tool === 'picture') html = picturePanel(lv);
     else if (S.tool === 'measure') html = measurePanel();
     else if (S.tool === 'calendar') html = calendarPanel();
+    else if (S.tool === 'house') html = housePanel();
     else if (S.tool === 'door' || S.tool === 'window') html = `<h2>${S.tool === 'door' ? T.door : T.window}</h2><p class="ed-note">${S.tool === 'door' ? T.doorNote : T.windowNote}</p>`;
     else html = levelPanel(lv);
     if (!placing) key = obj ? `sel:${S.sel.kind}` : S.tool;
@@ -1246,6 +1334,38 @@
       <button type="button" class="ed-btn" data-action="create-blank">${T.startBlank}</button></div>`;
   }
 
+  // The copies made before an update, to go back to one.
+  function backupCopies() {
+    if (!S.copies) {
+      if (!S.copiesAsked) {
+        S.copiesAsked = true;
+        api('GET', '/backups').then((list) => { S.copies = list; renderPanel(); }).catch(() => { S.copies = []; });
+      }
+      return '';
+    }
+    return S.copies.map((c) => `<div class="ed-list-row"><span>${esc(T.backupFrom)} ${esc(new Date(c.made).toLocaleDateString())}</span><button type="button" class="ed-btn small" data-action="backup-restore" data-file="${esc(c.file)}">${S.armed === c.file ? T.confirmAgain : T.backupRestore}</button></div>`).join('');
+  }
+
+  function saveFile(name, data) {
+    const url = URL.createObjectURL(new Blob([JSON.stringify(data)], { type: 'application/json' }));
+    const a = document.createElement('a');
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 10000);
+  }
+
+  function readBackup(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      let data = null;
+      try { data = JSON.parse(reader.result); } catch (err) { data = null; }
+      const say = (text) => { const el = $('backup-result'); if (el) el.textContent = text; };
+      if (!data) { say(T.backupBad); return; }
+      api('POST', '/backup', data).then(() => location.reload()).catch((err) => say(err.message || T.backupBad));
+    };
+    reader.readAsText(file);
+  }
+
   function levelPanel(lv) {
     // Without a floor zone every room zone is offered, except those already on any level of the plan.
     const rooms = lv.zoneId ? lv.rooms : S.plan.levels.flatMap((l) => l.rooms);
@@ -1262,7 +1382,12 @@
       ${free.length ? `<div class="ed-list">${free.map((z) => `<div class="ed-list-row"><span>${esc(z.name)}</span><button type="button" class="ed-btn small" data-action="place-zone" data-zone="${esc(z.id)}">${T.place}</button></div>`).join('')}</div>` : `<p class="ed-note">${T.allPlaced}</p>`}
       <h3>${T.plan}</h3>
       ${field(T.name, input('plan.name', S.plan.name))}
-      <div class="ed-row-btns">${S.plan.levels.length > 1 ? deleteBtn('level').replace(T.delete, T.deleteLevel) : ''}${deleteBtn('plan').replace(T.delete, T.deletePlan)}</div>`;
+      <div class="ed-row-btns">${S.plan.levels.length > 1 ? deleteBtn('level').replace(T.delete, T.deleteLevel) : ''}${deleteBtn('plan').replace(T.delete, T.deletePlan)}</div>
+      <h3>${T.backupTitle}</h3><p class="ed-note">${T.backupNote}</p>
+      <input type="file" id="backup-file" accept="application/json,.json" hidden>
+      <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="backup-export">⬇ ${T.backupExport}</button><button type="button" class="ed-btn" data-action="backup-import">⬆ ${T.backupImport}</button></div>
+      ${backupCopies()}
+      <p class="ed-note" id="backup-result"></p>`;
   }
 
   function roomPanel(room) {
@@ -1281,7 +1406,8 @@
       ${field(T.climate, `<select data-path="sel.climateDevice">${options(climates, room.climateDevice, T.zoneAverage)}</select>`)}
       ${field(T.tempFrom, `<select data-path="sel.tempDevice">${options(temps, room.tempDevice, T.zoneAverage)}</select>`)}
       ${field(T.humFrom, `<select data-path="sel.humDevice">${options(hums, room.humDevice, T.zoneAverage)}</select>`)}
-      ${room.locked ? '' : `<div class="ed-row-btns">${deleteBtn('sel')}</div>`}`;
+      ${askActions() || ''}${(S.actionChoices || []).length ? field(T.roomVacuum, `<select data-room-vacuum="1"><option value="">${esc(T.none)}</option>${S.actionChoices.filter((a) => a.kind !== 'mood').map((a) => `<option value="${esc(a.kind)}|${esc(a.id)}"${room.vacuum && room.vacuum.id === a.id ? ' selected' : ''}>${esc(a.name)}</option>`).join('')}</select>`) : ''}
+      ${room.locked ? '' : `<p class="ed-note">${T.shapeNote}</p>${room.points.length === 4 ? `<div class="ed-row-btns"><button type="button" class="ed-btn" data-action="room-lshape">⌐ ${T.lShape}</button></div>` : ''}<div class="ed-row-btns">${deleteBtn('sel')}</div>`}`;
   }
 
   function lockRow(obj) {
@@ -1541,6 +1667,191 @@
     fit(); draw();
   }
 
+  // Names on the cards of the house preview (the dashboard has its own, longer texts)
+  const HOUSE_TEXTS = {
+    solar: T.partSolar, grid: T.partGrid, gridIn: T.partGrid, gridOut: T.partGrid, battery: T.partBattery, car: T.partCar,
+    heatpump: T.partHeatpump, airco: T.partAirco, home: T.houseType, charging: '', discharging: '', idle: '', on: '', off: '',
+  };
+
+  // A tap on a storey of the house preview: on to that storey in the editor.
+  function openFromHouse(kind, id) {
+    if (kind !== 'level' || !S.plan.levels.some((l) => l.id === id)) return;
+    S.levelId = id;
+    renderLevels();
+    setTool('select');
+    fit();
+    draw();
+  }
+
+  // The own photo with its click areas, and the area being drawn.
+  function drawPhoto() {
+    const out = window.HouseCore.photoView(S.plan, { energy: S.energy, dark: isDark(), lang: (navigator.language || 'en').slice(0, 2), texts: HOUSE_TEXTS });
+    const el = $('ed-photo-svg');
+    const [, , W, H] = out.viewBox;
+    el.setAttribute('viewBox', `0 0 ${W} ${H}`);
+    const d = S.photoDraft;
+    let draft = '';
+    if (d) {
+      const pts = d.pts.map((p) => [p[0] * W, p[1] * H]);
+      draft = `<polyline points="${pts.map((p) => p.map((v) => v.toFixed(2)).join(',')).join(' ')}" fill="rgba(46,91,255,0.25)" stroke="#2e5bff" stroke-width="0.08"/>${pts.map((p, i) => `<circle cx="${p[0].toFixed(2)}" cy="${p[1].toFixed(2)}" r="${i ? 0.12 : 0.2}" fill="#2e5bff" stroke="#fff" stroke-width="0.04"/>`).join('')}`;
+    }
+    $('ed-photo').classList.toggle('drawing', !!d);
+    el.innerHTML = out.svg + draft;
+  }
+
+  // A click on the photo adds a corner; a click on the first corner closes the area.
+  function onPhotoClick(ev) {
+    const d = S.photoDraft;
+    if (!d) return;
+    const el = $('ed-photo-svg');
+    const box = el.viewBox.baseVal;
+    const p = new DOMPoint(ev.clientX, ev.clientY).matrixTransform(el.getScreenCTM().inverse());
+    const pt = [p.x / box.width, p.y / box.height];
+    if (pt[0] < 0 || pt[0] > 1 || pt[1] < 0 || pt[1] > 1) return;
+    const first = d.pts[0];
+    if (d.pts.length >= 3 && Math.hypot((pt[0] - first[0]) * box.width, (pt[1] - first[1]) * box.height) < 0.4) { finishArea(); return; }
+    d.pts.push(pt);
+    draw();
+  }
+
+  function finishArea() {
+    const d = S.photoDraft;
+    S.photoDraft = null;
+    if (!d || d.pts.length < 3) { draw(); renderPanel(); return; }
+    commit(() => {
+      const photo = S.plan.house.photo;
+      photo.areas = (photo.areas || []).filter((a) => !(a.kind === d.kind && (a.id || '') === (d.id || '')));
+      photo.areas.push({ kind: d.kind, pts: d.pts, ...(d.id ? { id: d.id } : {}) });
+    });
+  }
+
+  // Photos are made smaller, like traced pictures, so plans stay small enough for Homey's settings store.
+  function loadHousePhoto(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      const img = new Image();
+      img.onload = () => {
+        const k = Math.min(1, 1600 / Math.max(img.width, img.height));
+        const c = document.createElement('canvas');
+        c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+        c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+        commit(() => {
+          S.plan.house = S.plan.house || {};
+          S.plan.house.photo = { src: c.toDataURL('image/jpeg', 0.8), ratio: c.height / c.width, areas: (S.plan.house.photo && S.plan.house.photo.areas) || [] };
+        });
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function photoSection(h) {
+    const row = (kind, id, name) => {
+      const drawn = h.photo.areas.some((a) => a.kind === kind && (a.id || '') === (id || ''));
+      const busy = S.photoDraft && S.photoDraft.kind === kind && (S.photoDraft.id || '') === (id || '');
+      return `<div class="ed-list-row"><span>${drawn ? '✓ ' : ''}${esc(name)}</span><button type="button" class="ed-btn small${busy ? ' on' : ''}" data-action="photo-area" data-kind="${kind}" data-id="${esc(id || '')}">${busy ? T.drawingArea : drawn ? T.redrawArea : T.drawArea}</button></div>`;
+    };
+    const parts = [['home', T.partHouse], ['solar', T.partSolar], ['grid', T.partGrid], ['battery', T.partBattery], ['car', T.partCar], ['heatpump', T.partHeatpump], ['airco', T.partAirco]];
+    return `<h3>${T.photo}</h3><p class="ed-note">${T.photoNote}</p>
+      <input type="file" id="house-photo" accept="image/*" hidden>
+      <div class="ed-row-btns"><button type="button" class="ed-btn${h.photo ? '' : ' primary'}" data-action="photo-pick">${h.photo ? T.photoReplace : T.photoPick}</button>${h.photo ? `<button type="button" class="ed-btn danger" data-action="photo-remove">${T.photoRemove}</button>` : ''}</div>
+      ${h.photo ? `<h3>${T.photoAreas}</h3><p class="ed-note">${T.photoAreasNote}</p><div class="ed-list">${parts.map(([k, name]) => row(k, null, name)).join('')}${S.plan.levels.map((l) => row('level', l.id, l.name)).join('')}</div>` : ''}`;
+  }
+
+  function housePanel() {
+    const H = window.HouseCore;
+    if (!H) return `<h2>${T.house}</h2><p class="ed-note">${T.noHouse3d}</p>`;
+    const h = H.settings(S.plan);
+    const sel = (key, value, list) => `<select data-house="${key}">${list.map(([v, name]) => `<option value="${esc(v)}"${String(v) === String(value) ? ' selected' : ''}>${esc(name)}</option>`).join('')}</select>`;
+    const show = (part) => sel(`objects.${part}.show`, h.objects[part].show, [['auto', T.showAuto], ['on', T.showOn], ['off', T.showOff]]);
+    const dirs = [[0, T.north], [45, T.northEast], [90, T.east], [135, T.southEast], [180, T.south], [225, T.southWest], [270, T.west], [315, T.northWest]];
+    const off = (a) => Math.abs(((a - h.facing + 540) % 360) - 180);
+    const facing = dirs.reduce((best, d) => (off(d[0]) < off(best[0]) ? d : best))[0];
+    return `<h2>${T.house}</h2><p class="ed-note">${T.houseNote}</p>
+      ${photoSection(h)}
+      <h3>${T.houseType}</h3>
+      ${field(T.scene, sel('scene', h.scene, [['garden', T.sceneGarden], ['studio', T.sceneStudio]]))}
+      ${field(T.houseType, sel('type', h.type, [['detached', T.detached], ['semi', T.semi], ['terraced', T.terraced]]))}
+      ${h.type === 'semi' ? field(T.neighbourSide, sel('neighbour', h.neighbour, [['left', T.left], ['right', T.right]])) : ''}
+      ${field(T.roof, sel('roof', h.roof, [['gable', T.gable], ['hip', T.hip], ['flat', T.flat]]))}
+      ${h.roof !== 'flat' ? field(T.ridge, sel('ridge', h.ridge, [['width', T.ridgeWidth], ['depth', T.ridgeDepth]])) : ''}
+      ${h.roof !== 'flat' ? field(T.pitch, `<input type="number" data-house="pitch" data-num="1" min="15" max="55" step="5" value="${h.pitch}">`) : ''}
+      ${field(T.facing, sel('facing', facing, dirs))}
+      ${field(T.facade, sel('facade', h.facade, [['darkplaster', T.darkplaster], ['brick', T.brick], ['darkbrick', T.darkbrick], ['yellowbrick', T.yellowbrick], ['plaster', T.plaster]]))}
+      ${field(T.roofColor, sel('roofColor', h.roofColor, [['anthracite', T.anthracite], ['red', T.red], ['black', T.black]]))}
+      ${field(T.frames, sel('frames', h.frames, [['anthracite', T.anthracite], ['white', T.white]]))}
+      ${field(T.doorColor, `<input type="color" data-house="door" value="${esc(h.door)}">`)}
+      ${h.roof === 'gable' && h.ridge === 'width' ? `<label class="ed-check"><input type="checkbox" data-house="dormer" data-bool="1"${h.dormer ? ' checked' : ''}>${T.dormer}</label>` : ''}
+      ${field(T.extension, sel('extension', h.extension, [['none', T.none], ['back', T.back], ['side', T.side]]))}
+      ${h.type !== 'terraced' ? field(T.carport, sel('carport', h.carport, [['none', T.none], ['left', T.left], ['right', T.right]])) : ''}
+      ${field(T.front, sel('front', h.front, [['bottom', T.frontBottom], ['top', T.frontTop], ['left', T.frontLeft], ['right', T.frontRight]]))}
+      <h3>${T.houseParts}</h3>
+      ${field(T.partSolar, show('solar'))}
+      ${h.objects.solar.show !== 'off' ? field(T.panels, `<input type="number" data-house="objects.solar.panels" data-num="1" min="0" max="60" step="1" value="${h.objects.solar.panels}">`) : ''}
+      ${h.objects.solar.show !== 'off' ? field(T.solarLayout, sel('objects.solar.layout', h.objects.solar.layout, [['sunny', T.solarSunny], ['both', T.solarBoth]])) : ''}
+      ${h.objects.solar.show !== 'off' ? `<label class="ed-check"><input type="checkbox" data-house="forecast" data-bool="1"${h.forecast ? ' checked' : ''}>${T.forecastOn}</label>` : ''}
+      ${h.objects.solar.show !== 'off' ? field(T.kwp, `<input type="number" data-house="objects.solar.kwp" data-num="1" min="0" max="100" step="0.1" value="${h.objects.solar.kwp || ''}" placeholder="${esc(T.kwpAuto)}">`) : ''}
+      ${field(T.partGrid, show('grid'))}
+      ${field(T.partBattery, show('battery'))}
+      ${h.objects.battery.show !== 'off' && h.carport !== 'none' && h.type !== 'terraced' ? field(T.batteryPlace, sel('objects.battery.place', h.objects.battery.place, [['carport', T.underCarport], ['wall', T.againstWall]])) : ''}
+      ${field(T.partCar, show('car'))}
+      ${field(T.partHeatpump, show('heatpump'))}
+      ${field(T.partAirco, show('airco'))}
+      <h3>${T.outdoorLamps}</h3><p class="ed-note">${T.outdoorNote}</p>
+      ${H.PLACES.map((p) => field(T[`place_${p}`], outdoorSelect(p, h.outdoor[p]))).join('')}
+      ${actionSection()}
+      ${variableSection()}`;
+  }
+
+  // Logic variables to see and change on the dashboard.
+  function variableSection() {
+    if (!S.variableChoices) {
+      if (!S.variablesAsked) {
+        S.variablesAsked = true;
+        api('GET', '/variables/choices').then((list) => { S.variableChoices = list; if (S.tool === 'house') renderPanel(); }).catch(() => { S.variableChoices = []; });
+      }
+      return '';
+    }
+    const chosen = S.plan.variables || [];
+    return `<h3>${T.variablesTitle}</h3><p class="ed-note">${T.variablesNote}</p>${S.variableChoices.length ? S.variableChoices.map((v) => `<label class="ed-check"><input type="checkbox" data-pick-variable="${esc(v.id)}"${chosen.some((c) => c.id === v.id) ? ' checked' : ''}>${esc(v.name)}</label>`).join('') : `<p class="ed-note">${T.variablesNone}</p>`}`;
+  }
+
+  // Moods and Flows as buttons at the top of the dashboard.
+  function askActions() {
+    if (S.actionChoices || S.actionsAsked) return;
+    S.actionsAsked = true;
+    api('GET', '/actions/choices').then((list) => { S.actionChoices = list; renderPanel(); }).catch(() => { S.actionChoices = []; });
+  }
+
+  function actionSection() {
+    askActions();
+    if (!S.actionChoices) return '';
+    const chosen = S.plan.actions || [];
+    const row = (a) => `<label class="ed-check"><input type="checkbox" data-pick-action="${esc(a.kind)}|${esc(a.id)}"${chosen.some((c) => c.kind === a.kind && c.id === a.id) ? ' checked' : ''}>${a.kind === 'mood' ? '🎨' : '▶'} ${esc(a.name)}</label>`;
+    return `<h3>${T.actionsTitle}</h3><p class="ed-note">${T.actionsNote}</p>${S.actionChoices.length ? S.actionChoices.map(row).join('') : `<p class="ed-note">${T.actionsNone}</p>`}`;
+  }
+
+  function outdoorSelect(place, value) {
+    const lights = [...S.devices.values()].filter((d) => d.cls === 'light').sort((a, b) => a.name.localeCompare(b.name));
+    const list = [['auto', T.showAuto], ['none', T.showOff]].concat(lights.map((d) => [d.id, d.name]));
+    return `<select data-house="outdoor.${place}">${list.map(([v, name]) => `<option value="${esc(v)}"${v === value ? ' selected' : ''}>${esc(name)}</option>`).join('')}</select>`;
+  }
+
+  // A change in the house panel goes into plan.house; nested objects are made as needed.
+  function setHouse(el) {
+    let value = el.dataset.bool ? el.checked : el.value;
+    if (el.dataset.num || el.dataset.house === 'facing') { value = Number(value); if (!Number.isFinite(value)) return; }
+    // Typing a number is one step to undo
+    if (el.tagName === 'SELECT' || el.dataset.bool) snapshot();
+    else if (S.typingSnap !== el) { snapshot(); S.typingSnap = el; }
+    const keys = el.dataset.house.split('.');
+    S.plan.house = S.plan.house || {};
+    let obj = S.plan.house;
+    for (const k of keys.slice(0, -1)) obj = obj[k] = obj[k] || {};
+    obj[keys[keys.length - 1]] = value;
+    changed({ panel: el.tagName === 'SELECT' || !!el.dataset.bool });
+  }
+
   function calendarPanel() {
     const rows = S.calendars.map((c, i) => `<div class="ed-list-row" style="flex-direction:column;align-items:stretch;cursor:default">
       <div class="ed-two">${field(T.name, `<input type="text" data-cal="${i}" data-key="name" value="${esc(c.name)}">`)}${field(T.colour, `<input type="color" data-cal="${i}" data-key="color" value="${esc(c.color || '#2e5bff')}">`)}</div>
@@ -1567,6 +1878,7 @@
     if (el.id === 'furniture-search') { S.furnitureSearch = el.value; const pos = el.selectionStart; renderPanel(); const s2 = $('furniture-search'); s2.focus(); s2.setSelectionRange(pos, pos); return; }
     if (el.id === 'device-search') { S.deviceSearch = el.value; const pos = el.selectionStart; renderPanel(); const s = $('device-search'); s.focus(); s.setSelectionRange(pos, pos); return; }
     if (el.dataset.cal != null) { S.calendars[Number(el.dataset.cal)][el.dataset.key] = el.value; S.calendarsNote = ''; return; }
+    if (el.dataset.house) { if (el.tagName !== 'SELECT' && !el.dataset.bool) setHouse(el); return; }
     if (!el.dataset.path) return;
     if (ev.type === 'input' && el.tagName === 'SELECT') return;
     let value = el.value;
@@ -1613,10 +1925,14 @@
         if (action === 'create-zones') {
           const levels = core.levelsFromZones(S.zones, T.otherLevel);
           if (levels.length) plan.levels = levels;
+          // Quick start: every device in its room right away; the next step is the house
+          const all = [...S.devices.values()];
+          for (const lv2 of plan.levels) for (const room of lv2.rooms) lv2.items.push(...core.autoPlace(room, all.filter((d) => d.zone === room.zoneId)));
         }
         S.plan = plan; S.levelId = plan.levels[0].id; S.creating = false; S.undo = []; S.redo = []; S.sel = null;
         S.plans.push(plan);
         renderPlanSelect(); renderLevels(); fit(); changed();
+        if (action === 'create-zones') setTool('house');
         break;
       }
       case 'place-zone': {
@@ -1657,6 +1973,16 @@
         break;
       }
       case 'room-straighten': commit(() => straightenRoom(selectedObject())); break;
+      case 'room-lshape': commit(() => {
+        // A corner of the room cut out, 40% each way; its corners can be pulled from there
+        const room = selectedObject();
+        const pts = room.points;
+        const cur = pts[2]; const prev = pts[1]; const next = pts[3];
+        const a = [0, 1].map((i) => Math.round(cur[i] + (prev[i] - cur[i]) * 0.4));
+        const b = [0, 1].map((i) => Math.round(cur[i] + (next[i] - cur[i]) * 0.4));
+        const c = [0, 1].map((i) => Math.round(cur[i] + (prev[i] - cur[i]) * 0.4 + (next[i] - cur[i]) * 0.4));
+        pts.splice(2, 1, a, c, b);
+      }); break;
       case 'room-align': commit(() => alignToWalls(selectedObject(), true)); break;
       case 'wall-align': commit(() => alignToWalls(selectedObject(), false)); break;
       case 'align-all': commit(alignAll); break;
@@ -1718,6 +2044,12 @@
       case 'detect-apply': applyDetection(); break;
       case 'detect-discard': S.detection = null; draw(); renderPanel(); break;
       case 'bg-pick': $('bg-file').click(); break;
+      case 'backup-export': api('GET', '/backup').then((data) => saveFile(`homedeck-${new Date().toISOString().slice(0, 10)}.json`, data)).catch(() => {}); break;
+      case 'backup-import': $('backup-file').click(); break;
+      case 'backup-restore': armOrRun(el.dataset.file, () => { api('POST', '/backups/restore', { file: el.dataset.file }).then(() => location.reload()).catch(() => {}); }); break;
+      case 'photo-pick': $('house-photo').click(); break;
+      case 'photo-remove': S.photoDraft = null; commit(() => { delete S.plan.house.photo; }); break;
+      case 'photo-area': S.photoDraft = { kind: el.dataset.kind, pts: [], ...(el.dataset.id ? { id: el.dataset.id } : {}) }; draw(); renderPanel(); break;
       case 'bg-remove': commit(() => { lv.background = null; }); break;
       case 'bg-scale': {
         const real = Number($('real-length').value);
@@ -1770,9 +2102,36 @@
       return;
     }
     if (el.id === 'bg-file' && el.files && el.files[0]) { loadPicture(el.files[0]); return; }
+    if (el.id === 'house-photo' && el.files && el.files[0]) { loadHousePhoto(el.files[0]); return; }
+    if (el.id === 'backup-file' && el.files && el.files[0]) { readBackup(el.files[0]); return; }
+    if (el.dataset.pickVariable) {
+      const { pickVariable: id } = el.dataset;
+      commit(() => {
+        S.plan.variables = (S.plan.variables || []).filter((v) => v.id !== id);
+        if (el.checked) S.plan.variables.push({ id });
+      });
+      return;
+    }
+    if (el.dataset.roomVacuum !== undefined) {
+      const room = selectedObject();
+      const [kind, id] = el.value.split('|');
+      const choice = (S.actionChoices || []).find((a) => a.kind === kind && a.id === id);
+      commit(() => { if (choice) room.vacuum = choice; else delete room.vacuum; });
+      return;
+    }
+    if (el.dataset.pickAction) {
+      const [kind, id] = el.dataset.pickAction.split('|');
+      const choice = (S.actionChoices || []).find((a) => a.kind === kind && a.id === id);
+      commit(() => {
+        S.plan.actions = (S.plan.actions || []).filter((a) => !(a.kind === kind && a.id === id));
+        if (el.checked && choice) S.plan.actions.push(choice);
+      });
+      return;
+    }
     if (el.id === 'detect-darkness') { S.detectDarkness = el.value; return; }
     if (el.id === 'detect-replace' && S.detection) { S.detection.replace = el.checked; return; }
     if (el.dataset.detectZone != null && S.detection) { S.detection.zones[Number(el.dataset.detectZone)] = el.value; return; }
+    if (el.dataset.house && (el.tagName === 'SELECT' || el.dataset.bool)) { setHouse(el); return; }
     if (el.tagName === 'SELECT' && el.dataset.path) onPanelInput(ev);
     S.typingSnap = null;
   }
@@ -1896,6 +2255,7 @@
     svg.addEventListener('contextmenu', (ev) => ev.preventDefault());
     svg.addEventListener('wheel', (ev) => { ev.preventDefault(); if (!S.preview) zoomAt(toPlan(ev), Math.exp(ev.deltaY * 0.0015)); }, { passive: false });
     window.addEventListener('keydown', onKeyDown);
+    $('ed-photo-svg').addEventListener('click', onPhotoClick);
     window.addEventListener('keyup', (ev) => { if (ev.key === ' ') S.spaceDown = false; });
     window.addEventListener('resize', () => draw());
 
@@ -1912,7 +2272,7 @@
     $('toggle-grid').addEventListener('click', () => { S.grid = !S.grid; updateButtons(); draw(); });
     $('toggle-furniture').addEventListener('click', () => { S.showFurniture = !S.showFurniture; updateButtons(); draw(); });
     $('view-2d').addEventListener('click', () => { S.preview = null; updateButtons(); setTool(S.tool); });
-    $('view-3d').addEventListener('click', () => { S.preview = 'iso'; S.wallDraft = null; S.pendingFurniture = null; S.pendingDevice = null; updateButtons(); draw(); renderPanel(); });
+    $('view-3d').addEventListener('click', () => { S.preview = 'steep'; S.wallDraft = null; S.pendingFurniture = null; S.pendingDevice = null; updateButtons(); draw(); renderPanel(); });
     $('lock-layout').addEventListener('click', () => {
       const lv = level();
       if (!lv) return;
@@ -1972,6 +2332,7 @@
     panel.addEventListener('click', onPanelClick);
     panel.addEventListener('focusout', () => { S.typingSnap = null; });
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => draw());
+    window.addEventListener('fp-theme', () => draw());
   }
 
   function applyCaps(changes) {
@@ -1988,6 +2349,7 @@
   window.onHomeyReady = async function onHomeyReady(Homey) {
     S.Homey = Homey;
     for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = T[el.dataset.i18n] || el.textContent;
+    for (const b of document.querySelectorAll('#tools [data-tool]')) b.title = b.querySelector('small').textContent + (b.dataset.key ? ` (${b.dataset.key})` : '');
     bind();
     setTool('select');
     Homey.ready();

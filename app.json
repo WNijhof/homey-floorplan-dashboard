@@ -1,7 +1,7 @@
 {
   "_comment": "This file is generated. Please edit .homeycompose/app.json instead.",
   "id": "com.drpeppers.floorplandashboard",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": [
@@ -12,8 +12,8 @@
     "nl": "HomeDeck"
   },
   "description": {
-    "en": "Your home as a live floor plan, for any screen in your home",
-    "nl": "Je huis als live plattegrond, voor elk scherm in huis"
+    "en": "Your whole home in 3D with live energy, on any screen in your home",
+    "nl": "Je hele huis in 3D met live energie, op elk scherm in huis"
   },
   "category": [
     "tools"
@@ -27,6 +27,8 @@
   "homeyCommunityTopicId": 161491,
   "permissions": [
     "homey:manager:api",
+    "homey:manager:geolocation",
+    "homey:app:com.gruijter.powerhour",
     "homey:app:com.drpeppers.energydashboard"
   ],
   "images": {
@@ -88,6 +90,261 @@
       "path": "/diagnosis-report"
     }
   },
+  "flow": {
+    "triggers": [
+      {
+        "title": {
+          "en": "The cheapest hours start",
+          "nl": "De goedkoopste uren beginnen"
+        },
+        "hint": {
+          "en": "At the start of the cheapest three hours coming up.",
+          "nl": "Aan het begin van de goedkoopste drie uur die eraan komen."
+        },
+        "id": "cheap-power"
+      },
+      {
+        "title": {
+          "en": "There is power to spare",
+          "nl": "Er is stroom over"
+        },
+        "hint": {
+          "en": "When at least 400 W starts going back to the grid.",
+          "nl": "Als er minstens 400 W naar het net terug begint te gaan."
+        },
+        "tokens": [
+          {
+            "name": "watts",
+            "type": "number",
+            "title": {
+              "en": "Watts",
+              "nl": "Watt"
+            },
+            "example": 1200
+          }
+        ],
+        "id": "energy-surplus"
+      }
+    ],
+    "actions": [
+      {
+        "title": {
+          "en": "Put on a list",
+          "nl": "Zet op een lijst"
+        },
+        "titleFormatted": {
+          "en": "Put [[text]] on [[list]]",
+          "nl": "Zet [[text]] op [[list]]"
+        },
+        "args": [
+          {
+            "type": "dropdown",
+            "name": "list",
+            "title": {
+              "en": "List",
+              "nl": "Lijst"
+            },
+            "values": [
+              {
+                "id": "shopping",
+                "label": {
+                  "en": "the shopping list",
+                  "nl": "de boodschappenlijst"
+                }
+              },
+              {
+                "id": "tasks",
+                "label": {
+                  "en": "the tasks",
+                  "nl": "de taken"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "name": "text",
+            "title": {
+              "en": "Text",
+              "nl": "Tekst"
+            }
+          }
+        ],
+        "id": "add-to-list"
+      },
+      {
+        "title": {
+          "en": "Show on the screens",
+          "nl": "Toon op de schermen"
+        },
+        "titleFormatted": {
+          "en": "Show [[what]] [[detail]] on screen [[screen]] for [[seconds]] seconds",
+          "nl": "Toon [[what]] [[detail]] op scherm [[screen]] gedurende [[seconds]] seconden"
+        },
+        "hint": {
+          "en": "Leave the screen empty for all screens. Detail: the name of a storey, or the text of a message. 0 seconds: until someone taps.",
+          "nl": "Laat het scherm leeg voor alle schermen. Detail: de naam van een verdieping, of de tekst van een bericht. 0 seconden: tot iemand tikt."
+        },
+        "args": [
+          {
+            "type": "dropdown",
+            "name": "what",
+            "title": {
+              "en": "What",
+              "nl": "Wat"
+            },
+            "values": [
+              {
+                "id": "camera",
+                "label": {
+                  "en": "the camera",
+                  "nl": "de camera"
+                }
+              },
+              {
+                "id": "message",
+                "label": {
+                  "en": "a message",
+                  "nl": "een bericht"
+                }
+              },
+              {
+                "id": "house",
+                "label": {
+                  "en": "the house",
+                  "nl": "het huis"
+                }
+              },
+              {
+                "id": "level",
+                "label": {
+                  "en": "a storey",
+                  "nl": "een verdieping"
+                }
+              },
+              {
+                "id": "energy",
+                "label": {
+                  "en": "the Energy page",
+                  "nl": "de Energiepagina"
+                }
+              }
+            ]
+          },
+          {
+            "type": "text",
+            "name": "detail",
+            "title": {
+              "en": "Detail",
+              "nl": "Detail"
+            },
+            "required": false,
+            "placeholder": {
+              "en": "Text or storey",
+              "nl": "Tekst of verdieping"
+            }
+          },
+          {
+            "type": "text",
+            "name": "screen",
+            "title": {
+              "en": "Screen",
+              "nl": "Scherm"
+            },
+            "required": false,
+            "placeholder": {
+              "en": "All",
+              "nl": "Alle"
+            }
+          },
+          {
+            "type": "number",
+            "name": "seconds",
+            "title": {
+              "en": "Seconds",
+              "nl": "Seconden"
+            },
+            "min": 0,
+            "max": 3600,
+            "step": 1,
+            "placeholder": {
+              "en": "30",
+              "nl": "30"
+            }
+          }
+        ],
+        "id": "show-on-screen"
+      },
+      {
+        "title": {
+          "en": "Shower started",
+          "nl": "Douche gestart"
+        },
+        "hint": {
+          "en": "Only used when calibrating the shower minutes is turned on in the app settings. Run it when the shower is turned on.",
+          "nl": "Alleen in gebruik als het ijken van de doucheminuten aanstaat in de app-instellingen. Voer het uit als de douche aangaat."
+        },
+        "id": "shower-start"
+      },
+      {
+        "title": {
+          "en": "Shower finished",
+          "nl": "Douche klaar"
+        },
+        "hint": {
+          "en": "Only used when calibrating the shower minutes is turned on in the app settings. Run it when the shower is turned off.",
+          "nl": "Alleen in gebruik als het ijken van de doucheminuten aanstaat in de app-instellingen. Voer het uit als de douche uitgaat."
+        },
+        "id": "shower-stop"
+      },
+      {
+        "title": {
+          "en": "Hot tap water comes from",
+          "nl": "Warm tapwater komt uit"
+        },
+        "titleFormatted": {
+          "en": "Hot tap water comes [[source]] (reason: [[reason]])",
+          "nl": "Warm tapwater komt [[source]] (reden: [[reason]])"
+        },
+        "hint": {
+          "en": "Only used when the three-way valve is turned on in the app settings (Water heater). For a three-way valve between the water heater and the gas boiler. Run it after the Flow switched the valve; the Heating block shows the source and the last three switches. It shows what the Flow commanded, not a reading of the valve.",
+          "nl": "Alleen in gebruik als de driewegklep aanstaat in de app-instellingen (Boiler). Voor een driewegklep tussen de boiler en de cv-ketel. Voer het uit nadat de Flow de klep heeft omgezet; het blok Verwarming toont de bron en de laatste drie omschakelingen. Het toont wat de Flow opdroeg, geen meting van de klep."
+        },
+        "args": [
+          {
+            "name": "source",
+            "type": "dropdown",
+            "values": [
+              {
+                "id": "boiler",
+                "title": {
+                  "en": "straight from the water heater",
+                  "nl": "direct uit de boiler"
+                }
+              },
+              {
+                "id": "cv",
+                "title": {
+                  "en": "through the gas boiler (reheating)",
+                  "nl": "via de cv-ketel (naverwarming)"
+                }
+              }
+            ]
+          },
+          {
+            "name": "reason",
+            "type": "text",
+            "required": false,
+            "placeholder": {
+              "en": "optional",
+              "nl": "mag leeg"
+            }
+          }
+        ],
+        "id": "tapwater-source"
+      }
+    ]
+  },
   "widgets": {
     "floorplan": {
       "name": {
@@ -113,6 +370,31 @@
           }
         },
         {
+          "id": "start",
+          "type": "dropdown",
+          "title": {
+            "en": "Start on",
+            "nl": "Begint op"
+          },
+          "value": "level",
+          "values": [
+            {
+              "id": "level",
+              "title": {
+                "en": "The floor plan",
+                "nl": "De plattegrond"
+              }
+            },
+            {
+              "id": "house",
+              "title": {
+                "en": "The house with its energy",
+                "nl": "Het huis met zijn energie"
+              }
+            }
+          ]
+        },
+        {
           "id": "view",
           "type": "dropdown",
           "title": {
@@ -129,24 +411,10 @@
               }
             },
             {
-              "id": "iso",
-              "title": {
-                "en": "2.5D isometric (35°)",
-                "nl": "2.5D isometrisch (35°)"
-              }
-            },
-            {
-              "id": "game",
-              "title": {
-                "en": "2.5D game-style (30°)",
-                "nl": "2.5D game-stijl (30°)"
-              }
-            },
-            {
               "id": "steep",
               "title": {
-                "en": "2.5D steep (50°)",
-                "nl": "2.5D steil (50°)"
+                "en": "2.5D",
+                "nl": "2.5D"
               }
             }
           ]
@@ -399,6 +667,14 @@
         "getAgenda": {
           "method": "GET",
           "path": "/agenda"
+        },
+        "getEnergy": {
+          "method": "GET",
+          "path": "/energy"
+        },
+        "getEnergyDetail": {
+          "method": "GET",
+          "path": "/energy-detail"
         },
         "setCapability": {
           "method": "POST",

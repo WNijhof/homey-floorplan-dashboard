@@ -1,0 +1,21 @@
+{
+  "title": {
+    "en": "There is power to spare",
+    "nl": "Er is stroom over"
+  },
+  "hint": {
+    "en": "When at least 400 W starts going back to the grid.",
+    "nl": "Als er minstens 400 W naar het net terug begint te gaan."
+  },
+  "tokens": [
+    {
+      "name": "watts",
+      "type": "number",
+      "title": {
+        "en": "Watts",
+        "nl": "Watt"
+      },
+      "example": 1200
+    }
+  ]
+}

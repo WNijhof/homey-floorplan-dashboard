@@ -1,0 +1,1475 @@
+"use strict";
+(function() {
+  const LANGUAGES = {
+    nl: ["Nederlands", "nl-NL"],
+    en: ["English", "en-GB"],
+    de: ["Deutsch", "de-DE"],
+    no: ["Norsk", "nb-NO"],
+    sv: ["Svenska", "sv-SE"],
+    da: ["Dansk", "da-DK"],
+    it: ["Italiano", "it-IT"],
+    fr: ["Français", "fr-FR"],
+    pt: ["Português", "pt-PT"],
+    es: ["Español", "es-ES"]
+  };
+  const COLUMNS = ["en", "de", "no", "sv", "da", "it", "fr", "pt", "es"];
+  function browserLanguage() {
+    for (const tag of navigator.languages || [navigator.language || ""]) {
+      let code = String(tag).toLowerCase().split("-")[0];
+      if (code === "nb" || code === "nn") code = "no";
+      if (LANGUAGES[code]) return code;
+    }
+    return "en";
+  }
+  const KEY = "energy-dashboard-lang";
+  let lang = null;
+  try {
+    lang = localStorage.getItem(KEY);
+  } catch {
+  }
+  if (!LANGUAGES[lang]) lang = browserLanguage();
+  const column = COLUMNS.indexOf(lang);
+  const WORDS = {
+    // Page
+    "Energie": ["Energy", "Energie", "Energi", "Energi", "Energi", "Energia", "Énergie", "Energia", "Energía"],
+    "Verbinden…": ["Connecting…", "Verbinden…", "Kobler til…", "Ansluter…", "Forbinder…", "Connessione…", "Connexion…", "A ligar…", "Conectando…"],
+    "Vandaag": ["Today", "Heute", "I dag", "Idag", "I dag", "Oggi", "Aujourd'hui", "Hoje", "Hoy"],
+    "Gisteren": ["Yesterday", "Gestern", "I går", "Igår", "I går", "Ieri", "Hier", "Ontem", "Ayer"],
+    "Week": ["Week", "Woche", "Uke", "Vecka", "Uge", "Settimana", "Semaine", "Semana", "Semana"],
+    "Maand": ["Month", "Monat", "Måned", "Månad", "Måned", "Mese", "Mois", "Mês", "Mes"],
+    "Deze week": ["This week", "Diese Woche", "Denne uken", "Denna vecka", "Denne uge", "Questa settimana", "Cette semaine", "Esta semana", "Esta semana"],
+    "Deze maand": ["This month", "Dieser Monat", "Denne måneden", "Denna månad", "Denne måned", "Questo mese", "Ce mois-ci", "Este mês", "Este mes"],
+    "Dit jaar": ["This year", "Dieses Jahr", "I år", "I år", "I år", "Quest'anno", "Cette année", "Este ano", "Este año"],
+    "Jaar": ["Year", "Jahr", "År", "År", "År", "Anno", "Année", "Ano", "Año"],
+    "dit jaar": ["this year", "dieses Jahr", "i år", "i år", "i år", "quest'anno", "cette année", "este ano", "este año"],
+    "vorig jaar tot dezelfde maand": ["last year up to the same month", "Vorjahr bis zum selben Monat", "i fjor til samme måned", "förra året till samma månad", "sidste år til samme måned", "l'anno scorso fino allo stesso mese", "l'an dernier jusqu'au même mois", "o ano passado até ao mesmo mês", "el año pasado hasta el mismo mes"],
+    "Vaste kosten": ["Fixed costs", "Fixkosten", "Faste kostnader", "Fasta kostnader", "Faste omkostninger", "Costi fissi", "Frais fixes", "Custos fixos", "Costes fijos"],
+    "min vermindering energiebelasting": ["minus energy tax reduction", "abzüglich Energiesteuerermäßigung", "minus reduksjon i energiavgift", "minus sänkt energiskatt", "minus nedsættelse af energiafgift", "meno riduzione dell'imposta sull'energia", "moins réduction de la taxe sur l'énergie", "menos redução do imposto sobre a energia", "menos reducción del impuesto sobre la energía"],
+    "all-in: markt + belasting + opslag": ["all-in: market + tax + markup", "all-in: Markt + Steuer + Aufschlag", "alt inkl.: marked + avgift + påslag", "allt inkl.: marknad + skatt + påslag", "alt inkl.: marked + afgift + tillæg", "tutto incluso: mercato + imposte + maggiorazione", "tout compris : marché + taxes + marge", "tudo incluído: mercado + impostos + margem", "todo incluido: mercado + impuestos + margen"],
+    "marktprijs incl. btw": ["market price incl. VAT", "Marktpreis inkl. MwSt.", "markedspris inkl. mva", "marknadspris inkl. moms", "markedspris inkl. moms", "prezzo di mercato IVA incl.", "prix du marché TTC", "preço de mercado c/ IVA", "precio de mercado con IVA"],
+    "Net kost nu": ["Grid costs now", "Netz kostet jetzt", "Nettet koster nå", "Nätet kostar nu", "Nettet koster nu", "La rete costa ora", "Le réseau coûte maintenant", "A rede custa agora", "La red cuesta ahora"],
+    "Vandaag laag · gem. · hoog": ["Today low · avg · high", "Heute niedrig · Ø · hoch", "I dag lav · snitt · høy", "Idag låg · snitt · hög", "I dag lav · gns. · høj", "Oggi min · media · max", "Aujourd'hui bas · moy. · haut", "Hoje mín. · méd. · máx.", "Hoy mín. · media · máx."],
+    "vandaag": ["today", "heute", "i dag", "idag", "i dag", "oggi", "aujourd'hui", "hoje", "hoy"],
+    "gisteren": ["yesterday", "gestern", "i går", "igår", "i går", "ieri", "hier", "ontem", "ayer"],
+    "deze week": ["this week", "diese Woche", "denne uken", "denna vecka", "denne uge", "questa settimana", "cette semaine", "esta semana", "esta semana"],
+    "deze maand": ["this month", "diesen Monat", "denne måneden", "denna månad", "denne måned", "questo mese", "ce mois-ci", "este mês", "este mes"],
+    "Periode": ["Period", "Zeitraum", "Periode", "Period", "Periode", "Periodo", "Période", "Período", "Periodo"],
+    "Taal": ["Language", "Sprache", "Språk", "Språk", "Sprog", "Lingua", "Langue", "Idioma", "Idioma"],
+    // Block info: what each block shows and how
+    "Uitleg": ["Explanation", "Erklärung", "Forklaring", "Förklaring", "Forklaring", "Spiegazione", "Explication", "Explicação", "Explicación"],
+    "Het vermogen van dit moment tussen zon, net, huis en batterij, elke 10 seconden gelezen. Huis = net + zon − batterij. Onder de cirkels staan de kWh van vandaag.": [
+      "The power right now between solar, grid, home and battery, read every 10 seconds. Home = grid + solar − battery. Below the circles are today's kWh.",
+      "Die Leistung in diesem Moment zwischen Sonne, Netz, Haus und Batterie, alle 10 Sekunden gelesen. Haus = Netz + Sonne − Batterie. Unter den Kreisen stehen die kWh von heute.",
+      "Effekten akkurat nå mellom sol, nett, hus og batteri, lest hvert 10. sekund. Hus = nett + sol − batteri. Under sirklene står dagens kWh.",
+      "Effekten just nu mellan sol, nät, hus och batteri, läst var 10:e sekund. Hus = nät + sol − batteri. Under cirklarna står dagens kWh.",
+      "Effekten lige nu mellem sol, net, hus og batteri, læst hvert 10. sekund. Hus = net + sol − batteri. Under cirklerne står dagens kWh.",
+      "La potenza in questo momento tra sole, rete, casa e batteria, letta ogni 10 secondi. Casa = rete + sole − batteria. Sotto i cerchi i kWh di oggi.",
+      "La puissance à cet instant entre soleil, réseau, maison et batterie, lue toutes les 10 secondes. Maison = réseau + soleil − batterie. Sous les cercles, les kWh du jour.",
+      "A potência neste momento entre sol, rede, casa e bateria, lida a cada 10 segundos. Casa = rede + sol − bateria. Por baixo dos círculos, os kWh de hoje.",
+      "La potencia en este momento entre sol, red, casa y batería, leída cada 10 segundos. Casa = red + sol − batería. Bajo los círculos, los kWh de hoy."
+    ],
+    "De temperatuur van je boiler. De doucheminuten zijn een schatting uit de inhoud, de temperatuur van het koude water, je douchetemperatuur en je douchekop (bij de instellingen).": [
+      "The temperature of your water heater. The shower minutes are an estimate from its size, the cold water temperature, your shower temperature and your shower head (in the settings).",
+      "Die Temperatur deines Warmwasserspeichers. Die Duschminuten sind eine Schätzung aus Inhalt, Kaltwassertemperatur, Duschtemperatur und Duschkopf (in den Einstellungen).",
+      "Temperaturen i varmtvannsberederen. Dusjminuttene er et anslag ut fra størrelse, kaldtvannstemperatur, dusjtemperatur og dusjhode (i innstillingene).",
+      "Temperaturen i varmvattenberedaren. Duschminuterna är en uppskattning utifrån volym, kallvattnets temperatur, din duschtemperatur och ditt duschmunstycke (i inställningarna).",
+      "Temperaturen i varmtvandsbeholderen. Bruseminutterne er et skøn ud fra størrelse, koldtvandets temperatur, din brusetemperatur og dit brusehoved (i indstillingerne).",
+      "La temperatura dello scaldabagno. I minuti di doccia sono una stima da capacità, temperatura dell'acqua fredda, temperatura della doccia e soffione (nelle impostazioni).",
+      "La température de votre chauffe-eau. Les minutes de douche sont une estimation d'après sa contenance, l'eau froide, votre température de douche et votre pommeau (dans les réglages).",
+      "A temperatura do termoacumulador. Os minutos de duche são uma estimativa a partir da capacidade, da água fria, da temperatura do duche e do chuveiro (nas definições).",
+      "La temperatura de tu calentador. Los minutos de ducha son una estimación a partir de su capacidad, el agua fría, tu temperatura de ducha y tu alcachofa (en los ajustes)."
+    ],
+    "Kamertemperatuur van je thermostaat, en wat je warmtepomp of cv-ketel doet. Stroom komt van de meting van het toestel, gas van je slimme meter (het hele huis). Gas per graaddag corrigeert voor het weer. Zet je bij Boiler in de app-instellingen de driewegklep aan, dan zie je met de Flow-kaart Warm tapwater komt uit ook waar je warme water vandaan komt en de laatste drie omschakelingen: wat je Flow opdroeg, geen meting van de klep. Met de cv-check (ook bij Boiler) zie je hoe vaak de cv-ketel bijstookte bij warm tapwater terwijl de boiler warm was, en de laatste tapmomenten: uit de watermeter, de boilertemperatuur en de gasmeter.": [
+      "Room temperature from your thermostat, and what your heat pump or boiler is doing. Electricity comes from the unit's own meter, gas from your smart meter (the whole house). Gas per degree day corrects for the weather. Turn on the three-way valve under Water heater in the app settings, and with the Flow card Hot tap water comes from you also see where your hot water comes from and the last three switches: what your Flow commanded, not a reading of the valve. With the boiler check (also under Water heater) you see how often the gas boiler fired for hot tap water while the water heater was hot, and the latest taps: from the water meter, the water heater temperature and the gas meter.",
+      "Raumtemperatur deines Thermostats und was deine Wärmepumpe oder dein Heizkessel tut. Strom kommt von der Messung des Geräts, Gas von deinem Smart Meter (ganzes Haus). Gas pro Gradtag gleicht das Wetter aus. Schaltest du unter Water heater in den App-Einstellungen das Dreiwegeventil ein, siehst du mit der Flow-Karte Hot tap water comes from auch, woher dein Warmwasser kommt, und die letzten drei Umschaltungen: was dein Flow befohlen hat, keine Messung des Ventils. Mit der Kesselprüfung (ebenfalls unter Water heater) siehst du, wie oft der Heizkessel bei Warmwasser nachheizte, während der Speicher warm war, und die letzten Zapfungen: aus Wasserzähler, Speichertemperatur und Gaszähler.",
+      "Romtemperatur fra termostaten, og hva varmepumpen eller kjelen gjør. Strøm kommer fra enhetens måling, gass fra den smarte måleren (hele huset). Gass per graddag korrigerer for været. Slår du på treveisventilen under Water heater i appinnstillingene, ser du med Flow-kortet Hot tap water comes from også hvor varmtvannet kommer fra og de tre siste omkoblingene: det Flowen ba om, ikke en måling av ventilen. Med kjelsjekken (også under Water heater) ser du hvor ofte gasskjelen fyrte for varmtvann mens beholderen var varm, og de siste tappingene: fra vannmåleren, beholdertemperaturen og gassmåleren.",
+      "Rumstemperatur från termostaten, och vad värmepumpen eller pannan gör. El kommer från enhetens mätning, gas från din smarta mätare (hela huset). Gas per graddag korrigerar för vädret. Slår du på trevägsventilen under Water heater i appinställningarna ser du med Flow-kortet Hot tap water comes from också var varmvattnet kommer ifrån och de tre senaste omkopplingarna: vad ditt Flow beordrade, inte en mätning av ventilen. Med pannkontrollen (också under Water heater) ser du hur ofta gaspannan eldade för varmvatten medan beredaren var varm, och de senaste tappningarna: från vattenmätaren, beredarens temperatur och gasmätaren.",
+      "Rumtemperatur fra termostaten, og hvad varmepumpen eller kedlen laver. Strøm kommer fra enhedens måling, gas fra din smarte måler (hele huset). Gas pr. graddag korrigerer for vejret. Slår du trevejsventilen til under Water heater i appindstillingerne, ser du med Flow-kortet Hot tap water comes from også, hvor dit varme vand kommer fra, og de tre seneste omskiftninger: hvad dit Flow bad om, ikke en måling af ventilen. Med kedeltjekket (også under Water heater) ser du, hvor tit gaskedlen fyrede for varmt vand, mens beholderen var varm, og de seneste tapninger: fra vandmåleren, beholderens temperatur og gasmåleren.",
+      "Temperatura ambiente del termostato e cosa fa la pompa di calore o la caldaia. L'elettricità viene dalla misura dell'apparecchio, il gas dal contatore intelligente (tutta la casa). Il gas per grado giorno corregge per il meteo. Attivando la valvola a tre vie sotto Water heater nelle impostazioni dell'app, con la scheda Flow Hot tap water comes from vedi anche da dove arriva l'acqua calda e gli ultimi tre cambi: ciò che il Flow ha comandato, non una misura della valvola. Con il controllo caldaia (sempre sotto Water heater) vedi quante volte la caldaia si è accesa per l'acqua calda mentre il bollitore era caldo, e gli ultimi prelievi: dal contatore dell'acqua, dalla temperatura del bollitore e dal contatore del gas.",
+      "Température de la pièce selon votre thermostat, et ce que fait votre pompe à chaleur ou chaudière. L'électricité vient de la mesure de l'appareil, le gaz de votre compteur (toute la maison). Le gaz par degré-jour corrige la météo. En activant la vanne trois voies sous Water heater dans les réglages de l'app, avec la carte Flow Hot tap water comes from vous voyez aussi d'où vient votre eau chaude et les trois derniers basculements : ce que votre Flow a commandé, pas une mesure de la vanne. Avec le contrôle chaudière (aussi sous Water heater) vous voyez combien de fois la chaudière s'est allumée pour l'eau chaude alors que le ballon était chaud, et les derniers puisages : d'après le compteur d'eau, la température du ballon et le compteur de gaz.",
+      "Temperatura ambiente do termóstato e o que faz a bomba de calor ou caldeira. A eletricidade vem da medição do aparelho, o gás do contador inteligente (toda a casa). O gás por grau-dia corrige o tempo. Ao ativar a válvula de três vias em Water heater nas definições da app, com o cartão Flow Hot tap water comes from vê também de onde vem a sua água quente e as três últimas comutações: o que o Flow ordenou, não uma medição da válvula. Com a verificação da caldeira (também em Water heater) vê quantas vezes a caldeira ligou para água quente enquanto o termoacumulador estava quente, e os últimos consumos: do contador de água, da temperatura do termoacumulador e do contador de gás.",
+      "Temperatura ambiente del termostato y lo que hace tu bomba de calor o caldera. La electricidad viene de la medición del aparato, el gas de tu contador (toda la casa). El gas por grado-día corrige el tiempo. Si activas la válvula de tres vías en Water heater en los ajustes de la app, con la tarjeta Flow Hot tap water comes from ves también de dónde viene tu agua caliente y los tres últimos cambios: lo que tu Flow ordenó, no una medición de la válvula. Con el control de caldera (también en Water heater) ves cuántas veces se encendió la caldera para el agua caliente mientras el acumulador estaba caliente, y los últimos consumos: del contador de agua, la temperatura del acumulador y el contador de gas."
+    ],
+    "Vermogen en status van je laadpaal, de geladen kWh in de gekozen periode uit Homey Insights, en de kWh van de laadsessie als de app van je laadpaal die bijhoudt.": [
+      "Power and status of your EV charger, the kWh charged in the chosen period from Homey Insights, and the kWh of the charging session when the app of your charger keeps it.",
+      "Leistung und Status deiner Wallbox, die geladenen kWh im gewählten Zeitraum aus Homey Insights und die kWh des Ladevorgangs, wenn die App deiner Wallbox sie erfasst.",
+      "Effekt og status for elbilladeren, ladede kWh i valgt periode fra Homey Insights, og kWh for ladeøkten når appen til laderen registrerer det.",
+      "Effekt och status för laddboxen, laddade kWh under vald period från Homey Insights, och kWh för laddsessionen när laddboxens app registrerar det.",
+      "Effekt og status for ladeboksen, opladede kWh i den valgte periode fra Homey Insights, og kWh for ladesessionen når ladeboksens app registrerer det.",
+      "Potenza e stato della wallbox, i kWh caricati nel periodo scelto da Homey Insights, e i kWh della sessione di ricarica se l'app della wallbox li registra.",
+      "Puissance et état de votre borne, les kWh chargés sur la période choisie depuis Homey Insights, et les kWh de la session de charge si l'app de votre borne les enregistre.",
+      "Potência e estado do carregador, os kWh carregados no período escolhido do Homey Insights, e os kWh da sessão de carregamento quando a app do carregador os regista.",
+      "Potencia y estado de tu cargador, los kWh cargados en el periodo elegido de Homey Insights, y los kWh de la sesión de carga si la app de tu cargador los registra."
+    ],
+    "Laadniveau en vermogen van je thuisbatterij en wat hij laadde en leverde. Het saldo is wat ontladen bespaarde of opbracht min wat laden kostte; laden met zonnestroom kost de teruglevering die je misliep. Energie die aan het begin of eind van de periode nog in de batterij zit, telt niet mee. Bij vandaag en gisteren staan onder het laadniveau de geladen en ontladen kWh per uur, met het bereik en het aantal cycli; de capaciteit daarvoor is geschat uit de geladen kWh en hoe ver het laadniveau steeg.": [
+      "Charge level and power of your home battery, and what it charged and delivered. The balance is what discharging saved or earned minus what charging cost; charging with solar costs the export you missed. Energy still in the battery at the start or end of the period does not count. For today and yesterday the charged and discharged kWh per hour show under the charge level, with the range and the number of cycles; the capacity for that is estimated from the kWh charged and how far the charge level rose.",
+      "Ladestand und Leistung deines Heimspeichers und was er geladen und geliefert hat. Der Saldo ist, was Entladen sparte oder einbrachte, minus was Laden kostete; Laden mit Sonne kostet die entgangene Einspeisevergütung. Energie, die am Anfang oder Ende des Zeitraums noch in der Batterie ist, zählt nicht mit. Bei heute und gestern stehen unter dem Ladestand die geladenen und entladenen kWh pro Stunde, mit dem Bereich und der Zahl der Zyklen; die Kapazität dafür wird aus den geladenen kWh und dem Anstieg des Ladestands geschätzt.",
+      "Ladenivå og effekt for hjemmebatteriet, og hva det ladet og leverte. Saldoen er hva utlading sparte eller ga, minus hva lading kostet; lading med sol koster eksporten du gikk glipp av. Energi som fortsatt er i batteriet ved start eller slutt av perioden, telles ikke. For i dag og i går vises ladet og utladet kWh per time under ladenivået, med området og antall sykluser; kapasiteten anslås fra ladet kWh og hvor mye ladenivået steg.",
+      "Laddnivå och effekt för hembatteriet, och vad det laddade och levererade. Saldot är vad urladdning sparade eller gav, minus vad laddning kostade; laddning med sol kostar exporten du gick miste om. Energi som fortfarande finns i batteriet vid periodens början eller slut räknas inte. För idag och igår visas laddade och urladdade kWh per timme under laddnivån, med intervallet och antal cykler; kapaciteten uppskattas från laddade kWh och hur mycket laddnivån steg.",
+      "Ladeniveau og effekt for hjemmebatteriet, og hvad det opladede og leverede. Saldoen er hvad afladning sparede eller indbragte, minus hvad opladning kostede; opladning med sol koster den eksport, du gik glip af. Energi, der stadig er i batteriet ved periodens start eller slut, tæller ikke med. For i dag og i går vises opladet og afladet kWh pr. time under ladeniveauet, med intervallet og antal cyklusser; kapaciteten anslås ud fra opladet kWh og hvor meget ladeniveauet steg.",
+      "Livello di carica e potenza della batteria domestica, e cosa ha caricato e fornito. Il saldo è quanto la scarica ha fatto risparmiare o guadagnare meno quanto è costata la carica; caricare col sole costa l'immissione persa. L'energia ancora nella batteria all'inizio o alla fine del periodo non conta. Per oggi e ieri sotto il livello di carica ci sono i kWh caricati e scaricati per ora, con l’intervallo e il numero di cicli; la capacità è stimata dai kWh caricati e da quanto è salito il livello di carica.",
+      "Niveau de charge et puissance de votre batterie, et ce qu'elle a chargé et fourni. Le solde est ce que la décharge a économisé ou rapporté moins ce que la charge a coûté ; charger au solaire coûte l'injection perdue. L'énergie encore dans la batterie au début ou à la fin de la période ne compte pas. Pour aujourd’hui et hier, les kWh chargés et déchargés par heure figurent sous le niveau de charge, avec la plage et le nombre de cycles ; la capacité est estimée à partir des kWh chargés et de la hausse du niveau de charge.",
+      "Nível de carga e potência da bateria, e o que carregou e forneceu. O saldo é o que a descarga poupou ou rendeu menos o que a carga custou; carregar com sol custa a injeção perdida. A energia ainda na bateria no início ou no fim do período não conta. Para hoje e ontem, os kWh carregados e descarregados por hora aparecem sob o nível de carga, com o intervalo e o número de ciclos; a capacidade é estimada a partir dos kWh carregados e de quanto o nível de carga subiu.",
+      "Nivel de carga y potencia de tu batería, y lo que cargó y entregó. El saldo es lo que la descarga ahorró o generó menos lo que costó la carga; cargar con sol cuesta la inyección que perdiste. La energía que sigue en la batería al inicio o al final del periodo no cuenta. Para hoy y ayer, los kWh cargados y descargados por hora aparecen bajo el nivel de carga, con el rango y el número de ciclos; la capacidad se estima a partir de los kWh cargados y de cuánto subió el nivel de carga."
+    ],
+    "Wat de batterij laadde (van zon of net) en leverde (aan huis of net), en wat dat kostte en opleverde. Waar de energie vandaan kwam, volgt uit de energiestromen van dat uur. Het saldo telt energie die aan het begin of eind van de periode nog in de batterij zit niet mee, dus op één dag valt het vaak lager uit dan over een maand. Bij Vandaag en Gisteren elke sessie met de gemiddelde prijs.": [
+      "What the battery charged (from solar or grid) and delivered (to home or grid), and what that cost and returned. Where the energy came from follows from the energy flows of that hour. The balance does not count energy still in the battery at the start or end of the period, so for one day it is often lower than over a month. For Today and Yesterday each session with its average price.",
+      "Was die Batterie geladen (von Sonne oder Netz) und geliefert (ans Haus oder Netz) hat und was das kostete und einbrachte. Woher die Energie kam, folgt aus den Energieflüssen dieser Stunde. Der Saldo zählt Energie, die am Anfang oder Ende des Zeitraums noch in der Batterie ist, nicht mit; für einen Tag fällt er daher oft niedriger aus als für einen Monat. Bei Heute und Gestern jede Sitzung mit ihrem Durchschnittspreis.",
+      "Hva batteriet ladet (fra sol eller nett) og leverte (til hus eller nett), og hva det kostet og ga. Hvor energien kom fra, følger av energiflyten den timen. Saldoen teller ikke energi som fortsatt er i batteriet ved start eller slutt av perioden, så for én dag blir den ofte lavere enn for en måned. For I dag og I går hver økt med snittprisen.",
+      "Vad batteriet laddade (från sol eller nät) och levererade (till hus eller nät), och vad det kostade och gav. Varifrån energin kom följer av energiflödena den timmen. Saldot räknar inte energi som fortfarande finns i batteriet vid periodens början eller slut, så för en dag blir det ofta lägre än för en månad. För Idag och Igår varje session med snittpriset.",
+      "Hvad batteriet opladede (fra sol eller net) og leverede (til hus eller net), og hvad det kostede og indbragte. Hvor energien kom fra, følger af energistrømmene den time. Saldoen tæller ikke energi, der stadig er i batteriet ved periodens start eller slut, så for én dag bliver den ofte lavere end for en måned. For I dag og I går hver session med gennemsnitsprisen.",
+      "Cosa ha caricato la batteria (dal sole o dalla rete) e fornito (alla casa o alla rete), e quanto è costato e reso. La provenienza segue dai flussi di quell'ora. Il saldo non conta l'energia ancora nella batteria all'inizio o alla fine del periodo, quindi per un giorno è spesso più basso che per un mese. Per Oggi e Ieri ogni sessione con il prezzo medio.",
+      "Ce que la batterie a chargé (soleil ou réseau) et fourni (maison ou réseau), et ce que cela a coûté et rapporté. L'origine suit des flux d'énergie de cette heure. Le solde ne compte pas l'énergie encore dans la batterie au début ou à la fin de la période ; sur une journée il est donc souvent plus bas que sur un mois. Pour Aujourd'hui et Hier, chaque session avec son prix moyen.",
+      "O que a bateria carregou (do sol ou da rede) e forneceu (à casa ou à rede), e o que isso custou e rendeu. A origem segue dos fluxos dessa hora. O saldo não conta a energia ainda na bateria no início ou no fim do período, por isso num dia fica muitas vezes mais baixo do que num mês. Em Hoje e Ontem, cada sessão com o preço médio.",
+      "Lo que la batería cargó (del sol o la red) y entregó (a casa o a la red), y lo que costó y rindió. El origen sigue de los flujos de esa hora. El saldo no cuenta la energía que sigue en la batería al inicio o al final del periodo, así que en un día suele ser más bajo que en un mes. En Hoy y Ayer, cada sesión con su precio medio."
+    ],
+    "De totalen van de gekozen periode uit de meterstanden in Homey Insights, vergeleken met de vorige periode tot hetzelfde moment. Zelfvoorzienend is het deel van je verbruik uit zon en batterij.": [
+      "The totals of the chosen period from the meter readings in Homey Insights, compared with the previous period up to the same moment. Self-sufficient is the share of your use from solar and battery.",
+      "Die Summen des gewählten Zeitraums aus den Zählerständen in Homey Insights, verglichen mit dem vorherigen Zeitraum bis zum selben Moment. Autarkie ist der Anteil deines Verbrauchs aus Sonne und Batterie.",
+      "Totalene for valgt periode fra målerstandene i Homey Insights, sammenlignet med forrige periode til samme tidspunkt. Selvforsynt er andelen av forbruket fra sol og batteri.",
+      "Totalerna för vald period från mätarställningarna i Homey Insights, jämfört med föregående period till samma tidpunkt. Självförsörjande är andelen av förbrukningen från sol och batteri.",
+      "Totalerne for den valgte periode fra målerstandene i Homey Insights, sammenlignet med forrige periode til samme tidspunkt. Selvforsynende er andelen af forbruget fra sol og batteri.",
+      "I totali del periodo scelto dalle letture in Homey Insights, confrontati col periodo precedente fino allo stesso momento. Autosufficienza è la quota di consumo da sole e batteria.",
+      "Les totaux de la période choisie d'après les relevés dans Homey Insights, comparés à la période précédente au même moment. L'autonomie est la part de votre consommation venant du soleil et de la batterie.",
+      "Os totais do período escolhido a partir das leituras no Homey Insights, comparados com o período anterior até ao mesmo momento. Autossuficiente é a parte do consumo vinda do sol e da bateria.",
+      "Los totales del periodo elegido a partir de las lecturas en Homey Insights, comparados con el periodo anterior hasta el mismo momento. Autosuficiente es la parte de tu consumo del sol y la batería."
+    ],
+    "De dynamische stroomprijzen van vandaag en morgen, per kwartier of uur, van Homey Energie of EnergyZero. Het goedkoopste blok is het goedkoopste aaneengesloten blok van 3 uur. Net kost nu: wat je afname van dit moment per uur kost, met een min ervoor als je teruglevert.": [
+      "The dynamic electricity prices of today and tomorrow, per quarter hour or hour, from Homey Energy or EnergyZero. The cheapest block is the cheapest 3 hours in a row. Grid costs now: what your import of this moment costs per hour, with a minus while you export.",
+      "Die dynamischen Strompreise von heute und morgen, pro Viertelstunde oder Stunde, von Homey Energie oder EnergyZero. Der günstigste Block sind die günstigsten 3 Stunden am Stück. Netz kostet jetzt: was dein Bezug in diesem Moment pro Stunde kostet, mit einem Minus, wenn du einspeist.",
+      "Dynamiske strømpriser for i dag og i morgen, per kvarter eller time, fra Homey Energi eller EnergyZero. Billigste blokk er de billigste 3 timene på rad. Nettet koster nå: hva importen din akkurat nå koster per time, med minus når du eksporterer.",
+      "Dynamiska elpriser för idag och imorgon, per kvart eller timme, från Homey Energi eller EnergyZero. Billigaste blocket är de billigaste 3 timmarna i följd. Nätet kostar nu: vad din import just nu kostar per timme, med ett minus när du exporterar.",
+      "Dynamiske elpriser for i dag og i morgen, pr. kvarter eller time, fra Homey Energi eller EnergyZero. Billigste blok er de billigste 3 timer i træk. Nettet koster nu: hvad din import lige nu koster pr. time, med et minus når du eksporterer.",
+      "I prezzi dinamici di oggi e domani, per quarto d'ora o ora, da Homey Energia o EnergyZero. Il blocco più economico sono le 3 ore consecutive più economiche. La rete costa ora: quanto costa all'ora il prelievo di questo momento, con un meno quando immetti.",
+      "Les prix dynamiques d'aujourd'hui et de demain, par quart d'heure ou heure, de Homey Énergie ou EnergyZero. Le bloc le moins cher est celui de 3 heures consécutives le moins cher. Le réseau coûte maintenant : ce que coûte par heure ton soutirage de ce moment, avec un moins quand tu injectes.",
+      "Os preços dinâmicos de hoje e amanhã, por quarto de hora ou hora, do Homey Energia ou da EnergyZero. O bloco mais barato são as 3 horas seguidas mais baratas. A rede custa agora: quanto custa por hora o consumo da rede neste momento, com um menos quando injetas.",
+      "Los precios dinámicos de hoy y mañana, por cuarto de hora u hora, de Homey Energía o EnergyZero. El bloque más barato son las 3 horas seguidas más baratas. La red cuesta ahora: lo que cuesta por hora tu consumo de red en este momento, con un menos cuando inyectas."
+    ],
+    "Zelfvoorzienend: deel van je verbruik uit zon en batterij. Eigen zon gebruikt: deel van je zonnestroom dat je zelf gebruikte. Netto: afname min teruglevering.": [
+      "Self-sufficient: share of your use from solar and battery. Own solar used: share of your solar power you used yourself. Net: import minus export.",
+      "Autarkie: Anteil deines Verbrauchs aus Sonne und Batterie. Eigener Solarstrom genutzt: Anteil deines Solarstroms, den du selbst genutzt hast. Netto: Bezug minus Einspeisung.",
+      "Selvforsynt: andel av forbruket fra sol og batteri. Egen sol brukt: andel av solstrømmen du brukte selv. Netto: import minus eksport.",
+      "Självförsörjande: andel av förbrukningen från sol och batteri. Egen sol använd: andel av solelen du använde själv. Netto: import minus export.",
+      "Selvforsynende: andel af forbruget fra sol og batteri. Egen sol brugt: andel af solstrømmen du selv brugte. Netto: import minus eksport.",
+      "Autosufficienza: quota di consumo da sole e batteria. Solare proprio usato: quota della tua energia solare usata da te. Netto: prelievo meno immissione.",
+      "Autonomie : part de votre consommation venant du soleil et de la batterie. Solaire autoconsommé : part de votre production que vous avez utilisée. Net : soutirage moins injection.",
+      "Autossuficiente: parte do consumo vinda do sol e da bateria. Solar própria usada: parte da sua energia solar que usou. Líquido: consumo menos injeção.",
+      "Autosuficiente: parte de tu consumo del sol y la batería. Solar propia usada: parte de tu energía solar que usaste tú. Neto: consumo menos inyección."
+    ],
+    'Apparaten die nu stroom gebruiken, volgens hun eigen vermogensmeting. "geschat" betekent dat Homey het verbruik schat. De rest van Huis is wat het huis meer gebruikt dan alle apparaten samen: verbruik dat niets meet, of meters die niet op hetzelfde moment bijwerken (zonnepanelen via de cloud lopen vaak een paar minuten achter). Negatief betekent dat de apparaten samen meer melden dan Huis.': [
+      'Devices using power right now, from their own power meter. "estimated" means Homey estimates the use. The rest of Home is what the house uses beyond all devices together: use nothing measures, or meters that do not update at the same moment (solar panels via the cloud often lag a few minutes). Negative means the devices together report more than Home.',
+      'Geräte, die gerade Strom nutzen, laut ihrer eigenen Leistungsmessung. "geschätzt" heißt, dass Homey den Verbrauch schätzt. Der Rest von Haus ist, was das Haus mehr nutzt als alle Geräte zusammen: Verbrauch, den nichts misst, oder Zähler, die nicht im selben Moment aktualisieren (Solarmodule über die Cloud hängen oft ein paar Minuten nach). Negativ heißt, dass die Geräte zusammen mehr melden als Haus.',
+      'Enheter som bruker strøm nå, ifølge egen effektmåling. "anslått" betyr at Homey anslår forbruket. Resten av Hus er det huset bruker utover alle enhetene til sammen: forbruk som ingenting måler, eller målere som ikke oppdateres samtidig (solcellepaneler via skyen henger ofte noen minutter etter). Negativt betyr at enhetene til sammen melder mer enn Hus.',
+      'Enheter som använder el nu, enligt egen effektmätning. "uppskattad" betyder att Homey uppskattar förbrukningen. Resten av Hus är det huset använder utöver alla enheter tillsammans: förbrukning som inget mäter, eller mätare som inte uppdateras samtidigt (solpaneler via molnet ligger ofta några minuter efter). Negativt betyder att enheterna tillsammans rapporterar mer än Hus.',
+      'Enheder der bruger strøm nu, ifølge egen effektmåling. "anslået" betyder, at Homey anslår forbruget. Resten af Hus er det, huset bruger ud over alle enheder tilsammen: forbrug som intet måler, eller målere der ikke opdaterer samtidig (solpaneler via skyen halter ofte et par minutter efter). Negativt betyder, at enhederne tilsammen melder mere end Hus.',
+      'Dispositivi che usano corrente ora, secondo la loro misura di potenza. "stimato" significa che Homey stima il consumo. Il resto di Casa è quanto la casa usa oltre tutti i dispositivi insieme: consumo che nulla misura, o contatori che non si aggiornano nello stesso momento (i pannelli solari via cloud spesso sono indietro di qualche minuto). Negativo significa che i dispositivi insieme segnalano più di Casa.',
+      "Appareils qui consomment maintenant, selon leur propre mesure. « estimé » signifie que Homey estime la consommation. Le reste de Maison est ce que la maison consomme en plus de tous les appareils réunis : une consommation que rien ne mesure, ou des compteurs qui ne se mettent pas à jour au même moment (les panneaux solaires via le cloud ont souvent quelques minutes de retard). Négatif signifie que les appareils réunis indiquent plus que Maison.",
+      'Dispositivos que usam energia agora, pela sua própria medição. "estimado" significa que o Homey estima o consumo. O resto de Casa é o que a casa usa além de todos os dispositivos juntos: consumo que nada mede, ou contadores que não atualizam no mesmo momento (painéis solares via cloud atrasam muitas vezes alguns minutos). Negativo significa que os dispositivos juntos indicam mais do que Casa.',
+      'Dispositivos que usan energía ahora, según su propia medición. "estimado" significa que Homey estima el consumo. El resto de Casa es lo que la casa usa además de todos los dispositivos juntos: consumo que nada mide, o contadores que no se actualizan en el mismo momento (los paneles solares por la nube suelen ir unos minutos atrasados). Negativo significa que los dispositivos juntos indican más que Casa.'
+    ],
+    "Boven de nul waar je stroom vandaan kwam (net, zon, batterij), eronder waar overschot heen ging (teruglevering, batterij). Uit de meterstanden van je P1-meter, zonnepanelen en batterij.": [
+      "Above zero where your power came from (grid, solar, battery), below it where surplus went (export, battery). From the meter readings of your P1 meter, solar panels and battery.",
+      "Über null, woher dein Strom kam (Netz, Sonne, Batterie), darunter, wohin der Überschuss ging (Einspeisung, Batterie). Aus den Zählerständen von P1-Zähler, Solarmodulen und Batterie.",
+      "Over null hvor strømmen kom fra (nett, sol, batteri), under hvor overskuddet gikk (eksport, batteri). Fra målerstandene til P1-måler, solpaneler og batteri.",
+      "Över noll varifrån elen kom (nät, sol, batteri), under vart överskottet gick (export, batteri). Från mätarställningarna för P1-mätare, solpaneler och batteri.",
+      "Over nul hvor strømmen kom fra (net, sol, batteri), under hvor overskuddet gik hen (eksport, batteri). Fra målerstandene for P1-måler, solpaneler og batteri.",
+      "Sopra lo zero da dove è venuta la corrente (rete, sole, batteria), sotto dove è andato il surplus (immissione, batteria). Dalle letture di contatore P1, pannelli e batteria.",
+      "Au-dessus de zéro d'où venait le courant (réseau, soleil, batterie), en dessous où est allé le surplus (injection, batterie). D'après les relevés du compteur P1, des panneaux et de la batterie.",
+      "Acima de zero de onde veio a energia (rede, sol, bateria), abaixo para onde foi o excedente (injeção, bateria). Das leituras do contador P1, painéis e bateria.",
+      "Por encima de cero de dónde vino la energía (red, sol, batería), por debajo adónde fue el excedente (inyección, batería). De las lecturas del contador P1, paneles y batería."
+    ],
+    "Het vermogen door de dag in stappen van 5 minuten uit Homey Insights; het laatste stuk loopt live mee. De stippellijn is de verwachting van Forecast.Solar.": [
+      "The power through the day in steps of 5 minutes from Homey Insights; the last part follows live. The dashed line is the forecast of Forecast.Solar.",
+      "Die Leistung über den Tag in 5-Minuten-Schritten aus Homey Insights; das letzte Stück läuft live mit. Die gestrichelte Linie ist die Prognose von Forecast.Solar.",
+      "Effekten gjennom dagen i trinn på 5 minutter fra Homey Insights; siste del følger live. Den stiplede linjen er prognosen fra Forecast.Solar.",
+      "Effekten under dagen i steg om 5 minuter från Homey Insights; sista delen följer live. Den streckade linjen är prognosen från Forecast.Solar.",
+      "Effekten gennem dagen i trin på 5 minutter fra Homey Insights; sidste del følger live. Den stiplede linje er prognosen fra Forecast.Solar.",
+      "La potenza durante il giorno a passi di 5 minuti da Homey Insights; l'ultimo tratto segue dal vivo. La linea tratteggiata è la previsione di Forecast.Solar.",
+      "La puissance au fil de la journée par pas de 5 minutes, depuis Homey Insights ; la fin suit en direct. La ligne pointillée est la prévision de Forecast.Solar.",
+      "A potência ao longo do dia em passos de 5 minutos do Homey Insights; a última parte segue ao vivo. A linha tracejada é a previsão da Forecast.Solar.",
+      "La potencia a lo largo del día en pasos de 5 minutos de Homey Insights; el último tramo sigue en vivo. La línea discontinua es la previsión de Forecast.Solar."
+    ],
+    'Waar je energie vandaan kwam, via je huis naar elk apparaat met een meting; de dikte is de hoeveelheid. "Niet gemeten" is wat de apparaten samen niet verklaren.': [
+      'Where your energy came from, through your home to each device with a meter; the thickness is the amount. "Not measured" is what the devices together don\'t account for.',
+      'Woher deine Energie kam, über dein Haus zu jedem Gerät mit Messung; die Dicke ist die Menge. "Nicht gemessen" ist, was die Geräte zusammen nicht erklären.',
+      'Hvor energien kom fra, via huset til hver enhet med måling; tykkelsen er mengden. "Ikke målt" er det enhetene samlet ikke forklarer.',
+      'Varifrån energin kom, via huset till varje enhet med mätning; tjockleken är mängden. "Inte uppmätt" är det enheterna tillsammans inte förklarar.',
+      'Hvor energien kom fra, via huset til hver enhed med måling; tykkelsen er mængden. "Ikke målt" er det, enhederne samlet ikke forklarer.',
+      'Da dove è venuta l\'energia, attraverso la casa fino a ogni dispositivo misurato; lo spessore è la quantità. "Non misurato" è ciò che i dispositivi insieme non spiegano.',
+      "D'où venait votre énergie, via la maison jusqu'à chaque appareil mesuré ; l'épaisseur est la quantité. « Non mesuré » est ce que les appareils n'expliquent pas.",
+      'De onde veio a energia, pela casa até cada dispositivo medido; a espessura é a quantidade. "Não medido" é o que os dispositivos juntos não explicam.',
+      'De dónde vino tu energía, por tu casa hasta cada dispositivo medido; el grosor es la cantidad. "No medido" es lo que los dispositivos juntos no explican.'
+    ],
+    "kWh per apparaat in de gekozen periode, uit hun energiemeters in Homey Insights en het rapport van Homey Energie. Het percentage is het deel van je totale verbruik.": [
+      "kWh per device in the chosen period, from their energy meters in Homey Insights and the Homey Energy report. The percentage is the share of your total use.",
+      "kWh pro Gerät im gewählten Zeitraum, aus ihren Energiezählern in Homey Insights und dem Bericht von Homey Energie. Der Prozentsatz ist der Anteil am Gesamtverbrauch.",
+      "kWh per enhet i valgt periode, fra energimålerne i Homey Insights og rapporten fra Homey Energi. Prosenten er andelen av totalt forbruk.",
+      "kWh per enhet under vald period, från energimätarna i Homey Insights och rapporten från Homey Energi. Procenten är andelen av total förbrukning.",
+      "kWh pr. enhed i den valgte periode, fra energimålerne i Homey Insights og rapporten fra Homey Energi. Procenten er andelen af det samlede forbrug.",
+      "kWh per dispositivo nel periodo scelto, dai contatori in Homey Insights e dal rapporto di Homey Energia. La percentuale è la quota del consumo totale.",
+      "kWh par appareil sur la période choisie, d'après leurs compteurs dans Homey Insights et le rapport de Homey Énergie. Le pourcentage est la part de votre consommation totale.",
+      "kWh por dispositivo no período escolhido, dos contadores no Homey Insights e do relatório do Homey Energia. A percentagem é a parte do consumo total.",
+      "kWh por dispositivo en el periodo elegido, de sus contadores en Homey Insights y del informe de Homey Energía. El porcentaje es la parte de tu consumo total."
+    ],
+    "Elke meterstand is gerekend met de prijs van dat moment. Per regel: de hoeveelheid × de gemiddelde prijs in deze periode.": [
+      "Each meter reading is priced at the price of that moment. Per line: the amount × the average price in this period.",
+      "Jeder Zählerstand wird mit dem Preis dieses Moments berechnet. Pro Zeile: die Menge × der Durchschnittspreis in diesem Zeitraum.",
+      "Hver målerstand er regnet med prisen i det øyeblikket. Per linje: mengden × snittprisen i perioden.",
+      "Varje mätarställning räknas med priset vid det tillfället. Per rad: mängden × snittpriset under perioden.",
+      "Hver målerstand er regnet med prisen i det øjeblik. Pr. linje: mængden × gennemsnitsprisen i perioden.",
+      "Ogni lettura è calcolata con il prezzo di quel momento. Per riga: la quantità × il prezzo medio del periodo.",
+      "Chaque relevé est calculé au prix de ce moment. Par ligne : la quantité × le prix moyen de la période.",
+      "Cada leitura é calculada com o preço desse momento. Por linha: a quantidade × o preço médio do período.",
+      "Cada lectura se calcula con el precio de ese momento. Por línea: la cantidad × el precio medio del periodo."
+    ],
+    "Wat het einde van salderen op 1 januari 2027 kost, over vorig jaar (of dit jaar tot nu): per gesaldeerde kWh het verschil tussen de prijs die je nu vermijdt en wat teruglevering zonder salderen oplevert. Teruglevering boven je afname werd nooit gesaldeerd. Stroom per maand is afname min teruglevering, zonder vaste kosten, gemiddeld over dezelfde periode. Zonder thuisbatterij was wat hij laadde teruggeleverd en wat hij aan het huis gaf van het net gekomen.": [
+      "What the end of net metering on 1 January 2027 costs, over last year (or this year so far): per netted kWh the difference between the price you now avoid and what export earns without net metering. Export beyond your import was never netted. Electricity per month is import minus export, without fixed costs, averaged over the same period. Without the home battery, what it charged would have been exported and what it gave the house would have come from the grid.",
+      "Was das Ende der Saldierung am 1. Januar 2027 kostet, über das Vorjahr (oder dieses Jahr bis jetzt): pro saldierter kWh der Unterschied zwischen dem Preis, den du jetzt vermeidest, und dem, was Einspeisung ohne Saldierung bringt. Einspeisung über deinem Bezug wurde nie saldiert. Strom pro Monat ist Bezug minus Einspeisung, ohne Fixkosten, gemittelt über denselben Zeitraum. Ohne Heimbatterie wäre, was sie lud, eingespeist worden, und was sie dem Haus gab, wäre aus dem Netz gekommen.",
+      "Hva slutten på nettomåling 1. januar 2027 koster, over fjoråret (eller i år så langt): per avregnet kWh forskjellen mellom prisen du nå unngår og hva eksport gir uten nettomåling. Eksport utover importen ble aldri avregnet. Strøm per måned er import minus eksport, uten faste kostnader, i snitt over samme periode. Uten hjemmebatteriet ville det det ladet blitt eksportert, og det det ga huset kommet fra nettet.",
+      "Vad slutet på kvittningen den 1 januari 2027 kostar, över förra året (eller i år hittills): per kvittad kWh skillnaden mellan priset du nu undviker och vad export ger utan kvittning. Export utöver din import kvittades aldrig. El per månad är import minus export, utan fasta kostnader, i snitt över samma period. Utan hembatteriet hade det den laddade exporterats och det den gav huset kommit från nätet.",
+      "Hvad ophøret af nettoafregning 1. januar 2027 koster, over sidste år (eller i år indtil nu): pr. modregnet kWh forskellen mellem prisen, du nu undgår, og hvad eksport giver uden nettoafregning. Eksport ud over dit forbrug blev aldrig modregnet. Strøm pr. måned er forbrug fra nettet minus eksport, uden faste omkostninger, i gennemsnit over samme periode. Uden hjemmebatteriet var det, det ladede, blevet eksporteret, og det, det gav huset, kommet fra nettet.",
+      "Quanto costa la fine dello scambio sul posto il 1° gennaio 2027, sull'anno scorso (o quest'anno finora): per kWh compensato la differenza tra il prezzo che ora eviti e quanto rende l'immissione senza scambio. L'immissione oltre il prelievo non è mai stata compensata. L’elettricità al mese è prelievo meno immissione, senza costi fissi, in media sullo stesso periodo. Senza la batteria domestica, ciò che caricava sarebbe stato immesso e ciò che dava alla casa sarebbe venuto dalla rete.",
+      "Ce que coûte la fin de la compensation le 1er janvier 2027, sur l'an dernier (ou cette année jusqu'ici) : par kWh compensé, l'écart entre le prix que vous évitez et ce que rapporte l'injection sans compensation. L'injection au-delà du soutirage n'a jamais été compensée. L’électricité par mois est le soutirage moins l’injection, sans frais fixes, en moyenne sur la même période. Sans la batterie domestique, ce qu’elle chargeait aurait été injecté et ce qu’elle donnait à la maison serait venu du réseau.",
+      "Quanto custa o fim da compensação a 1 de janeiro de 2027, no ano passado (ou este ano até agora): por kWh compensado, a diferença entre o preço que evita e o que a injeção rende sem compensação. A injeção acima do consumo nunca foi compensada. A eletricidade por mês é o consumo da rede menos a injeção, sem custos fixos, em média no mesmo período. Sem a bateria doméstica, o que ela carregava teria sido injetado e o que dava à casa teria vindo da rede.",
+      "Lo que cuesta el fin de la compensación el 1 de enero de 2027, sobre el año pasado (o este año hasta ahora): por kWh compensado, la diferencia entre el precio que ahora evitas y lo que rinde la inyección sin compensación. La inyección por encima de tu consumo nunca se compensó. La electricidad al mes es el consumo de red menos el vertido, sin costes fijos, de media en el mismo periodo. Sin la batería doméstica, lo que cargaba se habría vertido y lo que daba a la casa habría venido de la red."
+    ],
+    "Opbrengst van je zonnepanelen met een streepje voor de verwachting van Forecast.Solar. Prestatie = opbrengst ÷ verwachting; per kWp gebruikt het vermogen van je dakvlakken.": [
+      "Yield of your solar panels with a mark for the forecast of Forecast.Solar. Performance = yield ÷ forecast; per kWp uses the size of your roof planes.",
+      "Ertrag deiner Solarmodule mit einem Strich für die Prognose von Forecast.Solar. Leistung = Ertrag ÷ Prognose; pro kWp nutzt die Größe deiner Dachflächen.",
+      "Produksjon fra solpanelene med en strek for prognosen fra Forecast.Solar. Ytelse = produksjon ÷ prognose; per kWp bruker størrelsen på takflatene.",
+      "Produktion från solpanelerna med ett streck för prognosen från Forecast.Solar. Prestanda = produktion ÷ prognos; per kWp använder takytornas storlek.",
+      "Produktion fra solpanelerne med en streg for prognosen fra Forecast.Solar. Ydelse = produktion ÷ prognose; pr. kWp bruger tagfladernes størrelse.",
+      "Produzione dei pannelli con un segno per la previsione di Forecast.Solar. Resa = produzione ÷ previsione; per kWp usa la potenza delle falde.",
+      "Production de vos panneaux avec un trait pour la prévision de Forecast.Solar. Performance = production ÷ prévision ; par kWc utilise la puissance de vos pans de toit.",
+      "Produção dos painéis com um traço para a previsão da Forecast.Solar. Desempenho = produção ÷ previsão; por kWp usa a potência das águas do telhado.",
+      "Producción de tus paneles con una marca para la previsión de Forecast.Solar. Rendimiento = producción ÷ previsión; por kWp usa la potencia de tus faldones."
+    ],
+    "Gasverbruik van het hele huis uit je slimme meter. Per graaddag deelt het verbruik door de graaddagen (buitentemperatuur van Open-Meteo), zodat perioden met ander weer te vergelijken zijn.": [
+      "Gas use of the whole house from your smart meter. Per degree day divides the use by the degree days (outside temperature from Open-Meteo), so periods with different weather can be compared.",
+      "Gasverbrauch des ganzen Hauses aus deinem Smart Meter. Pro Gradtag teilt den Verbrauch durch die Gradtage (Außentemperatur von Open-Meteo), damit Zeiträume mit anderem Wetter vergleichbar sind.",
+      "Gassforbruk for hele huset fra den smarte måleren. Per graddag deler forbruket på graddagene (utetemperatur fra Open-Meteo), så perioder med ulikt vær kan sammenlignes.",
+      "Gasförbrukning för hela huset från din smarta mätare. Per graddag delar förbrukningen med graddagarna (utetemperatur från Open-Meteo), så perioder med olika väder kan jämföras.",
+      "Gasforbrug for hele huset fra din smarte måler. Pr. graddag deler forbruget med graddagene (udetemperatur fra Open-Meteo), så perioder med forskelligt vejr kan sammenlignes.",
+      "Consumo di gas di tutta la casa dal contatore intelligente. Per grado giorno divide il consumo per i gradi giorno (temperatura esterna da Open-Meteo), per confrontare periodi con meteo diverso.",
+      "Consommation de gaz de toute la maison d'après votre compteur. Par degré-jour divise la consommation par les degrés-jours (température extérieure d'Open-Meteo), pour comparer des périodes de météo différente.",
+      "Consumo de gás de toda a casa do contador inteligente. Por grau-dia divide o consumo pelos graus-dia (temperatura exterior da Open-Meteo), para comparar períodos com tempo diferente.",
+      "Consumo de gas de toda la casa de tu contador. Por grado-día divide el consumo entre los grados-día (temperatura exterior de Open-Meteo), para comparar periodos con distinto tiempo."
+    ],
+    "De standen van je meters, zoals op de meter zelf of je jaarafrekening: stroom per tarief uit je slimme meter, gas, water en de kWh-teller van je zonnepanelen. In Nederland is tarief 1 het daltarief en tarief 2 normaal; in België is tarief 1 dag en tarief 2 nacht.": [
+      "The readings of your meters, as on the meter itself or your annual bill: electricity per tariff from your smart meter, gas, water and the kWh counter of your solar panels. In the Netherlands tariff 1 is the off-peak tariff and tariff 2 normal; in Belgium tariff 1 is day and tariff 2 night.",
+      "Die Stände deiner Zähler, wie auf dem Zähler selbst oder deiner Jahresabrechnung: Strom pro Tarif aus deinem Smart Meter, Gas, Wasser und der kWh-Zähler deiner Solarmodule. In den Niederlanden ist Tarif 1 der Niedertarif und Tarif 2 normal; in Belgien ist Tarif 1 Tag und Tarif 2 Nacht.",
+      "Standene på målerne dine, som på selve måleren eller årsoppgjøret: strøm per tariff fra smartmåleren, gass, vann og kWh-telleren til solcellepanelene. I Nederland er tariff 1 lavtariff og tariff 2 normal; i Belgia er tariff 1 dag og tariff 2 natt.",
+      "Ställningarna på dina mätare, som på mätaren själv eller årsräkningen: el per tariff från din smarta mätare, gas, vatten och kWh-räknaren för dina solpaneler. I Nederländerna är tariff 1 lågtariff och tariff 2 normal; i Belgien är tariff 1 dag och tariff 2 natt.",
+      "Standene på dine målere, som på selve måleren eller årsopgørelsen: strøm pr. tarif fra din smartmåler, gas, vand og kWh-tælleren for dine solpaneler. I Holland er tarif 1 lavtarif og tarif 2 normal; i Belgien er tarif 1 dag og tarif 2 nat.",
+      "Le letture dei tuoi contatori, come sul contatore stesso o sulla bolletta annuale: elettricità per fascia dal contatore intelligente, gas, acqua e il contatore kWh dei pannelli solari. Nei Paesi Bassi la fascia 1 è la tariffa ridotta e la fascia 2 normale; in Belgio la fascia 1 è giorno e la fascia 2 notte.",
+      "Les relevés de vos compteurs, comme sur le compteur lui-même ou votre facture annuelle : électricité par tarif de votre compteur intelligent, gaz, eau et le compteur kWh de vos panneaux solaires. Aux Pays-Bas, le tarif 1 est le tarif creux et le tarif 2 normal ; en Belgique, le tarif 1 est jour et le tarif 2 nuit.",
+      "As leituras dos seus contadores, como no próprio contador ou na fatura anual: eletricidade por tarifa do contador inteligente, gás, água e o contador kWh dos painéis solares. Nos Países Baixos a tarifa 1 é a de vazio e a tarifa 2 normal; na Bélgica a tarifa 1 é dia e a tarifa 2 noite.",
+      "Las lecturas de tus contadores, como en el propio contador o en tu factura anual: electricidad por tarifa de tu contador inteligente, gas, agua y el contador kWh de tus paneles solares. En los Países Bajos la tarifa 1 es la de valle y la tarifa 2 normal; en Bélgica la tarifa 1 es día y la tarifa 2 noche."
+    ],
+    "Waterverbruik in liters uit je watermeter, en het huidige verbruik per minuut.": [
+      "Water use in liters from your water meter, and the current use per minute.",
+      "Wasserverbrauch in Litern aus deinem Wasserzähler und der aktuelle Verbrauch pro Minute.",
+      "Vannforbruk i liter fra vannmåleren, og nåværende forbruk per minutt.",
+      "Vattenförbrukning i liter från vattenmätaren, och nuvarande förbrukning per minut.",
+      "Vandforbrug i liter fra vandmåleren, og det aktuelle forbrug pr. minut.",
+      "Consumo d'acqua in litri dal contatore, e il consumo attuale al minuto.",
+      "Consommation d'eau en litres d'après votre compteur, et la consommation actuelle par minute.",
+      "Consumo de água em litros do contador, e o consumo atual por minuto.",
+      "Consumo de agua en litros de tu contador, y el consumo actual por minuto."
+    ],
+    "Het laagste verbruik van het huis afgelopen nacht tussen 1:00 en 5:00, als alleen apparaten draaien die altijd aan staan.": [
+      "The lowest use of the house last night between 1:00 and 5:00, when only always-on devices run.",
+      "Der niedrigste Verbrauch des Hauses letzte Nacht zwischen 1:00 und 5:00, wenn nur Geräte laufen, die immer an sind.",
+      "Husets laveste forbruk i natt mellom 1:00 og 5:00, når bare enheter som alltid er på går.",
+      "Husets lägsta förbrukning i natt mellan 1:00 och 5:00, när bara enheter som alltid är på går.",
+      "Husets laveste forbrug i nat mellem 1:00 og 5:00, når kun enheder, der altid er tændt, kører.",
+      "Il consumo più basso della casa la notte scorsa tra l'1:00 e le 5:00, quando funzionano solo i dispositivi sempre accesi.",
+      "La consommation la plus basse de la maison la nuit dernière entre 1:00 et 5:00, quand seuls les appareils toujours allumés tournent.",
+      "O consumo mais baixo da casa na noite passada entre a 1:00 e as 5:00, quando só funcionam aparelhos sempre ligados.",
+      "El consumo más bajo de la casa anoche entre la 1:00 y las 5:00, cuando solo funcionan aparatos siempre encendidos."
+    ],
+    "Apparaten die langer aan staan dan normaal, hoger sluipverbruik dan de afgelopen twee weken, meters die niet reageren, een negatieve prijs terwijl je teruglevert en een kwartier boven je maandpiek.": [
+      "Devices on for longer than usual, standby use higher than the past two weeks, meters that don't respond, a negative price while you export and a quarter hour above your monthly peak.",
+      "Geräte, die länger als üblich an sind, höherer Standby-Verbrauch als in den letzten zwei Wochen, Zähler, die nicht reagieren, ein negativer Preis bei Einspeisung und eine Viertelstunde über deiner Monatsspitze.",
+      "Enheter som er på lenger enn vanlig, høyere standby-forbruk enn de siste to ukene, målere som ikke svarer, negativ pris mens du eksporterer og et kvarter over månedstoppen.",
+      "Enheter som är på längre än vanligt, högre standby-förbrukning än de senaste två veckorna, mätare som inte svarar, negativt pris medan du exporterar och en kvart över din månadstopp.",
+      "Enheder der er tændt længere end normalt, højere standbyforbrug end de sidste to uger, målere der ikke svarer, negativ pris mens du eksporterer og et kvarter over din månedsspids.",
+      "Dispositivi accesi più a lungo del solito, standby più alto delle ultime due settimane, contatori che non rispondono, un prezzo negativo mentre immetti e un quarto d'ora sopra il picco mensile.",
+      "Appareils allumés plus longtemps que d'habitude, veille plus élevée que ces deux dernières semaines, compteurs qui ne répondent pas, un prix négatif pendant l'injection et un quart d'heure au-dessus de votre pic mensuel.",
+      "Aparelhos ligados mais tempo do que o normal, standby mais alto do que nas últimas duas semanas, contadores que não respondem, um preço negativo enquanto injeta e um quarto de hora acima do pico mensal.",
+      "Aparatos encendidos más tiempo de lo normal, consumo en espera más alto que las últimas dos semanas, contadores que no responden, un precio negativo mientras inyectas y un cuarto de hora por encima de tu pico mensual."
+    ],
+    "De belasting per groep in je meterkast: het gemeten vermogen van de apparaten die je in de instellingen van de app aan de groep gaf (zonder meter: het verbruik dat in Homey is ingesteld), plus het vaste verbruik dat je invulde, als stroom (vermogen ÷ 230 V, gedeeld over de fasen van de groep) ten opzichte van de zekering. Overig is per fase wat je slimme meter meet (plus de zonnestroom op die fase, min wat de thuisbatterij er laadt) en wat de groepen niet verklaren. De balken onderaan tonen per groep hoe zwaar die door de dag belast was. Hoe lichter de kleur, hoe lager de belasting; een vast verbruik of een apparaat zonder meter geeft een balk die de hele dag doorloopt. Met A en W bovenaan kies je of de groepen in ampère of in watt staan.": [
+      "The load per circuit in your fuse box: the measured power of the devices you assigned to the circuit in the app settings (without a meter: the use set in Homey), plus the fixed use you entered, as a current (power ÷ 230 V, shared over the circuit's phases) compared with its fuse. Other is, per phase, what your smart meter measures (plus the solar power on that phase, minus what the home battery charges on it) that the circuits do not explain. The bars at the bottom show how heavily each circuit was loaded through the day. The lighter the color, the lower the load; a fixed use or a device without a meter gives a bar that runs all day. With A and W at the top you choose whether the circuits show amps or watts.",
+      "Die Last pro Stromkreis in deinem Sicherungskasten: die gemessene Leistung der Geräte, die du dem Stromkreis in den App-Einstellungen zugeordnet hast (ohne Zähler: der in Homey eingestellte Verbrauch), plus der eingetragene feste Verbrauch, als Strom (Leistung ÷ 230 V, verteilt auf die Phasen des Stromkreises) im Verhältnis zur Sicherung. Sonstiges ist pro Phase, was dein Smart Meter misst (plus der Solarstrom auf dieser Phase, minus was die Heimbatterie dort lädt) und die Stromkreise nicht erklären. Die Balken unten zeigen, wie stark jeder Stromkreis über den Tag belastet war. Je heller die Farbe, desto geringer die Last; ein fester Verbrauch oder ein Gerät ohne Zähler ergibt einen Balken, der den ganzen Tag durchläuft. Mit A und W oben wählst du, ob die Stromkreise in Ampere oder Watt angezeigt werden.",
+      "Belastningen per kurs i sikringsskapet: målt effekt for enhetene du har lagt til kursen i appinnstillingene (uten måler: forbruket som er satt i Homey), pluss det faste forbruket du la inn, som strøm (effekt ÷ 230 V, fordelt på kursens faser) sammenlignet med sikringen. Annet er per fase det den smarte måleren måler (pluss solstrømmen på den fasen, minus det hjemmebatteriet lader på den) som kursene ikke forklarer. Stolpene nederst viser hvor hardt hver kurs var belastet gjennom dagen. Jo lysere farge, desto lavere belastning; et fast forbruk eller en enhet uten måler gir en stolpe som går hele dagen. Med A og W øverst velger du om kursene vises i ampere eller watt.",
+      "Belastningen per grupp i elcentralen: uppmätt effekt för enheterna du har kopplat till gruppen i appinställningarna (utan mätare: förbrukningen som är inställd i Homey), plus den fasta förbrukning du angav, som ström (effekt ÷ 230 V, fördelad på gruppens faser) jämfört med säkringen. Övrigt är per fas det som din smarta mätare mäter (plus solelen på den fasen, minus det hembatteriet laddar på den) och som grupperna inte förklarar. Staplarna längst ner visar hur hårt varje grupp var belastad under dagen. Ju ljusare färg, desto lägre belastning; en fast förbrukning eller en enhet utan mätare ger en stapel som löper hela dagen. Med A och W högst upp väljer du om grupperna visas i ampere eller watt.",
+      "Belastningen pr. gruppe i eltavlen: målt effekt for de enheder, du har tilknyttet gruppen i appindstillingerne (uden måler: forbruget, der er indstillet i Homey), plus det faste forbrug, du har angivet, som strøm (effekt ÷ 230 V, fordelt på gruppens faser) sammenlignet med sikringen. Øvrigt er pr. fase det, din smarte måler måler (plus solstrømmen på den fase, minus det, hjemmebatteriet oplader på den), som grupperne ikke forklarer. Søjlerne nederst viser, hvor hårdt hver gruppe var belastet i løbet af dagen. Jo lysere farve, jo lavere belastning; et fast forbrug eller en enhed uden måler giver en søjle, der løber hele dagen. Med A og W øverst vælger du, om grupperne vises i ampere eller watt.",
+      "Il carico per circuito nel tuo quadro elettrico: la potenza misurata dei dispositivi che hai assegnato al circuito nelle impostazioni dell'app (senza misuratore: il consumo impostato in Homey), più il consumo fisso inserito, come corrente (potenza ÷ 230 V, ripartita sulle fasi del circuito) rispetto al fusibile. Altro è, per fase, ciò che misura il contatore intelligente (più l'energia solare su quella fase, meno ciò che la batteria domestica vi carica) e che i circuiti non spiegano. Le barre in basso mostrano quanto è stato caricato ogni circuito durante la giornata. Più il colore è chiaro, più il carico è basso; un consumo fisso o un dispositivo senza misuratore dà una barra che dura tutto il giorno. Con A e W in alto scegli se i circuiti sono mostrati in ampere o in watt.",
+      "La charge par circuit de ton tableau électrique : la puissance mesurée des appareils que tu as attribués au circuit dans les réglages de l'app (sans compteur : la consommation réglée dans Homey), plus la consommation fixe saisie, sous forme de courant (puissance ÷ 230 V, répartie sur les phases du circuit) par rapport au disjoncteur. Autre correspond, par phase, à ce que mesure ton compteur (plus l'énergie solaire sur cette phase, moins ce que la batterie domestique y charge) et que les circuits n'expliquent pas. Les barres du bas montrent la charge de chaque circuit au fil de la journée. Plus la couleur est claire, plus la charge est faible ; une consommation fixe ou un appareil sans compteur donne une barre qui dure toute la journée. Avec A et W en haut, vous choisissez d'afficher les circuits en ampères ou en watts.",
+      "A carga por circuito no seu quadro elétrico: a potência medida dos aparelhos que atribuiu ao circuito nas definições da app (sem medidor: o consumo definido no Homey), mais o consumo fixo indicado, como corrente (potência ÷ 230 V, repartida pelas fases do circuito) face ao disjuntor. Outros é, por fase, o que o seu contador mede (mais a energia solar nessa fase, menos o que a bateria doméstica carrega nela) e que os circuitos não explicam. As barras em baixo mostram a carga de cada circuito ao longo do dia. Quanto mais clara a cor, menor a carga; um consumo fixo ou um aparelho sem medidor dá uma barra que dura o dia todo. Com A e W no topo escolhe se os circuitos são mostrados em amperes ou em watts.",
+      "La carga por circuito en tu cuadro eléctrico: la potencia medida de los aparatos que asignaste al circuito en los ajustes de la app (sin medidor: el consumo configurado en Homey), más el consumo fijo indicado, como corriente (potencia ÷ 230 V, repartida entre las fases del circuito) frente al magnetotérmico. Otros es, por fase, lo que mide tu contador (más la energía solar en esa fase, menos lo que la batería doméstica carga en ella) y que los circuitos no explican. Las barras de abajo muestran la carga de cada circuito a lo largo del día. Cuanto más claro el color, menor la carga; un consumo fijo o un aparato sin medidor da una barra que dura todo el día. Con A y W arriba eliges si los circuitos se muestran en amperios o en vatios."
+    ],
+    "Je slimme meter geeft per fase alleen hele ampères. Het totaal van de meter is daarom naar verhouding over de fasen verdeeld.": [
+      "Your smart meter gives only whole amps per phase. The meter total is therefore spread over the phases in proportion.",
+      "Dein Smart Meter liefert pro Phase nur ganze Ampere. Die Gesamtleistung des Zählers wird deshalb anteilig auf die Phasen verteilt.",
+      "Strømmåleren din gir bare hele ampere per fase. Målerens totale effekt er derfor fordelt forholdsmessig over fasene.",
+      "Din elmätare ger bara hela ampere per fas. Mätarens totala effekt fördelas därför proportionellt över faserna.",
+      "Din elmåler giver kun hele ampere pr. fase. Målerens samlede effekt er derfor fordelt forholdsmæssigt over faserne.",
+      "Il tuo contatore fornisce solo ampere interi per fase. Il totale del contatore è quindi ripartito in proporzione sulle fasi.",
+      "Ton compteur ne donne que des ampères entiers par phase. Le total du compteur est donc réparti proportionnellement sur les phases.",
+      "O seu contador dá apenas amperes inteiros por fase. O total do contador é por isso distribuído proporcionalmente pelas fases.",
+      "Tu contador solo da amperios enteros por fase. Por eso el total del contador se reparte proporcionalmente entre las fases."
+    ],
+    "Stroom per fase van je slimme meter ten opzichte van je hoofdzekering; negatief is teruglevering. De grafiek toont de fasen door de dag.": [
+      "Current per phase from your smart meter compared with your main fuse; negative is export. The chart shows the phases through the day.",
+      "Strom pro Phase aus deinem Smart Meter im Verhältnis zur Hauptsicherung; negativ ist Einspeisung. Die Grafik zeigt die Phasen über den Tag.",
+      "Strøm per fase fra den smarte måleren sammenlignet med hovedsikringen; negativt er eksport. Grafen viser fasene gjennom dagen.",
+      "Ström per fas från din smarta mätare jämfört med huvudsäkringen; negativt är export. Diagrammet visar faserna under dagen.",
+      "Strøm pr. fase fra din smarte måler i forhold til hovedsikringen; negativ er eksport. Grafen viser faserne gennem dagen.",
+      "Corrente per fase dal contatore rispetto al fusibile principale; negativo è immissione. Il grafico mostra le fasi durante il giorno.",
+      "Courant par phase d'après votre compteur par rapport au disjoncteur principal ; négatif signifie injection. Le graphique montre les phases au fil de la journée.",
+      "Corrente por fase do contador em relação ao disjuntor principal; negativo é injeção. O gráfico mostra as fases ao longo do dia.",
+      "Corriente por fase de tu contador respecto al fusible principal; negativo es inyección. El gráfico muestra las fases a lo largo del día."
+    ],
+    "Voor het Belgische capaciteitstarief: je hoogste gemiddelde afname over een kwartier deze maand, van je meter of elke minuut gemeten door de app.": [
+      "For the Belgian capacity tariff: your highest average import over a quarter hour this month, from your meter or measured every minute by the app.",
+      "Für den belgischen Kapazitätstarif: dein höchster durchschnittlicher Bezug über eine Viertelstunde diesen Monat, von deinem Zähler oder jede Minute von der App gemessen.",
+      "For den belgiske kapasitetstariffen: høyeste gjennomsnittlige import over et kvarter denne måneden, fra måleren eller målt hvert minutt av appen.",
+      "För den belgiska kapacitetstariffen: din högsta genomsnittliga import under en kvart denna månad, från mätaren eller mätt varje minut av appen.",
+      "Til den belgiske kapacitetstarif: dit højeste gennemsnitlige forbrug over et kvarter denne måned, fra måleren eller målt hvert minut af appen.",
+      "Per la tariffa di capacità belga: il tuo prelievo medio più alto in un quarto d'ora questo mese, dal contatore o misurato ogni minuto dall'app.",
+      "Pour le tarif capacitaire belge : votre soutirage moyen le plus élevé sur un quart d'heure ce mois-ci, selon votre compteur ou mesuré chaque minute par l'app.",
+      "Para a tarifa de capacidade belga: o seu consumo médio mais alto num quarto de hora este mês, do contador ou medido a cada minuto pela app.",
+      "Para la tarifa de capacidad belga: tu consumo medio más alto en un cuarto de hora este mes, de tu contador o medido cada minuto por la app."
+    ],
+    "De all-in prijs komt uit de formule die je in Homey invulde.": ["The all-in price comes from the formula you entered in Homey.", "Der All-in-Preis kommt aus der Formel, die du in Homey eingegeben hast.", "Totalprisen kommer fra formelen du la inn i Homey.", "Totalpriset kommer från formeln du angav i Homey.", "Totalprisen kommer fra formlen, du indtastede i Homey.", "Il prezzo tutto incluso viene dalla formula inserita in Homey.", "Le prix tout compris vient de la formule saisie dans Homey.", "O preço com tudo incluído vem da fórmula que introduziu no Homey.", "El precio todo incluido viene de la fórmula que introdujiste en Homey."],
+    "De all-in prijs komt van Power by the Hour, met de opslagen die je daar invulde.": ["The all-in price comes from Power by the Hour, with the markups you entered there.", "Der All-in-Preis kommt von Power by the Hour, mit den dort eingegebenen Aufschlägen.", "Totalprisen kommer fra Power by the Hour, med påslagene du la inn der.", "Totalpriset kommer från Power by the Hour, med påslagen du angav där.", "Totalprisen kommer fra Power by the Hour, med de tillæg, du indtastede der.", "Il prezzo tutto incluso viene da Power by the Hour, con i ricarichi inseriti lì.", "Le prix tout compris vient de Power by the Hour, avec les majorations saisies là-bas.", "O preço com tudo incluído vem do Power by the Hour, com as margens que introduziu lá.", "El precio todo incluido viene de Power by the Hour, con los recargos que introdujiste allí."],
+    "Prijs per kwartier = marktprijs + energiebelasting + opslag leverancier.": ["Price per quarter hour = market price + energy tax + supplier markup.", "Preis pro Viertelstunde = Marktpreis + Energiesteuer + Aufschlag des Anbieters.", "Pris per kvarter = markedspris + energiavgift + leverandørpåslag.", "Pris per kvart = marknadspris + energiskatt + leverantörspåslag.", "Pris pr. kvarter = markedspris + energiafgift + leverandørtillæg.", "Prezzo per quarto d'ora = prezzo di mercato + imposta + maggiorazione del fornitore.", "Prix par quart d'heure = prix du marché + taxe énergie + marge du fournisseur.", "Preço por quarto de hora = preço de mercado + imposto + margem do fornecedor.", "Precio por cuarto de hora = precio de mercado + impuesto + margen del proveedor."],
+    "Met salderen levert teruglevering de prijs van dat moment op.": ["With net metering, export earns the price of that moment.", "Mit Saldierung bringt Einspeisung den Preis dieses Moments.", "Med nettomåling gir eksport prisen i det øyeblikket.", "Med kvittning ger export priset vid det tillfället.", "Med nettoafregning giver eksport prisen i det øjeblik.", "Con lo scambio sul posto l'immissione rende il prezzo di quel momento.", "Avec la compensation, l'injection rapporte le prix de ce moment.", "Com compensação, a injeção rende o preço desse momento.", "Con compensación, la inyección rinde el precio de ese momento."],
+    "Zonder salderen levert teruglevering de marktprijs op, min de terugleverkosten.": ["Without net metering, export earns the market price, minus the export fee.", "Ohne Saldierung bringt Einspeisung den Marktpreis, abzüglich der Einspeisekosten.", "Uten nettomåling gir eksport markedsprisen, minus eksportkostnaden.", "Utan kvittning ger export marknadspriset, minus exportavgiften.", "Uden nettoafregning giver eksport markedsprisen, minus eksportgebyret.", "Senza scambio sul posto l'immissione rende il prezzo di mercato, meno i costi di immissione.", "Sans compensation, l'injection rapporte le prix du marché, moins les frais d'injection.", "Sem compensação, a injeção rende o preço de mercado, menos os custos de injeção.", "Sin compensación, la inyección rinde el precio de mercado, menos los costes de inyección."],
+    "Zonder salderen levert teruglevering de terugleverprijs van Power by the Hour op.": ["Without net metering, export earns the export price from Power by the Hour.", "Ohne Saldierung bringt Einspeisung den Einspeisepreis von Power by the Hour.", "Uten nettomåling gir eksport eksportprisen fra Power by the Hour.", "Utan kvittning ger export exportpriset från Power by the Hour.", "Uden nettoafregning giver eksport eksportprisen fra Power by the Hour.", "Senza scambio sul posto l'immissione rende il prezzo di immissione di Power by the Hour.", "Sans compensation, l'injection rapporte le prix d'injection de Power by the Hour.", "Sem compensação, a injeção rende o preço de injeção do Power by the Hour.", "Sin compensación, la inyección rinde el precio de inyección de Power by the Hour."],
+    "Zonder salderen levert teruglevering de terugleververgoeding op, min de terugleverkosten.": ["Without net metering, export earns the export compensation, minus the export fee.", "Ohne Saldierung bringt Einspeisung die Einspeisevergütung, abzüglich der Einspeisekosten.", "Uten nettomåling gir eksport eksportgodtgjørelsen, minus eksportkostnaden.", "Utan kvittning ger export ersättningen för såld el, minus exportavgiften.", "Uden nettoafregning giver eksport afregningsprisen, minus eksportgebyret.", "Senza scambio sul posto l'immissione rende il compenso di immissione, meno i costi di immissione.", "Sans compensation, l'injection rapporte la rémunération d'injection, moins les frais d'injection.", "Sem compensação, a injeção rende a tarifa de injeção, menos os custos de injeção.", "Sin compensación, la inyección rinde la compensación por inyección, menos los costes de inyección."],
+    "Btw over de marktprijs van Homey": ["VAT on the market price from Homey", "MwSt. auf den Marktpreis von Homey", "Mva på markedsprisen fra Homey", "Moms på marknadspriset från Homey", "Moms på markedsprisen fra Homey", "IVA sul prezzo di mercato di Homey", "TVA sur le prix du marché de Homey", "IVA sobre o preço de mercado do Homey", "IVA sobre el precio de mercado de Homey"],
+    "Formule in Homey": ["Formula in Homey", "Formel in Homey", "Formel i Homey", "Formel i Homey", "Formel i Homey", "Formula in Homey", "Formule dans Homey", "Fórmula no Homey", "Fórmula en Homey"],
+    "Energiebelasting": ["Energy tax", "Energiesteuer", "Energiavgift", "Energiskatt", "Energiafgift", "Imposta sull'energia", "Taxe énergie", "Imposto sobre a energia", "Impuesto sobre la energía"],
+    "Opslag leverancier": ["Supplier markup", "Aufschlag des Anbieters", "Leverandørpåslag", "Leverantörspåslag", "Leverandørtillæg", "Maggiorazione del fornitore", "Marge du fournisseur", "Margem do fornecedor", "Margen del proveedor"],
+    "Normaaltarief": ["Normal rate", "Normaltarif", "Normaltariff", "Normaltaxa", "Normaltakst", "Tariffa normale", "Tarif normal", "Tarifa normal", "Tarifa normal"],
+    "Daltarief": ["Off-peak rate", "Niedertarif", "Lavtariff", "Lågtaxa", "Lavtakst", "Tariffa ridotta", "Tarif heures creuses", "Tarifa de vazio", "Tarifa valle"],
+    "Terugleververgoeding": ["Export compensation", "Einspeisevergütung", "Eksportgodtgjørelse", "Ersättning för såld el", "Afregningspris", "Compenso di immissione", "Rémunération d'injection", "Tarifa de injeção", "Compensación por inyección"],
+    "Terugleverkosten": ["Export fee", "Einspeisekosten", "Eksportkostnad", "Exportavgift", "Eksportgebyr", "Costi di immissione", "Frais d'injection", "Custos de injeção", "Costes de inyección"],
+    "Vaste kosten per dag": ["Fixed costs per day", "Fixkosten pro Tag", "Faste kostnader per dag", "Fasta kostnader per dag", "Faste omkostninger pr. dag", "Costi fissi al giorno", "Frais fixes par jour", "Custos fixos por dia", "Costes fijos por día"],
+    "Marktprijs nu": ["Market price now", "Marktpreis jetzt", "Markedspris nå", "Marknadspris nu", "Markedspris nu", "Prezzo di mercato ora", "Prix du marché maintenant", "Preço de mercado agora", "Precio de mercado ahora"],
+    "All-in nu": ["All-in now", "All-in jetzt", "Totalpris nå", "Totalpris nu", "Totalpris nu", "Tutto incluso ora", "Tout compris maintenant", "Tudo incluído agora", "Todo incluido ahora"],
+    "Besparing per kWh": ["Saving per kWh", "Ersparnis pro kWh", "Besparelse per kWh", "Besparing per kWh", "Besparelse pr. kWh", "Risparmio per kWh", "Économie par kWh", "Poupança por kWh", "Ahorro por kWh"],
+    "Afnameprijs die je vermijdt": ["Import price you avoid", "Vermiedener Bezugspreis", "Importpris du unngår", "Importpris du undviker", "Købspris du undgår", "Prezzo di prelievo evitato", "Prix d'achat évité", "Preço de compra evitado", "Precio de compra evitado"],
+    "Vergoeding zonder salderen": ["Export compensation without net metering", "Einspeisevergütung ohne Saldierung", "Kompensasjon uten nettomåling", "Ersättning utan kvittning", "Afregning uden nettoafregning", "Compenso senza scambio sul posto", "Rémunération sans compensation", "Compensação sem compensação líquida", "Compensación sin balance neto"],
+    "Extra per jaar": ["Extra per year", "Mehr pro Jahr", "Ekstra per år", "Extra per år", "Ekstra pr. år", "In più all'anno", "En plus par an", "A mais por ano", "Más al año"],
+    "Opbrengst": ["Earnings", "Ertrag", "Inntekt", "Intäkt", "Indtægt", "Ricavo", "Revenu", "Receita", "Ingresos"],
+    "Telt deze maand": ["Counts this month", "Zählt diesen Monat", "Teller denne måneden", "Räknas denna månad", "Tæller denne måned", "Conta questo mese", "Compte ce mois-ci", "Conta este mês", "Cuenta este mes"],
+    // Help menu and diagnosis
+    "Probleem melden": ["Report a problem", "Problem melden", "Meld et problem", "Rapportera ett problem", "Rapportér et problem", "Segnala un problema", "Signaler un problème", "Comunicar um problema", "Informar de un problema"],
+    "Handleiding": ["Manual", "Anleitung", "Veiledning", "Handbok", "Vejledning", "Guida", "Guide", "Manual", "Manual"],
+    "Wordt een apparaat niet gevonden of klopt er iets niet? Stuur de maker een rapport: welke apps en metingen je apparaten hebben, zonder namen, ruimtes of locatie.": [
+      "Is a device not found, or does something look wrong? Send the maker a report: which apps and readings your devices have, without names, rooms or location.",
+      "Wird ein Gerät nicht gefunden oder stimmt etwas nicht? Schicke dem Entwickler einen Bericht: welche Apps und Messwerte deine Geräte haben, ohne Namen, Räume oder Standort.",
+      "Blir en enhet ikke funnet, eller stemmer noe ikke? Send utvikleren en rapport: hvilke apper og målinger enhetene dine har, uten navn, rom eller sted.",
+      "Hittas en enhet inte, eller stämmer något inte? Skicka en rapport till utvecklaren: vilka appar och mätvärden dina enheter har, utan namn, rum eller plats.",
+      "Bliver en enhed ikke fundet, eller passer noget ikke? Send udvikleren en rapport: hvilke apps og målinger dine enheder har, uden navne, rum eller placering.",
+      "Un dispositivo non viene trovato o qualcosa non torna? Invia un rapporto allo sviluppatore: quali app e misure hanno i tuoi dispositivi, senza nomi, stanze o posizione.",
+      "Un appareil n'est pas trouvé, ou quelque chose ne va pas ? Envoyez un rapport au développeur : les applications et mesures de vos appareils, sans noms, pièces ni emplacement.",
+      "Um dispositivo não é encontrado, ou algo não está certo? Envie um relatório ao criador: que apps e medições os seus dispositivos têm, sem nomes, divisões nem localização.",
+      "¿No se encuentra un dispositivo o algo no cuadra? Envía un informe al creador: qué apps y mediciones tienen tus dispositivos, sin nombres, estancias ni ubicación."
+    ],
+    "Mijn dashboard meesturen": ["Include my dashboard", "Mein Dashboard mitsenden", "Send med dashbordet mitt", "Skicka med min instrumentpanel", "Send mit dashboard med", "Includi la mia dashboard", "Joindre mon tableau de bord", "Incluir o meu painel", "Incluir mi panel"],
+    "Diagnose mailen": ["E-mail diagnosis", "Diagnose mailen", "Send diagnose på e-post", "Mejla diagnos", "Send diagnose på e-mail", "Invia diagnosi per e-mail", "Envoyer le diagnostic par e-mail", "Enviar diagnóstico por e-mail", "Enviar diagnóstico por correo"],
+    "Delen op GitHub": ["Share on GitHub", "Auf GitHub teilen", "Del på GitHub", "Dela på GitHub", "Del på GitHub", "Condividi su GitHub", "Partager sur GitHub", "Partilhar no GitHub", "Compartir en GitHub"],
+    "Rapport maken…": ["Making report…", "Bericht wird erstellt…", "Lager rapport…", "Skapar rapport…", "Laver rapport…", "Creazione del rapporto…", "Création du rapport…", "A criar relatório…", "Creando informe…"],
+    "Het rapport staat op je klembord. Staat het nog niet in de mail of het issue, plak het er dan in.": [
+      "The report is on your clipboard. If it is not in the e-mail or issue yet, paste it in.",
+      "Der Bericht ist in deiner Zwischenablage. Steht er noch nicht in der Mail oder dem Issue, füge ihn dort ein.",
+      "Rapporten ligger på utklippstavlen. Står den ikke i e-posten eller saken ennå, lim den inn.",
+      "Rapporten finns i urklipp. Står den inte i mejlet eller ärendet ännu, klistra in den.",
+      "Rapporten ligger i din udklipsholder. Står den ikke i mailen eller sagen endnu, så indsæt den.",
+      "Il rapporto è negli appunti. Se non è ancora nell'e-mail o nella segnalazione, incollalo.",
+      "Le rapport est dans votre presse-papiers. S'il n'est pas encore dans l'e-mail ou le ticket, collez-le.",
+      "O relatório está na sua área de transferência. Se ainda não estiver no e-mail ou no issue, cole-o.",
+      "El informe está en tu portapapeles. Si aún no está en el correo o la incidencia, pégalo."
+    ],
+    "Wat werkt er niet goed? (bijvoorbeeld: mijn batterij wordt niet gevonden)": [
+      "What does not work well? (for example: my battery is not found)",
+      "Was funktioniert nicht gut? (zum Beispiel: meine Batterie wird nicht gefunden)",
+      "Hva fungerer ikke bra? (for eksempel: batteriet mitt blir ikke funnet)",
+      "Vad fungerar inte bra? (till exempel: mitt batteri hittas inte)",
+      "Hvad virker ikke godt? (for eksempel: mit batteri bliver ikke fundet)",
+      "Cosa non funziona bene? (ad esempio: la mia batteria non viene trovata)",
+      "Qu'est-ce qui ne fonctionne pas bien ? (par exemple : ma batterie n'est pas trouvée)",
+      "O que não funciona bem? (por exemplo: a minha bateria não é encontrada)",
+      "¿Qué no funciona bien? (por ejemplo: no se encuentra mi batería)"
+    ],
+    "(Plak hier het rapport; het staat op je klembord.)": ["(Paste the report here; it is on your clipboard.)", "(Füge den Bericht hier ein; er ist in deiner Zwischenablage.)", "(Lim inn rapporten her; den ligger på utklippstavlen.)", "(Klistra in rapporten här; den finns i urklipp.)", "(Indsæt rapporten her; den ligger i din udklipsholder.)", "(Incolla qui il rapporto; è negli appunti.)", "(Collez le rapport ici ; il est dans votre presse-papiers.)", "(Cole aqui o relatório; está na sua área de transferência.)", "(Pega aquí el informe; está en tu portapapeles.)"],
+    "Momentopname": ["Snapshot", "Momentaufnahme", "Øyeblikksbilde", "Ögonblicksbild", "Øjebliksbillede", "Istantanea", "Instantané", "Instantâneo", "Instantánea"],
+    "Demo": ["Demo", "Demo", "Demo", "Demo", "Demo", "Demo", "Démo", "Demo", "Demo"],
+    "Live": ["Live", "Live", "Live", "Live", "Live", "Live", "Direct", "Ao vivo", "En vivo"],
+    "Geen verbinding": ["No connection", "Keine Verbindung", "Ingen tilkobling", "Ingen anslutning", "Ingen forbindelse", "Nessuna connessione", "Pas de connexion", "Sem ligação", "Sin conexión"],
+    "Kan geen gegevens ophalen.": ["Cannot load data.", "Daten können nicht geladen werden.", "Kan ikke hente data.", "Kan inte hämta data.", "Kan ikke hente data.", "Impossibile caricare i dati.", "Impossible de charger les données.", "Não é possível carregar os dados.", "No se pueden cargar los datos."],
+    "Laden…": ["Loading…", "Laden…", "Laster…", "Laddar…", "Indlæser…", "Caricamento…", "Chargement…", "A carregar…", "Cargando…"],
+    "Nog geen gegevens voor deze periode": ["No data for this period yet", "Noch keine Daten für diesen Zeitraum", "Ingen data for denne perioden ennå", "Inga data för denna period ännu", "Ingen data for denne periode endnu", "Ancora nessun dato per questo periodo", "Pas encore de données pour cette période", "Ainda sem dados para este período", "Aún no hay datos para este periodo"],
+    // Edit mode
+    "Indeling bewerken": ["Edit layout", "Layout bearbeiten", "Rediger oppsett", "Redigera layout", "Rediger layout", "Modifica layout", "Modifier la disposition", "Editar disposição", "Editar diseño"],
+    "Sleep": ["Drag", "Ziehe", "Dra", "Dra", "Træk", "Trascina", "Faites glisser", "Arraste", "Arrastra"],
+    "om een blok te verplaatsen. Sleep de rand rechts voor de breedte en de rand onder voor de hoogte.": [
+      "to move a block. Drag the right edge for the width and the bottom edge for the height.",
+      "um einen Block zu verschieben. Ziehe den rechten Rand für die Breite und den unteren Rand für die Höhe.",
+      "for å flytte en blokk. Dra høyre kant for bredden og nederste kant for høyden.",
+      "för att flytta ett block. Dra högerkanten för bredden och nederkanten för höjden.",
+      "for at flytte en blok. Træk i højre kant for bredden og nederste kant for højden.",
+      "per spostare un blocco. Trascina il bordo destro per la larghezza e il bordo inferiore per l'altezza.",
+      "pour déplacer un bloc. Faites glisser le bord droit pour la largeur et le bord inférieur pour la hauteur.",
+      "para mover um bloco. Arraste a margem direita para a largura e a margem inferior para a altura.",
+      "para mover un bloque. Arrastra el borde derecho para el ancho y el borde inferior para la altura."
+    ],
+    "Handleiding: wat elk blok toont ↗": ["Manual: what each block shows ↗", "Anleitung: was jeder Block zeigt ↗", "Veiledning: hva hver blokk viser ↗", "Handbok: vad varje block visar ↗", "Vejledning: hvad hver blok viser ↗", "Guida: cosa mostra ogni blocco ↗", "Guide : ce que montre chaque bloc ↗", "Manual: o que cada bloco mostra ↗", "Manual: qué muestra cada bloque ↗"],
+    "Standaard": ["Default", "Standard", "Standard", "Standard", "Standard", "Predefinito", "Par défaut", "Predefinido", "Predeterminado"],
+    "Annuleren": ["Cancel", "Abbrechen", "Avbryt", "Avbryt", "Annuller", "Annulla", "Annuler", "Cancelar", "Cancelar"],
+    "Opslaan": ["Save", "Speichern", "Lagre", "Spara", "Gem", "Salva", "Enregistrer", "Guardar", "Guardar"],
+    "Opslaan…": ["Saving…", "Speichern…", "Lagrer…", "Sparar…", "Gemmer…", "Salvataggio…", "Enregistrement…", "A guardar…", "Guardando…"],
+    "Pincode": ["PIN", "PIN", "PIN-kode", "PIN-kod", "Pinkode", "PIN", "Code PIN", "PIN", "PIN"],
+    "Toevoegen:": ["Add:", "Hinzufügen:", "Legg til:", "Lägg till:", "Tilføj:", "Aggiungi:", "Ajouter :", "Adicionar:", "Añadir:"],
+    "Hoogte auto": ["Auto height", "Auto-Höhe", "Auto høyde", "Auto höjd", "Auto højde", "Altezza auto", "Hauteur auto", "Altura auto", "Altura auto"],
+    "Hoogte weer laten bepalen door de inhoud": ["Let the content decide the height again", "Höhe wieder vom Inhalt bestimmen lassen", "La innholdet bestemme høyden igjen", "Låt innehållet bestämma höjden igen", "Lad indholdet bestemme højden igen", "Lascia di nuovo decidere l'altezza al contenuto", "Laisser de nouveau le contenu fixer la hauteur", "Deixar de novo o conteúdo definir a altura", "Dejar que el contenido vuelva a decidir la altura"],
+    "Verplaatsen": ["Move", "Verschieben", "Flytt", "Flytta", "Flyt", "Sposta", "Déplacer", "Mover", "Mover"],
+    "Verbergen": ["Hide", "Ausblenden", "Skjul", "Dölj", "Skjul", "Nascondi", "Masquer", "Ocultar", "Ocultar"],
+    "Sleep om de breedte te veranderen": ["Drag to change the width", "Ziehen, um die Breite zu ändern", "Dra for å endre bredden", "Dra för att ändra bredden", "Træk for at ændre bredden", "Trascina per cambiare la larghezza", "Faites glisser pour changer la largeur", "Arraste para alterar a largura", "Arrastra para cambiar el ancho"],
+    "Sleep om de hoogte te veranderen": ["Drag to change the height", "Ziehen, um die Höhe zu ändern", "Dra for å endre høyden", "Dra för att ändra höjden", "Træk for at ændre højden", "Trascina per cambiare l'altezza", "Faites glisser pour changer la hauteur", "Arraste para alterar a altura", "Arrastra para cambiar la altura"],
+    "hele breedte": ["full width", "volle Breite", "full bredde", "full bredd", "fuld bredde", "larghezza intera", "pleine largeur", "largura total", "ancho completo"],
+    "Weergave": ["View", "Ansicht", "Visning", "Visning", "Visning", "Vista", "Affichage", "Vista", "Vista"],
+    "Indeling": ["Layout", "Layout", "Oppsett", "Layout", "Layout", "Layout", "Disposition", "Disposição", "Diseño"],
+    "Standaard indeling": ["Default layout", "Standardlayout", "Standardoppsett", "Standardlayout", "Standardlayout", "Layout predefinito", "Disposition par défaut", "Disposição predefinida", "Diseño predeterminado"],
+    "Automatische indeling": ["Automatic layout", "Automatisches Layout", "Automatisk oppsett", "Automatisk layout", "Automatisk layout", "Layout automatico", "Disposition automatique", "Disposição automática", "Diseño automático"],
+    "Blokken weer automatisch laten kiezen": ["Let the blocks be chosen automatically again", "Blöcke wieder automatisch wählen lassen", "La blokkene velges automatisk igjen", "Låt blocken väljas automatiskt igen", "Lad blokkene blive valgt automatisk igen", "Lascia di nuovo scegliere i blocchi automaticamente", "Laisser de nouveau choisir les blocs automatiquement", "Deixar de novo os blocos serem escolhidos automaticamente", "Dejar que los bloques se elijan automáticamente otra vez"],
+    "Verschijnt na het opslaan van de indeling": ["Appears after saving the layout", "Erscheint nach dem Speichern des Layouts", "Vises etter at oppsettet er lagret", "Visas när layouten har sparats", "Vises, når layoutet er gemt", "Compare dopo aver salvato il layout", "Apparaît après l'enregistrement de la disposition", "Aparece depois de guardar a disposição", "Aparece después de guardar el diseño"],
+    "Nieuwe indeling…": ["New layout…", "Neues Layout…", "Nytt oppsett…", "Ny layout…", "Nyt layout…", "Nuovo layout…", "Nouvelle disposition…", "Nova disposição…", "Nuevo diseño…"],
+    "Naam, bijv. keuken": ["Name, e.g. kitchen", "Name, z. B. wohnzimmer", "Navn, f.eks. stue", "Namn, t.ex. hall", "Navn, f.eks. stue", "Nome, ad es. cucina", "Nom, p. ex. cuisine", "Nome, p. ex. cozinha", "Nombre, p. ej. cocina"],
+    "Indeling verwijderen": ["Delete layout", "Layout löschen", "Slett oppsett", "Ta bort layout", "Slet layout", "Elimina layout", "Supprimer la disposition", "Eliminar disposição", "Eliminar diseño"],
+    "Geef de indeling een naam van letters, cijfers of streepjes": ["Give the layout a name of letters, digits or dashes", "Gib dem Layout einen Namen aus Buchstaben, Ziffern oder Bindestrichen", "Gi oppsettet et navn med bokstaver, sifre eller bindestreker", "Ge layouten ett namn med bokstäver, siffror eller bindestreck", "Giv layoutet et navn med bogstaver, tal eller bindestreger", "Dai al layout un nome con lettere, cifre o trattini", "Donnez à la disposition un nom en lettres, chiffres ou tirets", "Dê à disposição um nome com letras, algarismos ou hífenes", "Da al diseño un nombre con letras, cifras o guiones"],
+    "Scherm": ["Screen", "Bildschirm", "Skjerm", "Skärm", "Skærm", "Schermo", "Écran", "Ecrã", "Pantalla"],
+    "Volledig scherm": ["Full screen", "Vollbild", "Fullskjerm", "Helskärm", "Fuld skærm", "Schermo intero", "Plein écran", "Ecrã inteiro", "Pantalla completa"],
+    "Alle uren exporteren (CSV)": ["Export all hours (CSV)", "Alle Stunden exportieren (CSV)", "Eksporter alle timer (CSV)", "Exportera alla timmar (CSV)", "Eksportér alle timer (CSV)", "Esporta tutte le ore (CSV)", "Exporter toutes les heures (CSV)", "Exportar todas as horas (CSV)", "Exportar todas las horas (CSV)"],
+    "Back-up van alle gegevens": ["Backup of all data", "Sicherung aller Daten", "Sikkerhetskopi av alle data", "Säkerhetskopia av all data", "Sikkerhedskopi af alle data", "Backup di tutti i dati", "Sauvegarde de toutes les données", "Cópia de segurança de todos os dados", "Copia de seguridad de todos los datos"],
+    "Periode exporteren (CSV)": ["Export period (CSV)", "Zeitraum exportieren (CSV)", "Eksporter periode (CSV)", "Exportera period (CSV)", "Eksportér periode (CSV)", "Esporta periodo (CSV)", "Exporter la période (CSV)", "Exportar período (CSV)", "Exportar periodo (CSV)"],
+    "Scherm aan houden": ["Keep screen on", "Bildschirm anlassen", "Hold skjermen på", "Håll skärmen på", "Hold skærmen tændt", "Mantieni lo schermo acceso", "Garder l'écran allumé", "Manter o ecrã ligado", "Mantener la pantalla encendida"],
+    "Nachtstand": ["Night mode", "Nachtmodus", "Nattmodus", "Nattläge", "Nattilstand", "Modalità notte", "Mode nuit", "Modo noturno", "Modo nocturno"],
+    "Beweging": ["Motion", "Bewegung", "Bevegelse", "Rörelse", "Bevægelse", "Movimento", "Mouvement", "Movimento", "Movimiento"],
+    "Licht of donker": ["Light or dark", "Hell oder dunkel", "Lys eller mørk", "Ljust eller mörkt", "Lys eller mørk", "Chiaro o scuro", "Clair ou sombre", "Claro ou escuro", "Claro u oscuro"],
+    "Licht": ["Light", "Hell", "Lys", "Ljust", "Lys", "Chiaro", "Clair", "Claro", "Claro"],
+    "Donker": ["Dark", "Dunkel", "Mørk", "Mörkt", "Mørk", "Scuro", "Sombre", "Escuro", "Oscuro"],
+    "Volgt de zon": ["Follows the sun", "Folgt der Sonne", "Følger solen", "Följer solen", "Følger solen", "Segue il sole", "Suit le soleil", "Segue o sol", "Sigue al sol"],
+    "Sfeerkleur achtergrond": ["Mood color in background", "Stimmungsfarbe im Hintergrund", "Stemningsfarge i bakgrunnen", "Stämningsfärg i bakgrunden", "Stemningsfarve i baggrunden", "Colore d'atmosfera sullo sfondo", "Couleur d'ambiance en arrière-plan", "Cor ambiente no fundo", "Color ambiental de fondo"],
+    "Snelheid stromen": ["Flow speed", "Geschwindigkeit der Flüsse", "Hastighet på strømmene", "Flödenas hastighet", "Hastighed på strømmene", "Velocità dei flussi", "Vitesse des flux", "Velocidade dos fluxos", "Velocidad de los flujos"],
+    "Sneller": ["Faster", "Schneller", "Raskere", "Snabbare", "Hurtigere", "Più veloce", "Plus rapide", "Mais rápido", "Más rápido"],
+    "Trager": ["Slower", "Langsamer", "Saktere", "Långsammare", "Langsommere", "Più lento", "Plus lent", "Mais lento", "Más lento"],
+    "Kruipend": ["Crawling", "Kriechend", "Krypende", "Krypande", "Krybende", "Lentissimo", "Très lent", "Muito lento", "Muy lento"],
+    "Alle effecten": ["All effects", "Alle Effekte", "Alle effekter", "Alla effekter", "Alle effekter", "Tutti gli effetti", "Tous les effets", "Todos os efeitos", "Todos los efectos"],
+    "Dimmen": ["Dim", "Dimmen", "Dimme", "Dimma", "Dæmp", "Attenua", "Atténuer", "Escurecer", "Atenuar"],
+    "Zwart": ["Black", "Schwarz", "Svart", "Svart", "Sort", "Nero", "Noir", "Preto", "Negro"],
+    "Van – tot": ["From – to", "Von – bis", "Fra – til", "Från – till", "Fra – til", "Da – a", "De – à", "De – a", "De – a"],
+    "Deze keuzes gelden alleen voor dit scherm.": ["These choices apply to this screen only.", "Diese Einstellungen gelten nur für diesen Bildschirm.", "Disse valgene gjelder bare for denne skjermen.", "Dessa val gäller bara för den här skärmen.", "Disse valg gælder kun for denne skærm.", "Queste scelte valgono solo per questo schermo.", "Ces choix s'appliquent uniquement à cet écran.", "Estas escolhas aplicam-se apenas a este ecrã.", "Estas opciones solo se aplican a esta pantalla."],
+    // Block titles (also sent by the server)
+    "Nu": ["Now", "Jetzt", "Nå", "Nu", "Nu", "Ora", "Maintenant", "Agora", "Ahora"],
+    "Terug naar nu": ["Back to now", "Zurück zu jetzt", "Tilbake til nå", "Tillbaka till nu", "Tilbage til nu", "Torna a ora", "Revenir à maintenant", "Voltar a agora", "Volver a ahora"],
+    "Tijdstip om terug te kijken": ["Moment to look back at", "Zeitpunkt zum Zurückblicken", "Tidspunkt å se tilbake på", "Tidpunkt att titta tillbaka på", "Tidspunkt at se tilbage på", "Momento da rivedere", "Moment à revoir", "Momento para rever", "Momento para revisar"],
+    "Energie nu": ["Energy now", "Energie jetzt", "Energi nå", "Energi nu", "Energi nu", "Energia ora", "Énergie maintenant", "Energia agora", "Energía ahora"],
+    "Warm water": ["Hot water", "Warmwasser", "Varmtvann", "Varmvatten", "Varmt vand", "Acqua calda", "Eau chaude", "Água quente", "Agua caliente"],
+    "Verwarming": ["Heating", "Heizung", "Oppvarming", "Uppvärmning", "Opvarmning", "Riscaldamento", "Chauffage", "Aquecimento", "Calefacción"],
+    "Laadpaal": ["EV charger", "Wallbox", "Elbillader", "Laddbox", "Ladeboks", "Wallbox", "Borne de recharge", "Carregador VE", "Cargador VE"],
+    "Totalen": ["Totals", "Summen", "Totaler", "Totaler", "Totaler", "Totali", "Totaux", "Totais", "Totales"],
+    "Stroomprijs": ["Electricity price", "Strompreis", "Strømpris", "Elpris", "Elpris", "Prezzo dell'elettricità", "Prix de l'électricité", "Preço da eletricidade", "Precio de la luz"],
+    "Kengetallen": ["Key figures", "Kennzahlen", "Nøkkeltall", "Nyckeltal", "Nøgletal", "Indicatori", "Indicateurs", "Indicadores", "Indicadores"],
+    "Elektriciteit": ["Electricity", "Strom", "Strøm", "El", "El", "Elettricità", "Électricité", "Eletricidade", "Electricidad"],
+    "Vermogen vandaag": ["Power today", "Leistung heute", "Effekt i dag", "Effekt idag", "Effekt i dag", "Potenza oggi", "Puissance aujourd'hui", "Potência hoje", "Potencia hoy"],
+    "Apparaten nu": ["Devices now", "Geräte jetzt", "Enheter nå", "Enheter nu", "Enheder nu", "Dispositivi ora", "Appareils maintenant", "Dispositivos agora", "Dispositivos ahora"],
+    "Energiestromen": ["Energy flows", "Energieflüsse", "Energiflyt", "Energiflöden", "Energistrømme", "Flussi di energia", "Flux d'énergie", "Fluxos de energia", "Flujos de energía"],
+    "Verbruik per apparaat": ["Use per device", "Verbrauch pro Gerät", "Forbruk per enhet", "Förbrukning per enhet", "Forbrug pr. enhed", "Consumo per dispositivo", "Consommation par appareil", "Consumo por dispositivo", "Consumo por dispositivo"],
+    "Kosten": ["Costs", "Kosten", "Kostnader", "Kostnader", "Omkostninger", "Costi", "Coûts", "Custos", "Costes"],
+    "Zonne-energie": ["Solar energy", "Solarenergie", "Solenergi", "Solenergi", "Solenergi", "Energia solare", "Énergie solaire", "Energia solar", "Energía solar"],
+    "Gas": ["Gas", "Gas", "Gass", "Gas", "Gas", "Gas", "Gaz", "Gás", "Gas"],
+    "Water": ["Water", "Wasser", "Vann", "Vatten", "Vand", "Acqua", "Eau", "Água", "Agua"],
+    "Batterij kiezen": [
+      "Choosing a battery",
+      "Batterie wählen",
+      "Velge batteri",
+      "Välja batteri",
+      "Vælg batteri",
+      "Scegliere una batteria",
+      "Choisir une batterie",
+      "Escolher uma bateria",
+      "Elegir una batería"
+    ],
+    "per avond en nacht, als de zon minder dan 200 W geeft": [
+      "per evening and night, while the sun gives less than 200 W",
+      "pro Abend und Nacht, solange die Sonne weniger als 200 W liefert",
+      "per kveld og natt, når solen gir mindre enn 200 W",
+      "per kväll och natt, när solen ger mindre än 200 W",
+      "pr. aften og nat, når solen giver mindre end 200 W",
+      "per sera e notte, quando il sole dà meno di 200 W",
+      "par soirée et nuit, quand le soleil donne moins de 200 W",
+      "por noite, enquanto o sol dá menos de 200 W",
+      "por tarde y noche, mientras el sol da menos de 200 W"
+    ],
+    "Dekt: welk deel van je verbruik in het donker een batterij van die grootte zou leveren, als je hem alleen met je eigen zonne-overschot van die dag laadt.": [
+      "Covers: the share of your use in the dark a battery of that size would supply, if you charge it only with your own solar surplus of that day.",
+      "Deckt: welcher Anteil deines Verbrauchs im Dunkeln eine Batterie dieser Größe liefern würde, wenn du sie nur mit deinem eigenen Solarüberschuss dieses Tages lädst.",
+      "Dekker: hvor stor del av forbruket i mørket et batteri av den størrelsen ville levere, hvis du bare lader det med ditt eget solenergioverskudd fra den dagen.",
+      "Täcker: hur stor del av förbrukningen i mörker ett batteri av den storleken skulle leverera, om du bara laddar det med ditt eget solöverskott från den dagen.",
+      "Dækker: hvor stor en del af forbruget i mørke et batteri af den størrelse ville levere, hvis du kun oplader det med dit eget solcelleoverskud fra den dag.",
+      "Copre: la quota del tuo consumo al buio che una batteria di quella capacità fornirebbe, se la carichi solo con il tuo surplus solare di quel giorno.",
+      "Couvre : la part de ta consommation dans le noir qu'une batterie de cette taille fournirait, si tu la charges uniquement avec ton propre surplus solaire de la journée.",
+      "Cobre: a parte do seu consumo no escuro que uma bateria desse tamanho forneceria, se a carregar apenas com o seu próprio excedente solar desse dia.",
+      "Cubre: la parte de tu consumo a oscuras que daría una batería de ese tamaño, si la cargas solo con tu propio excedente solar de ese día."
+    ],
+    "Wordt berekend uit de metingen in Homey…": [
+      "Being calculated from the readings in Homey…",
+      "Wird aus den Messwerten in Homey berechnet…",
+      "Beregnes fra målingene i Homey…",
+      "Beräknas från mätningarna i Homey…",
+      "Beregnes ud fra målingerne i Homey…",
+      "In calcolo dalle misurazioni in Homey…",
+      "Calcul à partir des mesures dans Homey…",
+      "A calcular a partir das medições no Homey…",
+      "Calculando a partir de las mediciones en Homey…"
+    ],
+    "Nog geen nachten gevonden met metingen per uur of fijner. Elke nacht komt er een bij.": [
+      "No nights found yet with readings per hour or finer. Each night adds one.",
+      "Noch keine Nächte mit Messwerten pro Stunde oder feiner gefunden. Jede Nacht kommt eine hinzu.",
+      "Ingen netter med målinger per time eller finere funnet ennå. Hver natt kommer det en til.",
+      "Inga nätter med mätningar per timme eller tätare hittades ännu. Varje natt tillkommer en.",
+      "Ingen nætter med målinger pr. time eller finere fundet endnu. Hver nat kommer der en til.",
+      "Nessuna notte trovata finora con misurazioni orarie o più frequenti. Ogni notte se ne aggiunge una.",
+      "Aucune nuit trouvée pour l'instant avec des mesures par heure ou plus fines. Chaque nuit en ajoute une.",
+      "Ainda não foram encontradas noites com medições por hora ou mais finas. Cada noite acrescenta uma.",
+      "Aún no se han encontrado noches con mediciones por hora o más finas. Cada noche se añade una."
+    ],
+    "Uren in het donker per nacht": [
+      "Hours in the dark per night",
+      "Stunden im Dunkeln pro Nacht",
+      "Timer i mørket per natt",
+      "Timmar i mörker per natt",
+      "Timer i mørke pr. nat",
+      "Ore al buio per notte",
+      "Heures dans le noir par nuit",
+      "Horas no escuro por noite",
+      "Horas a oscuras por noche"
+    ],
+    "Verbruik in het donker per jaar": [
+      "Use in the dark per year",
+      "Verbrauch im Dunkeln pro Jahr",
+      "Forbruk i mørket per år",
+      "Förbrukning i mörker per år",
+      "Forbrug i mørke pr. år",
+      "Consumo al buio all'anno",
+      "Consommation dans le noir par an",
+      "Consumo no escuro por ano",
+      "Consumo a oscuras por año"
+    ],
+    "Hoogste vermogen in het donker": [
+      "Highest power in the dark",
+      "Höchste Leistung im Dunkeln",
+      "Høyeste effekt i mørket",
+      "Högsta effekt i mörker",
+      "Højeste effekt i mørke",
+      "Potenza massima al buio",
+      "Puissance maximale dans le noir",
+      "Potência máxima no escuro",
+      "Potencia máxima a oscuras"
+    ],
+    "Capaciteit voor 4 van de 5 nachten": [
+      "Capacity for 4 in 5 nights",
+      "Kapazität für 4 von 5 Nächten",
+      "Kapasitet for 4 av 5 netter",
+      "Kapacitet för 4 av 5 nätter",
+      "Kapacitet til 4 ud af 5 nætter",
+      "Capacità per 4 notti su 5",
+      "Capacité pour 4 nuits sur 5",
+      "Capacidade para 4 em cada 5 noites",
+      "Capacidad para 4 de cada 5 noches"
+    ],
+    "Vermogen voor 90% van dat verbruik": [
+      "Power for 90% of that use",
+      "Leistung für 90 % dieses Verbrauchs",
+      "Effekt for 90 % av det forbruket",
+      "Effekt för 90 % av den förbrukningen",
+      "Effekt til 90 % af det forbrug",
+      "Potenza per il 90% di quel consumo",
+      "Puissance pour 90 % de cette consommation",
+      "Potência para 90% desse consumo",
+      "Potencia para el 90 % de ese consumo"
+    ],
+    "Verbruik in het donker": [
+      "Use in the dark",
+      "Verbrauch im Dunkeln",
+      "Forbruk i mørket",
+      "Förbrukning i mörker",
+      "Forbrug i mørke",
+      "Consumo al buio",
+      "Consommation dans le noir",
+      "Consumo no escuro",
+      "Consumo a oscuras"
+    ],
+    "Zonne-overschot": [
+      "Solar surplus",
+      "Solarüberschuss",
+      "Solenergioverskudd",
+      "Solöverskott",
+      "Solcelleoverskud",
+      "Surplus solare",
+      "Surplus solaire",
+      "Excedente solar",
+      "Excedente solar"
+    ],
+    "Capaciteit": [
+      "Capacity",
+      "Kapazität",
+      "Kapasitet",
+      "Kapacitet",
+      "Kapacitet",
+      "Capacità",
+      "Capacité",
+      "Capacidade",
+      "Capacidad"
+    ],
+    "Vermogen": [
+      "Power",
+      "Leistung",
+      "Effekt",
+      "Effekt",
+      "Effekt",
+      "Potenza",
+      "Puissance",
+      "Potência",
+      "Potencia"
+    ],
+    "dekt": [
+      "covers",
+      "deckt",
+      "dekker",
+      "täcker",
+      "dækker",
+      "copre",
+      "couvre",
+      "cobre",
+      "cubre"
+    ],
+    "per jaar": [
+      "per year",
+      "pro Jahr",
+      "per år",
+      "per år",
+      "pr. år",
+      "all'anno",
+      "par an",
+      "por ano",
+      "por año"
+    ],
+    "Nachten": [
+      "Nights",
+      "Nächte",
+      "Netter",
+      "Nätter",
+      "Nætter",
+      "Notti",
+      "Nuits",
+      "Noites",
+      "Noches"
+    ],
+    "Meetstap": [
+      "Reading step",
+      "Messintervall",
+      "Måleintervall",
+      "Mätintervall",
+      "Måleinterval",
+      "Intervallo di misura",
+      "Pas de mesure",
+      "Intervalo de medição",
+      "Intervalo de medición"
+    ],
+    "Hoogst haalbaar met zon": [
+      "Most possible with solar",
+      "Höchstens erreichbar mit Sonne",
+      "Mest mulig med sol",
+      "Mest möjligt med sol",
+      "Mest muligt med sol",
+      "Massimo ottenibile con il sole",
+      "Maximum possible avec le soleil",
+      "Máximo possível com sol",
+      "Máximo posible con sol"
+    ],
+    "Hoe groot een thuisbatterij moet zijn: per nacht wat het huis verbruikt terwijl de zon minder dan 200 W geeft, van de middag tot de middag erna, over de afgelopen 365 dagen. Het verbruik is wat de slimme meter afneemt plus wat de zonnepanelen leveren. Onder nul staat het zonne-overschot van een dag: wat je teruglevert en dus in een batterij kunt laden. Een batterij van een bepaalde grootte levert per nacht hooguit zijn capaciteit, hooguit wat die nacht gebruikt wordt en hooguit wat de zon die dag over had. Het vermogen is gemiddeld per meetstap van Homey (vaak een uur), dus korte pieken zoals een waterkoker vallen weg. De eerste keer haalt de app de nachten uit de dagrapporten van Homey Energy (vermogen per 5 minuten, zo ver terug als die gaan) en uit Insights, en daarna elke dag de afgelopen nacht. Elk dagrapport wordt gecontroleerd tegen zijn eigen kWh-totalen. Nachten met ontbrekende of onlogische metingen tellen niet mee: een koppeling die uit lag, een meter die bleef hangen, teruglevering terwijl de panelen niets gaven, of veel minder verbruik dan normaal. Een kort gat in het donker wordt aangevuld met het gemiddelde van die nacht. Wat een laadpaal gebruikt telt niet mee.": [
+      "How large a home battery should be: per night what the house uses while the sun gives less than 200 W, from noon to the next noon, over the last 365 days. The use is what the smart meter imports plus what the solar panels supply. Below zero is the solar surplus of a day: what you export and could therefore charge into a battery. A battery of a given size supplies per night at most its capacity, at most what is used that night and at most what the sun had left over that day. The power is averaged per reading step of Homey (often an hour), so short peaks such as a kettle drop out. The first time, the app takes the nights from Homey Energy's day reports (power per 5 minutes, as far back as they go) and from Insights, and after that every day the past night. Each day report is checked against its own kWh totals. Nights with missing or implausible readings are left out: an integration that was down, a meter that got stuck, export while the panels gave nothing, or far less use than normal. A short gap in the dark is filled in with the average of that night. What an EV charger uses is not counted.",
+      "Wie groß eine Heimbatterie sein sollte: pro Nacht, was das Haus verbraucht, solange die Sonne weniger als 200 W liefert, von Mittag bis zum nächsten Mittag, über die letzten 365 Tage. Der Verbrauch ist, was der Smart Meter bezieht, plus was die Solaranlage liefert. Unter null steht der Solarüberschuss eines Tages: was du einspeist und also in eine Batterie laden könntest. Eine Batterie einer bestimmten Größe liefert pro Nacht höchstens ihre Kapazität, höchstens den Verbrauch dieser Nacht und höchstens den Überschuss der Sonne an diesem Tag. Die Leistung ist pro Messintervall von Homey gemittelt (oft eine Stunde), kurze Spitzen wie ein Wasserkocher fallen also weg. Beim ersten Mal holt die App die Nächte aus den Tagesberichten von Homey Energy (Leistung alle 5 Minuten, so weit sie zurückreichen) und aus Insights, danach jeden Tag die vergangene Nacht. Jeder Tagesbericht wird mit seinen eigenen kWh-Summen abgeglichen. Nächte mit fehlenden oder unplausiblen Messwerten zählen nicht: eine ausgefallene Integration, ein hängender Zähler, Einspeisung ohne Solarertrag oder viel weniger Verbrauch als normal. Eine kurze Lücke im Dunkeln wird mit dem Durchschnitt dieser Nacht gefüllt. Was eine Wallbox verbraucht, zählt nicht.",
+      "Hvor stort et hjemmebatteri bør være: per natt hva huset bruker mens solen gir mindre enn 200 W, fra middag til middag dagen etter, over de siste 365 dagene. Forbruket er det strømmåleren tar ut pluss det solcellene leverer. Under null står solenergioverskuddet for en dag: det du eksporterer og dermed kunne ladet inn i et batteri. Et batteri av en gitt størrelse leverer per natt høyst sin kapasitet, høyst det som brukes den natten og høyst det solen hadde til overs den dagen. Effekten er et gjennomsnitt per måleintervall i Homey (ofte en time), så korte topper som en vannkoker faller bort. Første gang henter appen nettene fra dagsrapportene i Homey Energy (effekt per 5 minutter, så langt tilbake som de går) og fra Insights, og deretter hver dag natten som gikk. Hver dagsrapport kontrolleres mot sine egne kWh-totaler. Netter med manglende eller ulogiske målinger telles ikke: en integrasjon som var nede, en måler som hang seg, eksport mens panelene ikke ga noe, eller mye lavere forbruk enn normalt. Et kort hull i mørket fylles med gjennomsnittet for den natten. Det en elbillader bruker, telles ikke.",
+      "Hur stort ett hembatteri bör vara: per natt vad huset förbrukar medan solen ger mindre än 200 W, från middag till middag dagen efter, över de senaste 365 dagarna. Förbrukningen är det elmätaren tar ut plus det solpanelerna levererar. Under noll står solöverskottet för en dag: det du exporterar och alltså kunde ladda in i ett batteri. Ett batteri av en viss storlek levererar per natt högst sin kapacitet, högst det som förbrukas den natten och högst det solen hade över den dagen. Effekten är ett medelvärde per mätintervall i Homey (ofta en timme), så korta toppar som en vattenkokare försvinner. Första gången hämtar appen nätterna från dagsrapporterna i Homey Energy (effekt per 5 minuter, så långt tillbaka som de går) och från Insights, och därefter varje dag den senaste natten. Varje dagsrapport kontrolleras mot sina egna kWh-totaler. Nätter med saknade eller orimliga mätningar räknas inte: en integration som låg nere, en mätare som hängde sig, export medan panelerna inte gav något, eller mycket lägre förbrukning än normalt. En kort lucka i mörkret fylls i med medelvärdet för den natten. Det en laddbox förbrukar räknas inte.",
+      "Hvor stort et hjemmebatteri bør være: pr. nat hvad huset bruger, mens solen giver mindre end 200 W, fra middag til middag dagen efter, over de seneste 365 dage. Forbruget er det, elmåleren trækker, plus det, solcellerne leverer. Under nul står solcelleoverskuddet for en dag: det, du eksporterer og dermed kunne lade ind i et batteri. Et batteri af en given størrelse leverer pr. nat højst sin kapacitet, højst det, der bruges den nat, og højst det, solen havde til overs den dag. Effekten er et gennemsnit pr. måleinterval i Homey (ofte en time), så korte spidser som en elkedel forsvinder. Første gang henter appen nætterne fra dagsrapporterne i Homey Energy (effekt pr. 5 minutter, så langt tilbage som de går) og fra Insights, og derefter hver dag den forgangne nat. Hver dagsrapport kontrolleres mod sine egne kWh-totaler. Nætter med manglende eller ulogiske målinger tæller ikke med: en integration, der var nede, en måler, der hang, eksport mens panelerne intet gav, eller meget lavere forbrug end normalt. Et kort hul i mørket udfyldes med gennemsnittet for den nat. Det en ladeboks bruger, tæller ikke med.",
+      "Quanto dovrebbe essere grande una batteria domestica: per ogni notte ciò che la casa consuma mentre il sole dà meno di 200 W, da mezzogiorno al mezzogiorno successivo, negli ultimi 365 giorni. Il consumo è ciò che il contatore preleva più ciò che forniscono i pannelli solari. Sotto lo zero c'è il surplus solare di un giorno: ciò che immetti in rete e potresti quindi caricare in una batteria. Una batteria di una certa capacità fornisce per notte al massimo la sua capacità, al massimo ciò che si consuma quella notte e al massimo ciò che il sole ha lasciato quel giorno. La potenza è una media per intervallo di misura di Homey (spesso un'ora), quindi i picchi brevi come un bollitore scompaiono. La prima volta l'app ricava le notti dai rapporti giornalieri di Homey Energy (potenza ogni 5 minuti, fin dove arrivano) e da Insights, e poi ogni giorno la notte appena trascorsa. Ogni rapporto giornaliero viene confrontato con i propri totali in kWh. Le notti con misurazioni mancanti o non plausibili non contano: un'integrazione ferma, un contatore bloccato, immissione mentre i pannelli non davano nulla, o un consumo molto più basso del normale. Un breve buco al buio viene riempito con la media di quella notte. Il consumo di una wallbox non conta.",
+      "Quelle taille devrait avoir une batterie domestique : par nuit, ce que la maison consomme pendant que le soleil donne moins de 200 W, de midi à midi le lendemain, sur les 365 derniers jours. La consommation est ce que le compteur prélève plus ce que fournissent les panneaux solaires. Sous zéro figure le surplus solaire d'une journée : ce que tu injectes et pourrais donc charger dans une batterie. Une batterie d'une taille donnée fournit par nuit au maximum sa capacité, au maximum ce qui est consommé cette nuit-là et au maximum ce que le soleil a laissé ce jour-là. La puissance est une moyenne par pas de mesure de Homey (souvent une heure), donc les pics courts comme une bouilloire disparaissent. La première fois, l'app prend les nuits dans les rapports journaliers de Homey Energy (puissance toutes les 5 minutes, aussi loin qu'ils remontent) et dans Insights, puis chaque jour la nuit écoulée. Chaque rapport journalier est vérifié par rapport à ses propres totaux en kWh. Les nuits avec des mesures manquantes ou incohérentes ne comptent pas : une intégration en panne, un compteur bloqué, de l'injection alors que les panneaux ne donnaient rien, ou bien moins de consommation que d'habitude. Un court trou dans le noir est complété avec la moyenne de cette nuit. Ce qu'une borne de recharge consomme ne compte pas.",
+      "Que tamanho deve ter uma bateria doméstica: por noite, o que a casa consome enquanto o sol dá menos de 200 W, do meio-dia ao meio-dia seguinte, nos últimos 365 dias. O consumo é o que o contador retira da rede mais o que os painéis solares fornecem. Abaixo de zero está o excedente solar de um dia: o que injeta e poderia, portanto, carregar numa bateria. Uma bateria de um certo tamanho fornece por noite no máximo a sua capacidade, no máximo o que se consome nessa noite e no máximo o que o sol deixou nesse dia. A potência é uma média por intervalo de medição do Homey (muitas vezes uma hora), por isso picos curtos como uma chaleira desaparecem. Na primeira vez, a app obtém as noites dos relatórios diários do Homey Energy (potência a cada 5 minutos, até onde forem) e do Insights, e depois todos os dias a noite anterior. Cada relatório diário é verificado com os seus próprios totais em kWh. As noites com medições em falta ou incoerentes não contam: uma integração em baixo, um contador bloqueado, injeção enquanto os painéis não davam nada, ou muito menos consumo do que o normal. Uma falha curta no escuro é preenchida com a média dessa noite. O que um carregador de VE consome não conta.",
+      "Qué tamaño debería tener una batería doméstica: por noche, lo que consume la casa mientras el sol da menos de 200 W, de mediodía a mediodía del día siguiente, en los últimos 365 días. El consumo es lo que el contador toma de la red más lo que dan los paneles solares. Por debajo de cero está el excedente solar de un día: lo que viertes a la red y podrías cargar en una batería. Una batería de un tamaño dado da por noche como máximo su capacidad, como máximo lo que se consume esa noche y como máximo lo que el sol dejó ese día. La potencia es una media por intervalo de medición de Homey (a menudo una hora), así que los picos cortos como un hervidor desaparecen. La primera vez, la app toma las noches de los informes diarios de Homey Energy (potencia cada 5 minutos, hasta donde lleguen) y de Insights, y después cada día la noche anterior. Cada informe diario se comprueba con sus propios totales en kWh. Las noches con mediciones que faltan o sin lógica no cuentan: una integración caída, un contador bloqueado, vertido mientras los paneles no daban nada, o mucho menos consumo de lo normal. Un hueco corto a oscuras se rellena con la media de esa noche. Lo que consume un cargador de coche no cuenta."
+    ],
+    "Overgeslagen nachten": [
+      "Skipped nights",
+      "Übersprungene Nächte",
+      "Hoppet over netter",
+      "Överhoppade nätter",
+      "Sprungne nætter over",
+      "Notti saltate",
+      "Nuits ignorées",
+      "Noites ignoradas",
+      "Noches omitidas"
+    ],
+    "De nachten tot nu toe hadden ontbrekende of onlogische metingen. Elke nacht komt er een bij.": [
+      "The nights so far had missing or implausible readings. Each night adds one.",
+      "Die bisherigen Nächte hatten fehlende oder unplausible Messwerte. Jede Nacht kommt eine hinzu.",
+      "Nettene så langt hadde manglende eller ulogiske målinger. Hver natt kommer det en til.",
+      "Nätterna hittills hade saknade eller orimliga mätningar. Varje natt tillkommer en.",
+      "Nætterne indtil nu havde manglende eller ulogiske målinger. Hver nat kommer der en til.",
+      "Le notti finora avevano misurazioni mancanti o non plausibili. Ogni notte se ne aggiunge una.",
+      "Les nuits jusqu'ici avaient des mesures manquantes ou incohérentes. Chaque nuit en ajoute une.",
+      "As noites até agora tinham medições em falta ou incoerentes. Cada noite acrescenta uma.",
+      "Las noches hasta ahora tenían mediciones que faltan o sin lógica. Cada noche se añade una."
+    ],
+    "Vermogen klopt niet met kWh-totaal": ["Power does not match the kWh total", "Leistung passt nicht zur kWh-Summe", "Effekt stemmer ikke med kWh-totalen", "Effekten stämmer inte med kWh-totalen", "Effekt passer ikke med kWh-totalen", "La potenza non corrisponde al totale in kWh", "La puissance ne correspond pas au total en kWh", "A potência não corresponde ao total em kWh", "La potencia no coincide con el total en kWh"],
+    "Geschat uit meterexport": ["Estimated from meter export", "Geschätzt aus Zählerexport", "Anslått fra måler-eksport", "Uppskattat från mätarexport", "Anslået fra måler-eksport", "Stimato dall'esportazione del contatore", "Estimé à partir de l'export du compteur", "Estimado a partir da exportação do contador", "Estimado a partir de la exportación del contador"],
+    "Schatting t.o.v. gemeten": ["Estimate vs measured", "Schätzung vs. gemessen", "Anslag mot målt", "Uppskattning mot uppmätt", "Skøn mod målt", "Stima vs misurato", "Estimation vs mesuré", "Estimativa vs medido", "Estimación vs medido"],
+    "Import": ["Import", "Import", "Import", "Import", "Import", "Importazione", "Import", "Importação", "Importación"],
+    "Gemeten": ["Measured", "Gemessen", "Målt", "Uppmätt", "Målt", "Misurato", "Mesuré", "Medido", "Medido"],
+    "+ export": ["+ export", "+ Export", "+ eksport", "+ export", "+ eksport", "+ esportazione", "+ export", "+ exportação", "+ exportación"],
+    "+ model": ["+ model", "+ Modell", "+ modell", "+ modell", "+ model", "+ modello", "+ modèle", "+ modelo", "+ modelo"],
+    "Verbruik in het donker (model)": ["Use in the dark (model)", "Verbrauch im Dunkeln (Modell)", "Forbruk i mørket (modell)", "Förbrukning i mörker (modell)", "Forbrug i mørke (model)", "Consumo al buio (modello)", "Consommation dans le noir (modèle)", "Consumo no escuro (modelo)", "Consumo a oscuras (modelo)"],
+    "Geen maandtotalen": ["No month totals", "Keine Monatssummen", "Ingen månedstotaler", "Inga månadstotaler", "Ingen månedstotaler", "Nessun totale mensile", "Pas de totaux mensuels", "Sem totais mensais", "Sin totales mensuales"],
+    "Instellingen": ["Settings", "Einstellungen", "Innstillinger", "Inställningar", "Indstillinger", "Impostazioni", "Réglages", "Definições", "Ajustes"],
+    "Gemodelleerd uit maandtotalen": ["Modelled from month totals", "Aus Monatssummen modelliert", "Modellert fra månedstotaler", "Modellerat från månadstotaler", "Modelleret ud fra månedstotaler", "Modellato dai totali mensili", "Modélisé à partir des totaux mensuels", "Modelado a partir dos totais mensais", "Modelado a partir de los totales mensuales"],
+    "Model": ["Model", "Modell", "Modell", "Modell", "Model", "Modello", "Modèle", "Modelo", "Modelo"],
+    "Lichtere balken zijn gemodelleerd uit de maandtotalen van Homey Energy, niet gemeten. Kies Gemeten of + export om ze weg te laten.": [
+      "Lighter bars are modelled from Homey Energy's month totals, not measured. Choose Measured or + export to leave them out.",
+      "Hellere Balken sind aus den Monatssummen von Homey Energy modelliert, nicht gemessen. Wähle Gemessen oder + Export, um sie wegzulassen.",
+      "Lysere stolper er modellert fra månedstotalene i Homey Energy, ikke målt. Velg Målt eller + eksport for å utelate dem.",
+      "Ljusare staplar är modellerade från månadstotalerna i Homey Energy, inte uppmätta. Välj Uppmätt eller + export för att utelämna dem.",
+      "Lysere søjler er modelleret ud fra månedstotalerne i Homey Energy, ikke målt. Vælg Målt eller + eksport for at udelade dem.",
+      "Le barre più chiare sono modellate dai totali mensili di Homey Energy, non misurate. Scegli Misurato o + esportazione per escluderle.",
+      "Les barres plus claires sont modélisées à partir des totaux mensuels de Homey Energy, pas mesurées. Choisis Mesuré ou + export pour les exclure.",
+      "As barras mais claras são modeladas a partir dos totais mensais do Homey Energy, não medidas. Escolha Medido ou + exportação para as excluir.",
+      "Las barras más claras están modeladas a partir de los totales mensuales de Homey Energy, no medidas. Elige Medido o + exportación para excluirlas."
+    ],
+    "Ontbrekende metingen": [
+      "Missing readings",
+      "Fehlende Messwerte",
+      "Manglende målinger",
+      "Saknade mätningar",
+      "Manglende målinger",
+      "Misurazioni mancanti",
+      "Mesures manquantes",
+      "Medições em falta",
+      "Mediciones que faltan"
+    ],
+    "Meter bleef hangen": [
+      "Meter got stuck",
+      "Zähler hing fest",
+      "Måleren hang seg",
+      "Mätaren hängde sig",
+      "Måleren hang",
+      "Contatore bloccato",
+      "Compteur bloqué",
+      "Contador bloqueado",
+      "Contador bloqueado"
+    ],
+    "Teruglevering zonder zon": [
+      "Export without sun",
+      "Einspeisung ohne Sonne",
+      "Eksport uten sol",
+      "Export utan sol",
+      "Eksport uden sol",
+      "Immissione senza sole",
+      "Injection sans soleil",
+      "Injeção sem sol",
+      "Vertido sin sol"
+    ],
+    "Bijna geen verbruik": [
+      "Hardly any use",
+      "Kaum Verbrauch",
+      "Nesten ikke noe forbruk",
+      "Nästan ingen förbrukning",
+      "Næsten intet forbrug",
+      "Quasi nessun consumo",
+      "Presque aucune consommation",
+      "Quase nenhum consumo",
+      "Casi ningún consumo"
+    ],
+    "Veel lager dan normaal": [
+      "Far below normal",
+      "Weit unter normal",
+      "Langt under normalt",
+      "Långt under det normala",
+      "Langt under normalt",
+      "Molto sotto il normale",
+      "Bien en dessous de la normale",
+      "Muito abaixo do normal",
+      "Muy por debajo de lo normal"
+    ],
+    "Sluipverbruik": ["Standby use", "Standby-Verbrauch", "Standby-forbruk", "Standby-förbrukning", "Standbyforbrug", "Consumo in standby", "Consommation en veille", "Consumo em standby", "Consumo en espera"],
+    "Groepen": ["Circuits", "Stromkreise", "Kurser", "Grupper", "Grupper", "Circuiti", "Circuits", "Circuitos", "Circuitos"],
+    "Meterstanden": ["Meter readings", "Zählerstände", "Målerstander", "Mätarställningar", "Målerstande", "Letture dei contatori", "Relevés des compteurs", "Leituras dos contadores", "Lecturas de los contadores"],
+    "Afname": ["Import", "Bezug", "Import", "Import", "Import", "Prelievo", "Soutirage", "Consumo da rede", "Consumo de red"],
+    "Afname tarief 1": ["Import tariff 1", "Bezug Tarif 1", "Import tariff 1", "Import tariff 1", "Import tarif 1", "Prelievo fascia 1", "Soutirage tarif 1", "Consumo da rede tarifa 1", "Consumo de red tarifa 1"],
+    "Teruglevering tarief 1": ["Export tariff 1", "Einspeisung Tarif 1", "Eksport tariff 1", "Export tariff 1", "Eksport tarif 1", "Immissione fascia 1", "Injection tarif 1", "Injeção tarifa 1", "Inyección tarifa 1"],
+    "Afname tarief 2": ["Import tariff 2", "Bezug Tarif 2", "Import tariff 2", "Import tariff 2", "Import tarif 2", "Prelievo fascia 2", "Soutirage tarif 2", "Consumo da rede tarifa 2", "Consumo de red tarifa 2"],
+    "Teruglevering tarief 2": ["Export tariff 2", "Einspeisung Tarif 2", "Eksport tariff 2", "Export tariff 2", "Eksport tarif 2", "Immissione fascia 2", "Injection tarif 2", "Injeção tarifa 2", "Inyección tarifa 2"],
+    "Zonnepanelen": ["Solar panels", "Solarmodule", "Solcellepaneler", "Solpaneler", "Solpaneler", "Pannelli solari", "Panneaux solaires", "Painéis solares", "Paneles solares"],
+    "Geen meterstanden gevonden. Kies je meters bij de instellingen.": ["No meter readings found. Choose your meters in the settings.", "Keine Zählerstände gefunden. Wähle deine Zähler in den Einstellungen.", "Ingen målerstander funnet. Velg målerne dine i innstillingene.", "Inga mätarställningar hittades. Välj dina mätare i inställningarna.", "Ingen målerstande fundet. Vælg dine målere i indstillingerne.", "Nessuna lettura trovata. Scegli i tuoi contatori nelle impostazioni.", "Aucun relevé trouvé. Choisissez vos compteurs dans les réglages.", "Nenhuma leitura encontrada. Escolha os seus contadores nas definições.", "No se encontraron lecturas. Elige tus contadores en los ajustes."],
+    "Fasebelasting": ["Phase load", "Phasenlast", "Fasebelastning", "Fasbelastning", "Fasebelastning", "Carico per fase", "Charge par phase", "Carga por fase", "Carga por fase"],
+    // Energy now
+    "Actuele energiestroom": ["Current energy flow", "Aktueller Energiefluss", "Nåværende energiflyt", "Aktuellt energiflöde", "Aktuel energistrøm", "Flusso di energia attuale", "Flux d'énergie actuel", "Fluxo de energia atual", "Flujo de energía actual"],
+    "Zon": ["Solar", "Solar", "Sol", "Sol", "Sol", "Sole", "Solaire", "Solar", "Solar"],
+    "Net": ["Grid", "Netz", "Nett", "Nät", "Net", "Rete", "Réseau", "Rede", "Red"],
+    "Huis": ["Home", "Haus", "Hus", "Hus", "Hus", "Casa", "Maison", "Casa", "Casa"],
+    "Batterij": ["Battery", "Batterie", "Batteri", "Batteri", "Batteri", "Batteria", "Batterie", "Bateria", "Batería"],
+    "terug": ["export", "Einspeisung", "eksport", "export", "eksport", "immissione", "injection", "injeção", "inyección"],
+    "afname": ["import", "Bezug", "import", "import", "import", "prelievo", "soutirage", "consumo", "consumo"],
+    "laden": ["charging", "lädt", "lader", "laddar", "lader", "in carica", "en charge", "a carregar", "cargando"],
+    "ontladen": ["discharging", "entlädt", "utlader", "urladdar", "aflader", "in scarica", "en décharge", "a descarregar", "descargando"],
+    // Hot water
+    "Geen boiler gevonden. Kies er een bij de instellingen.": ["No water heater found. Choose one in the settings.", "Kein Warmwasserspeicher gefunden. Wähle einen in den Einstellungen.", "Ingen varmtvannsbereder funnet. Velg en i innstillingene.", "Ingen varmvattenberedare hittades. Välj en i inställningarna.", "Ingen varmtvandsbeholder fundet. Vælg en i indstillingerne.", "Nessuno scaldabagno trovato. Scegline uno nelle impostazioni.", "Aucun chauffe-eau trouvé. Choisissez-en un dans les réglages.", "Nenhum termoacumulador encontrado. Escolha um nas definições.", "No se encontró ningún calentador de agua. Elige uno en los ajustes."],
+    "doucheminuten": ["shower minutes", "Duschminuten", "dusjminutter", "duschminuter", "bruseminutter", "minuti di doccia", "minutes de douche", "minutos de duche", "minutos de ducha"],
+    "Douchebeurten": ["Showers", "Duschen", "Dusjer", "Duschar", "Brusebade", "Docce", "Douches", "Duches", "Duchas"],
+    "Ingesteld": ["Target", "Soll", "Innstilt", "Inställt", "Indstillet", "Impostato", "Consigne", "Definido", "Objetivo"],
+    "Onderin": ["Bottom", "Unten", "Nederst", "Nederst", "Nederst", "In basso", "En bas", "Em baixo", "Abajo"],
+    "Opwarmen": ["Heating up", "Aufheizen", "Varmer opp", "Värmer upp", "Varmer op", "In riscaldamento", "Chauffe", "A aquecer", "Calentando"],
+    "Warm": ["Hot", "Heiß", "Varm", "Varmt", "Varmt", "Calda", "Chaude", "Quente", "Caliente"],
+    "Lauw": ["Lukewarm", "Lauwarm", "Lunken", "Ljummet", "Lunkent", "Tiepida", "Tiède", "Morna", "Tibia"],
+    "Koud": ["Cold", "Kalt", "Kald", "Kallt", "Koldt", "Fredda", "Froide", "Fria", "Fría"],
+    "Onbekend": ["Unknown", "Unbekannt", "Ukjent", "Okänt", "Ukendt", "Sconosciuto", "Inconnu", "Desconhecido", "Desconocido"],
+    "Watertemperatuur": ["Water temperature", "Wassertemperatur", "Vanntemperatur", "Vattentemperatur", "Vandtemperatur", "Temperatura dell'acqua", "Température de l'eau", "Temperatura da água", "Temperatura del agua"],
+    "Boilertemperatuur": ["Water heater temperature", "Speichertemperatur", "Beredertemperatur", "Beredartemperatur", "Beholdertemperatur", "Temperatura dello scaldabagno", "Température du chauffe-eau", "Temperatura do termoacumulador", "Temperatura del calentador"],
+    "Boiler": ["Water heater", "Warmwasserspeicher", "Varmtvannsbereder", "Varmvattenberedare", "Varmtvandsbeholder", "Scaldabagno", "Chauffe-eau", "Termoacumulador", "Calentador"],
+    "Uit": ["Off", "Aus", "Av", "Av", "Fra", "Spento", "Arrêt", "Desligado", "Apagado"],
+    "Aan": ["On", "An", "På", "På", "Til", "Acceso", "Marche", "Ligado", "Encendido"],
+    "Niet beschikbaar": ["Unavailable", "Nicht verfügbar", "Ikke tilgjengelig", "Inte tillgänglig", "Ikke tilgængelig", "Non disponibile", "Indisponible", "Indisponível", "No disponible"],
+    "Ja": ["Yes", "Ja", "Ja", "Ja", "Ja", "Sì", "Oui", "Sim", "Sí"],
+    "Nee": ["No", "Nein", "Nei", "Nej", "Nej", "No", "Non", "Não", "No"],
+    // Modes and states (sent by the server)
+    "Programma": ["Program", "Programm", "Program", "Program", "Program", "Programma", "Programme", "Programa", "Programa"],
+    "Elektrisch": ["Electric", "Elektrisch", "Elektrisk", "Elektrisk", "Elektrisk", "Elettrico", "Électrique", "Elétrico", "Eléctrico"],
+    "Prestatie": ["Performance", "Leistung", "Ytelse", "Prestanda", "Ydelse", "Prestazioni", "Performance", "Desempenho", "Rendimiento"],
+    "Hoog verbruik": ["High demand", "Hoher Bedarf", "Høyt forbruk", "Hög förbrukning", "Højt forbrug", "Alta richiesta", "Forte demande", "Consumo elevado", "Alta demanda"],
+    "Warmtepomp": ["Heat pump", "Wärmepumpe", "Varmepumpe", "Värmepump", "Varmepumpe", "Pompa di calore", "Pompe à chaleur", "Bomba de calor", "Bomba de calor"],
+    "Automatisch": ["Automatic", "Automatisch", "Automatisk", "Automatiskt", "Automatisk", "Automatico", "Automatique", "Automático", "Automático"],
+    "Verwarmen": ["Heating", "Heizen", "Varmer", "Värmer", "Varmer", "Riscaldamento", "Chauffage", "Aquecimento", "Calefacción"],
+    "Koelen": ["Cooling", "Kühlen", "Kjøler", "Kyler", "Køler", "Raffreddamento", "Refroidissement", "Arrefecimento", "Refrigeración"],
+    "Laden": ["Charging", "Laden", "Lader", "Laddar", "Lader", "In carica", "En charge", "A carregar", "Cargando"],
+    "Ontladen": ["Discharging", "Entladen", "Utlader", "Urladdar", "Aflader", "In scarica", "En décharge", "A descarregar", "Descargando"],
+    "Gepauzeerd": ["Paused", "Pausiert", "På pause", "Pausad", "På pause", "In pausa", "En pause", "Em pausa", "En pausa"],
+    "Aangesloten": ["Plugged in", "Angeschlossen", "Tilkoblet", "Ansluten", "Tilsluttet", "Collegato", "Branché", "Ligado", "Conectado"],
+    "Niet aangesloten": ["Not plugged in", "Nicht angeschlossen", "Ikke tilkoblet", "Inte ansluten", "Ikke tilsluttet", "Non collegato", "Non branché", "Não ligado", "No conectado"],
+    "Niet aan het laden": ["Not charging", "Lädt nicht", "Lader ikke", "Laddar inte", "Lader ikke", "Non in carica", "Pas en charge", "Não está a carregar", "No está cargando"],
+    // Heating, EV charger and home battery
+    "Geen warmtepomp, cv-ketel of thermostaat gevonden. Kies ze bij de instellingen.": [
+      "No heat pump, central heating boiler or thermostat found. Choose them in the settings.",
+      "Keine Wärmepumpe, kein Heizkessel und kein Thermostat gefunden. Wähle sie in den Einstellungen.",
+      "Ingen varmepumpe, kjele eller termostat funnet. Velg dem i innstillingene.",
+      "Ingen värmepump, panna eller termostat hittades. Välj dem i inställningarna.",
+      "Ingen varmepumpe, kedel eller termostat fundet. Vælg dem i indstillingerne.",
+      "Nessuna pompa di calore, caldaia o termostato trovati. Sceglili nelle impostazioni.",
+      "Aucune pompe à chaleur, chaudière ou thermostat trouvé. Choisissez-les dans les réglages.",
+      "Nenhuma bomba de calor, caldeira ou termóstato encontrado. Escolha-os nas definições.",
+      "No se encontró ninguna bomba de calor, caldera ni termostato. Elígelos en los ajustes."
+    ],
+    "Geen laadpaal gevonden. Kies er een bij de instellingen.": ["No EV charger found. Choose one in the settings.", "Keine Wallbox gefunden. Wähle eine in den Einstellungen.", "Ingen elbillader funnet. Velg en i innstillingene.", "Ingen laddbox hittades. Välj en i inställningarna.", "Ingen ladeboks fundet. Vælg en i indstillingerne.", "Nessuna wallbox trovata. Scegline una nelle impostazioni.", "Aucune borne de recharge trouvée. Choisissez-en une dans les réglages.", "Nenhum carregador VE encontrado. Escolha um nas definições.", "No se encontró ningún cargador VE. Elige uno en los ajustes."],
+    "Laadpalen": ["EV chargers", "Wallboxen", "Elbilladere", "Laddboxar", "Ladebokse", "Wallbox", "Bornes de recharge", "Carregadores VE", "Cargadores VE"],
+    "Thuisbatterij": ["Home battery", "Heimspeicher", "Hjemmebatteri", "Hembatteri", "Hjemmebatteri", "Batteria domestica", "Batterie domestique", "Bateria doméstica", "Batería doméstica"],
+    "Geen thuisbatterij gevonden. Kies er een bij de instellingen.": ["No home battery found. Choose one in the settings.", "Kein Heimspeicher gefunden. Wähle einen in den Einstellungen.", "Ingen hjemmebatteri funnet. Velg ett i innstillingene.", "Inget hembatteri hittades. Välj ett i inställningarna.", "Intet hjemmebatteri fundet. Vælg et i indstillingerne.", "Nessuna batteria domestica trovata. Scegline una nelle impostazioni.", "Aucune batterie domestique trouvée. Choisissez-en une dans les réglages.", "Nenhuma bateria doméstica encontrada. Escolha uma nas definições.", "No se encontró ninguna batería doméstica. Elige una en los ajustes."],
+    "Rust": ["Idle", "Ruhe", "Hvile", "Vila", "Hvile", "Inattiva", "Au repos", "Em repouso", "En reposo"],
+    "laadniveau": ["charge level", "Ladestand", "ladenivå", "laddnivå", "ladeniveau", "livello di carica", "niveau de charge", "nível de carga", "nivel de carga"],
+    "Laadniveau": ["Charge level", "Ladestand", "Ladenivå", "Laddnivå", "Ladeniveau", "Livello di carica", "Niveau de charge", "Nível de carga", "Nivel de carga"],
+    "Laadniveau vandaag": ["Charge level today", "Ladestand heute", "Ladenivå i dag", "Laddnivå idag", "Ladeniveau i dag", "Livello di carica oggi", "Niveau de charge aujourd'hui", "Nível de carga hoje", "Nivel de carga hoy"],
+    "Saldo": ["Balance", "Saldo", "Saldo", "Saldo", "Saldo", "Saldo", "Solde", "Saldo", "Saldo"],
+    "Rendement": ["Efficiency", "Wirkungsgrad", "Virkningsgrad", "Verkningsgrad", "Virkningsgrad", "Efficienza", "Rendement", "Eficiência", "Eficiencia"],
+    "Geladen met zon": ["Charged from solar", "Mit Solarstrom geladen", "Ladet med sol", "Laddat med sol", "Opladet med sol", "Caricata dal solare", "Chargée au solaire", "Carregada com solar", "Cargada con solar"],
+    "Zonder salderen (vanaf 2027)": ["Without net metering (from 2027)", "Ohne Saldierung (ab 2027)", "Uten nettomåling (fra 2027)", "Utan kvittning (från 2027)", "Uden nettoafregning (fra 2027)", "Senza scambio sul posto (dal 2027)", "Sans compensation (à partir de 2027)", "Sem compensação (a partir de 2027)", "Sin compensación (desde 2027)"],
+    "Zonprestatie": ["Solar performance", "Solarleistung", "Solytelse", "Solprestanda", "Solydelse", "Resa solare", "Performance solaire", "Desempenho solar", "Rendimiento solar"],
+    "Gas per graaddag": ["Gas per degree day", "Gas pro Gradtag", "Gass per graddag", "Gas per graddag", "Gas pr. graddag", "Gas per grado giorno", "Gaz par degré-jour", "Gás por grau-dia", "Gas por grado-día"],
+    "Cv bijgestookt vóór de wijziging": ["Boiler fired before the change", "Kessel nachgeheizt vor der Änderung", "Kjelen fyrte før endringen", "Pannan eldade före ändringen", "Kedlen fyrede før ændringen", "Caldaia accesa prima della modifica", "Chaudière allumée avant le changement", "Caldeira ligada antes da alteração", "Caldera encendida antes del cambio"],
+    "Cv bijgestookt na de wijziging": ["Boiler fired after the change", "Kessel nachgeheizt nach der Änderung", "Kjelen fyrte etter endringen", "Pannan eldade efter ändringen", "Kedlen fyrede efter ændringen", "Caldaia accesa dopo la modifica", "Chaudière allumée après le changement", "Caldeira ligada depois da alteração", "Caldera encendida después del cambio"],
+    "Cv bijgestookt bij warme boiler": ["Boiler fired with a hot water heater", "Kessel nachgeheizt bei warmem Speicher", "Kjelen fyrte med varm beholder", "Pannan eldade med varm beredare", "Kedlen fyrede med varm beholder", "Caldaia accesa con bollitore caldo", "Chaudière allumée avec ballon chaud", "Caldeira ligada com termoacumulador quente", "Caldera encendida con acumulador caliente"],
+    "nog geen": ["none yet", "noch keine", "ingen ennå", "inga än", "ingen endnu", "ancora nessuno", "pas encore", "ainda nenhum", "aún ninguno"],
+    "cv aan": ["boiler on", "Kessel an", "kjel på", "panna på", "kedel tændt", "caldaia accesa", "chaudière allumée", "caldeira ligada", "caldera encendida"],
+    "cv uit": ["boiler off", "Kessel aus", "kjel av", "panna av", "kedel slukket", "caldaia spenta", "chaudière éteinte", "caldeira desligada", "caldera apagada"],
+    "onduidelijk": ["unclear", "unklar", "uklart", "oklart", "uklart", "incerto", "incertain", "incerto", "dudoso"],
+    "geen gasmeter": ["no gas meter", "kein Gaszähler", "ingen gassmåler", "ingen gasmätare", "ingen gasmåler", "nessun contatore del gas", "pas de compteur de gaz", "sem contador de gás", "sin contador de gas"],
+    "Cv-check warm tapwater": ["Boiler check hot tap water", "Kesselprüfung Warmwasser", "Kjelsjekk varmtvann", "Pannkontroll varmvatten", "Kedeltjek varmt vand", "Controllo caldaia acqua calda", "Contrôle chaudière eau chaude", "Verificação da caldeira água quente", "Control de caldera agua caliente"],
+    "Alle tapmomenten downloaden (CSV)": ["Download all taps (CSV)", "Alle Zapfungen herunterladen (CSV)", "Last ned alle tappinger (CSV)", "Ladda ner alla tappningar (CSV)", "Download alle tapninger (CSV)", "Scarica tutti i prelievi (CSV)", "Télécharger tous les puisages (CSV)", "Transferir todos os consumos (CSV)", "Descargar todos los consumos (CSV)"],
+    "Nog geen tapmomenten": ["No taps yet", "Noch keine Zapfungen", "Ingen tappinger ennå", "Inga tappningar än", "Ingen tapninger endnu", "Ancora nessun prelievo", "Pas encore de puisage", "Ainda sem consumos", "Aún sin consumos"],
+    "Warm tapwater": ["Hot tap water", "Warmwasser", "Varmtvann", "Varmvatten", "Varmt vand", "Acqua calda sanitaria", "Eau chaude sanitaire", "Água quente sanitária", "Agua caliente sanitaria"],
+    "Direct uit boiler": ["Straight from the water heater", "Direkt aus dem Speicher", "Rett fra beholderen", "Direkt från beredaren", "Direkte fra beholderen", "Direttamente dal bollitore", "Directement du ballon", "Direto do termoacumulador", "Directamente del acumulador"],
+    "Via cv-ketel": ["Through the gas boiler", "Über den Heizkessel", "Via gasskjelen", "Via gaspannan", "Via gaskedlen", "Tramite la caldaia", "Par la chaudière", "Pela caldeira", "Por la caldera"],
+    "Omgeschakeld naar boiler": ["Switched to the water heater", "Auf den Speicher umgeschaltet", "Koblet om til beholderen", "Omkopplat till beredaren", "Skiftet til beholderen", "Passato al bollitore", "Basculé vers le ballon", "Comutado para o termoacumulador", "Cambiado al acumulador"],
+    "Omgeschakeld naar cv-ketel": ["Switched to the gas boiler", "Auf den Heizkessel umgeschaltet", "Koblet om til gasskjelen", "Omkopplat till gaspannan", "Skiftet til gaskedlen", "Passato alla caldaia", "Basculé vers la chaudière", "Comutado para a caldeira", "Cambiado a la caldera"],
+    "kWh opgewekt": ["kWh produced", "kWh erzeugt", "kWh produsert", "kWh producerat", "kWh produceret", "kWh prodotti", "kWh produits", "kWh produzidos", "kWh producidos"],
+    "Verwacht": ["Expected", "Erwartet", "Forventet", "Förväntat", "Forventet", "Previsto", "Prévu", "Previsto", "Previsto"],
+    "Verwacht tot nu": ["Expected so far", "Bisher erwartet", "Forventet så langt", "Förväntat hittills", "Forventet indtil nu", "Previsto finora", "Prévu jusqu'ici", "Previsto até agora", "Previsto hasta ahora"],
+    "Verwacht vandaag": ["Expected today", "Heute erwartet", "Forventet i dag", "Förväntat idag", "Forventet i dag", "Previsto oggi", "Prévu aujourd'hui", "Previsto hoje", "Previsto hoy"],
+    "Prestatie t.o.v. verwachting": ["Performance vs forecast", "Leistung gegenüber Prognose", "Ytelse mot prognose", "Prestanda mot prognos", "Ydelse i forhold til prognose", "Resa rispetto alla previsione", "Performance par rapport à la prévision", "Desempenho face à previsão", "Rendimiento frente a la previsión"],
+    "Per kWp": ["Per kWp", "Pro kWp", "Per kWp", "Per kWp", "Pr. kWp", "Per kWp", "Par kWc", "Por kWp", "Por kWp"],
+    "aan het laden": ["charging", "lädt", "lader", "laddar", "lader", "in carica", "en charge", "a carregar", "cargando"],
+    "vermogen": ["power", "Leistung", "effekt", "effekt", "effekt", "potenza", "puissance", "potência", "potencia"],
+    "Deze laadsessie": ["This charging session", "Aktueller Ladevorgang", "Denne ladeøkten", "Denna laddsession", "Denne ladesession", "Sessione di ricarica attuale", "Session de charge en cours", "Sessão de carregamento atual", "Sesión de carga actual"],
+    "Vorige laadsessie": ["Last charging session", "Letzter Ladevorgang", "Forrige ladeøkt", "Förra laddsessionen", "Sidste ladesession", "Ultima sessione di ricarica", "Dernière session de charge", "Última sessão de carregamento", "Última sesión de carga"],
+    "Accu auto": ["Car battery", "Autobatterie", "Bilbatteri", "Bilbatteri", "Bilbatteri", "Batteria auto", "Batterie voiture", "Bateria do carro", "Batería del coche"],
+    // Totals and charts
+    "Verbruik": ["Consumption", "Verbrauch", "Forbruk", "Förbrukning", "Forbrug", "Consumo", "Consommation", "Consumo", "Consumo"],
+    "Van het net": ["From grid", "Aus dem Netz", "Fra nettet", "Från nätet", "Fra nettet", "Dalla rete", "Du réseau", "Da rede", "De la red"],
+    "Zon opgewekt": ["Solar produced", "Solar erzeugt", "Sol produsert", "Sol producerad", "Sol produceret", "Solare prodotto", "Solaire produit", "Solar produzida", "Solar producida"],
+    "Terug": ["Export", "Einspeisung", "Eksport", "Export", "Eksport", "Immissione", "Injection", "Injeção", "Inyección"],
+    "Teruggeleverd": ["Exported", "Eingespeist", "Eksportert", "Exporterat", "Eksporteret", "Immessa", "Injecté", "Injetada", "Inyectada"],
+    "Teruglevering": ["Export", "Einspeisung", "Eksport", "Export", "Eksport", "Immissione", "Injection", "Injeção", "Inyección"],
+    "Zelf": ["Self", "Selbst", "Selv", "Själv", "Selv", "Auto", "Auto", "Próprio", "Propio"],
+    "Zelfvoorzienend": ["Self-sufficient", "Autarkie", "Selvforsynt", "Självförsörjande", "Selvforsynende", "Autosufficienza", "Autonomie", "Autossuficiente", "Autosuficiente"],
+    "Geladen": ["Charged", "Geladen", "Ladet", "Laddat", "Opladet", "Caricata", "Chargé", "Carregada", "Cargada"],
+    "Batterij geladen": ["Battery charged", "Batterie geladen", "Batteri ladet", "Batteri laddat", "Batteri opladet", "Batteria caricata", "Batterie chargée", "Bateria carregada", "Batería cargada"],
+    "Batterij ontladen": ["Battery discharged", "Batterie entladen", "Batteri utladet", "Batteri urladdat", "Batteri afladet", "Batteria scaricata", "Batterie déchargée", "Bateria descarregada", "Batería descargada"],
+    "Batterij laden": ["Battery charging", "Batterie laden", "Batterilading", "Batteriladdning", "Batteriopladning", "Carica batteria", "Charge batterie", "Carregar bateria", "Carga de batería"],
+    "Eigen zon gebruikt": ["Own solar used", "Eigener Solarstrom genutzt", "Egen sol brukt", "Egen sol använd", "Egen sol brugt", "Solare proprio usato", "Solaire autoconsommé", "Solar própria usada", "Solar propia usada"],
+    "Zon direct": ["Solar direct", "Solar direkt", "Sol direkte", "Sol direkt", "Sol direkte", "Solare diretto", "Solaire direct", "Solar direta", "Solar directa"],
+    "Uit batterij": ["From battery", "Aus Batterie", "Fra batteri", "Från batteri", "Fra batteri", "Dalla batteria", "De la batterie", "Da bateria", "De la batería"],
+    "Zon in batterij": ["Solar to battery", "Solar in Batterie", "Sol til batteri", "Sol till batteri", "Sol til batteri", "Solare in batteria", "Solaire vers batterie", "Solar para bateria", "Solar a batería"],
+    "Zelfverbruik": ["Self-consumption", "Eigenverbrauch", "Egenforbruk", "Egenförbrukning", "Egetforbrug", "Autoconsumo", "Autoconsommation", "Autoconsumo", "Autoconsumo"],
+    "Verwachte zon": ["Expected solar", "Erwarteter Solarertrag", "Forventet sol", "Förväntad sol", "Forventet sol", "Solare previsto", "Solaire prévu", "Solar prevista", "Solar prevista"],
+    "Opgewekt": ["Produced", "Erzeugt", "Produsert", "Producerat", "Produceret", "Prodotto", "Produit", "Produzido", "Producido"],
+    "Stroom verwarming": ["Heating electricity", "Heizstrom", "Strøm til oppvarming", "El till uppvärmning", "Strøm til opvarmning", "Elettricità riscaldamento", "Électricité chauffage", "Eletricidade aquecimento", "Electricidad calefacción"],
+    "= gelijk": ["= same", "= gleich", "= likt", "= lika", "= samme", "= uguale", "= identique", "= igual", "= igual"],
+    "vorige periode": ["previous period", "vorheriger Zeitraum", "forrige periode", "föregående period", "forrige periode", "periodo precedente", "période précédente", "período anterior", "periodo anterior"],
+    "gisteren tot hetzelfde uur": ["yesterday up to the same hour", "gestern bis zur selben Stunde", "i går til samme time", "igår till samma timme", "i går til samme time", "ieri fino alla stessa ora", "hier jusqu'à la même heure", "ontem até à mesma hora", "ayer hasta la misma hora"],
+    "vorige week tot dezelfde dag": ["last week up to the same day", "letzte Woche bis zum selben Tag", "forrige uke til samme dag", "förra veckan till samma dag", "sidste uge til samme dag", "la settimana scorsa fino allo stesso giorno", "la semaine dernière jusqu'au même jour", "a semana passada até ao mesmo dia", "la semana pasada hasta el mismo día"],
+    "vorige maand tot dezelfde dag": ["last month up to the same day", "letzten Monat bis zum selben Tag", "forrige måned til samme dag", "förra månaden till samma dag", "sidste måned til samme dag", "il mese scorso fino allo stesso giorno", "le mois dernier jusqu'au même jour", "o mês passado até ao mesmo dia", "el mes pasado hasta el mismo día"],
+    "Geen vermogensgegevens van de P1-meter": ["No power data from the P1 meter", "Keine Leistungsdaten vom P1-Zähler", "Ingen effektdata fra P1-måleren", "Inga effektdata från P1-mätaren", "Ingen effektdata fra P1-måleren", "Nessun dato di potenza dal contatore P1", "Aucune donnée de puissance du compteur P1", "Sem dados de potência do contador P1", "Sin datos de potencia del contador P1"],
+    // Energy flows
+    "nu · W": ["now · W", "jetzt · W", "nå · W", "nu · W", "nu · W", "ora · W", "maintenant · W", "agora · W", "ahora · W"],
+    "Nu geen energiestroom gemeten": ["No energy flow measured right now", "Derzeit kein Energiefluss gemessen", "Ingen energiflyt målt akkurat nå", "Inget energiflöde uppmätt just nu", "Ingen energistrøm målt lige nu", "Nessun flusso di energia misurato al momento", "Aucun flux d'énergie mesuré pour l'instant", "Nenhum fluxo de energia medido neste momento", "Ningún flujo de energía medido ahora mismo"],
+    "Overig": ["Other", "Sonstiges", "Annet", "Övrigt", "Øvrigt", "Altro", "Autre", "Outros", "Otros"],
+    "Zonder fase": ["No phase", "Ohne Phase", "Uten fase", "Utan fas", "Uden fase", "Senza fase", "Sans phase", "Sem fase", "Sin fase"],
+    "Niet gemeten": ["Not measured", "Nicht gemessen", "Ikke målt", "Inte uppmätt", "Ikke målt", "Non misurato", "Non mesuré", "Não medido", "No medido"],
+    "Energiestromen van bron naar verbruiker": ["Energy flows from source to consumer", "Energieflüsse von der Quelle zum Verbraucher", "Energiflyt fra kilde til forbruker", "Energiflöden från källa till förbrukare", "Energistrømme fra kilde til forbruger", "Flussi di energia dalla fonte all'utenza", "Flux d'énergie de la source au consommateur", "Fluxos de energia da fonte ao consumidor", "Flujos de energía de la fuente al consumidor"],
+    // Prices
+    "Geen prijzen beschikbaar.": ["No prices available.", "Keine Preise verfügbar.", "Ingen priser tilgjengelig.", "Inga priser tillgängliga.", "Ingen priser tilgængelige.", "Nessun prezzo disponibile.", "Aucun prix disponible.", "Sem preços disponíveis.", "No hay precios disponibles."],
+    "per kWh nu": ["per kWh now", "pro kWh jetzt", "per kWh nå", "per kWh nu", "pr. kWh nu", "per kWh ora", "par kWh maintenant", "por kWh agora", "por kWh ahora"],
+    "morgen": ["tmrw", "morgen", "i morgen", "imorgon", "i morgen", "domani", "demain", "amanhã", "mañana"],
+    "Prijzen ophalen duurde te lang": ["Loading prices took too long", "Preise laden dauerte zu lange", "Henting av priser tok for lang tid", "Att hämta priser tog för lång tid", "Hentning af priser tog for lang tid", "Il caricamento dei prezzi ha richiesto troppo tempo", "Le chargement des prix a pris trop de temps", "Carregar os preços demorou demasiado", "La carga de precios tardó demasiado"],
+    "Goedkoopste 1 uur": ["Cheapest hour", "Günstigste Stunde", "Billigste time", "Billigaste timmen", "Billigste time", "Ora più economica", "Heure la moins chère", "Hora mais barata", "Hora más barata"],
+    // Key figures, devices, costs
+    "kWh netto geleverd": ["kWh net exported", "kWh netto eingespeist", "kWh netto eksportert", "kWh netto exporterat", "kWh netto eksporteret", "kWh netti immessi", "kWh nets injectés", "kWh líquidos injetados", "kWh netos inyectados"],
+    "kWh netto afgenomen": ["kWh net imported", "kWh netto bezogen", "kWh netto importert", "kWh netto importerat", "kWh netto importeret", "kWh netti prelevati", "kWh nets soutirés", "kWh líquidos consumidos", "kWh netos consumidos"],
+    "Geen apparaten met een kWh-meter gevonden": ["No devices with a kWh meter found", "Keine Geräte mit kWh-Zähler gefunden", "Ingen enheter med kWh-måler funnet", "Inga enheter med kWh-mätare hittades", "Ingen enheder med kWh-måler fundet", "Nessun dispositivo con contatore kWh trovato", "Aucun appareil avec compteur kWh trouvé", "Nenhum dispositivo com contador kWh encontrado", "No se encontró ningún dispositivo con contador kWh"],
+    "Andere apparaten": ["Other devices", "Andere Geräte", "Andre enheter", "Andra enheter", "Andre enheder", "Altri dispositivi", "Autres appareils", "Outros dispositivos", "Otros dispositivos"],
+    "Rest van Huis (niet gemeten of meetverschil)": ["Rest of Home (not measured or metering difference)", "Rest von Haus (nicht gemessen oder Messdifferenz)", "Resten av Hus (ikke målt eller måleavvik)", "Resten av Hus (ej uppmätt eller mätskillnad)", "Resten af Hus (ikke målt eller måleforskel)", "Resto di Casa (non misurato o differenza di misura)", "Reste de Maison (non mesuré ou écart de mesure)", "Resto de Casa (não medido ou diferença de medição)", "Resto de Casa (no medido o diferencia de medición)"],
+    "Geen apparaten met stroommeting actief": ["No devices with power metering active", "Keine Geräte mit aktiver Leistungsmessung", "Ingen enheter med aktiv effektmåling", "Inga enheter med aktiv effektmätning", "Ingen enheder med aktiv effektmåling", "Nessun dispositivo con misura di potenza attiva", "Aucun appareil avec mesure de puissance active", "Nenhum dispositivo com medição de potência ativa", "Ningún dispositivo con medición de potencia activa"],
+    "Vul je tarieven in bij de instellingen om de kosten te zien.": ["Enter your tariffs in the settings to see the costs.", "Trage deine Tarife in den Einstellungen ein, um die Kosten zu sehen.", "Fyll inn tariffene dine i innstillingene for å se kostnadene.", "Fyll i dina priser i inställningarna för att se kostnaderna.", "Udfyld dine takster i indstillingerne for at se omkostningerne.", "Inserisci le tue tariffe nelle impostazioni per vedere i costi.", "Saisissez vos tarifs dans les réglages pour voir les coûts.", "Introduza as suas tarifas nas definições para ver os custos.", "Introduce tus tarifas en los ajustes para ver los costes."],
+    "Stroom afname": ["Electricity import", "Strombezug", "Kjøpt strøm", "Köpt el", "Købt strøm", "Prelievo di elettricità", "Électricité soutirée", "Eletricidade consumida", "Electricidad consumida"],
+    "Totaal": ["Total", "Gesamt", "Totalt", "Totalt", "I alt", "Totale", "Total", "Total", "Total"],
+    // Water, standby use, phases
+    "Geen watermeter gevonden. Kies er een bij de instellingen.": ["No water meter found. Choose one in the settings.", "Kein Wasserzähler gefunden. Wähle einen in den Einstellungen.", "Ingen vannmåler funnet. Velg en i innstillingene.", "Ingen vattenmätare hittades. Välj en i inställningarna.", "Ingen vandmåler fundet. Vælg en i indstillingerne.", "Nessun contatore dell'acqua trovato. Scegline uno nelle impostazioni.", "Aucun compteur d'eau trouvé. Choisissez-en un dans les réglages.", "Nenhum contador de água encontrado. Escolha um nas definições.", "No se encontró ningún contador de agua. Elige uno en los ajustes."],
+    "vannacht": ["last night", "letzte Nacht", "i natt", "i natt", "i nat", "stanotte", "cette nuit", "esta noite", "anoche"],
+    "Nog niet bekend. Dit wordt berekend uit het verbruik van afgelopen nacht.": ["Not known yet. This is calculated from last night's use.", "Noch nicht bekannt. Wird aus dem Verbrauch der letzten Nacht berechnet.", "Ikke kjent ennå. Dette beregnes ut fra forbruket i natt.", "Inte känt ännu. Det beräknas från förbrukningen i natt.", "Endnu ikke kendt. Det beregnes ud fra forbruget i nat.", "Non ancora noto. Viene calcolato dal consumo della notte scorsa.", "Pas encore connu. Calculé à partir de la consommation de la nuit dernière.", "Ainda não conhecido. É calculado a partir do consumo da noite passada.", "Aún no se conoce. Se calcula a partir del consumo de anoche."],
+    "altijd aan": ["always on", "immer an", "alltid på", "alltid på", "altid tændt", "sempre acceso", "toujours allumé", "sempre ligado", "siempre encendido"],
+    "Per jaar": ["Per year", "Pro Jahr", "Per år", "Per år", "Pr. år", "All'anno", "Par an", "Por ano", "Por año"],
+    "Kost per jaar": ["Cost per year", "Kosten pro Jahr", "Kostnad per år", "Kostnad per år", "Pris pr. år", "Costo annuo", "Coût par an", "Custo por ano", "Coste por año"],
+    "Gemeten": ["Measured", "Gemessen", "Målt", "Uppmätt", "Målt", "Misurato", "Mesuré", "Medido", "Medido"],
+    "vannacht 1:00–5:00": ["last night 1:00–5:00", "letzte Nacht 1:00–5:00", "i natt 1:00–5:00", "i natt 1:00–5:00", "i nat 1:00–5:00", "stanotte 1:00–5:00", "cette nuit 1:00–5:00", "esta noite 1:00–5:00", "anoche 1:00–5:00"],
+    "Stel je groepen in bij de instellingen van de app in Homey.": ["Set up your circuits in the app settings in Homey.", "Richte deine Stromkreise in den App-Einstellungen in Homey ein.", "Sett opp kursene dine i appinnstillingene i Homey.", "Ställ in dina grupper i appinställningarna i Homey.", "Opsæt dine grupper i appindstillingerne i Homey.", "Configura i tuoi circuiti nelle impostazioni dell'app in Homey.", "Configure tes circuits dans les réglages de l'app dans Homey.", "Configure os seus circuitos nas definições da app no Homey.", "Configura tus circuitos en los ajustes de la app en Homey."],
+    "Je slimme meter geeft geen waarden per fase door.": ["Your smart meter does not report values per phase.", "Dein Smart Meter liefert keine Werte pro Phase.", "Den smarte måleren din sender ikke verdier per fase.", "Din smarta elmätare rapporterar inga värden per fas.", "Din smarte måler sender ikke værdier pr. fase.", "Il tuo contatore intelligente non fornisce valori per fase.", "Votre compteur communicant ne transmet pas de valeurs par phase.", "O seu contador inteligente não envia valores por fase.", "Tu contador inteligente no envía valores por fase."],
+    // Messages
+    "P1-meter": ["P1 meter", "P1-Zähler", "P1-måler", "P1-mätare", "P1-måler", "contatore P1", "compteur P1", "contador P1", "contador P1"],
+    "zonnepanelen": ["solar panels", "Solarmodule", "solcellepaneler", "solpaneler", "solpaneler", "pannelli solari", "panneaux solaires", "painéis solares", "paneles solares"],
+    "boiler": ["water heater", "Warmwasserspeicher", "varmtvannsbereder", "varmvattenberedare", "varmtvandsbeholder", "scaldabagno", "chauffe-eau", "termoacumulador", "calentador"],
+    "Demo-modus.": ["Demo mode.", "Demo-Modus.", "Demomodus.", "Demoläge.", "Demotilstand.", "Modalità demo.", "Mode démo.", "Modo demo.", "Modo demo."],
+    "Je ziet voorbeelddata. Vul": ["You are looking at sample data. Fill in", "Du siehst Beispieldaten. Trage in", "Du ser eksempeldata. Fyll ut", "Du ser exempeldata. Fyll i", "Du ser eksempeldata. Udfyld", "Stai vedendo dati di esempio. Compila", "Vous voyez des données d'exemple. Complétez", "Está a ver dados de exemplo. Preencha", "Estás viendo datos de ejemplo. Completa"],
+    "in met het adres en de API-key van je Homey Pro en start de server opnieuw.": [
+      "with the address and API key of your Homey Pro and restart the server.",
+      "die Adresse und den API-Schlüssel deines Homey Pro ein und starte den Server neu.",
+      "med adressen og API-nøkkelen til Homey Pro og start serveren på nytt.",
+      "med adressen och API-nyckeln för din Homey Pro och starta om servern.",
+      "med adressen og API-nøglen til din Homey Pro og genstart serveren.",
+      "con l'indirizzo e la chiave API del tuo Homey Pro e riavvia il server.",
+      "avec l'adresse et la clé API de votre Homey Pro et redémarrez le serveur.",
+      "com o endereço e a chave API do seu Homey Pro e reinicie o servidor.",
+      "con la dirección y la clave API de tu Homey Pro y reinicia el servidor."
+    ],
+    "Zet de apparaat-id's in": ["Put the device IDs in", "Trage die Geräte-IDs in", "Legg enhets-ID-ene i", "Lägg enhets-id:na i", "Sæt enheds-id'erne i", "Inserisci gli ID dei dispositivi in", "Mettez les ID des appareils dans", "Coloque os IDs dos dispositivos em", "Pon los ID de los dispositivos en"],
+    "(zie": ["(see", "(siehe", "(se", "(se", "(se", "(vedi", "(voir", "(ver", "(ver"],
+    "Kies ze in de Homey-app bij": ["Choose them in the Homey app under", "Wähle sie in der Homey-App unter", "Velg dem i Homey-appen under", "Välj dem i Homey-appen under", "Vælg dem i Homey-appen under", "Sceglili nell'app Homey in", "Choisissez-les dans l'app Homey sous", "Escolha-os na app Homey em", "Elígelos en la app de Homey en"],
+    "Apps → Energie Dashboard → Instellingen": ["Apps → Energy Dashboard → Settings", "Apps → Energy Dashboard → Einstellungen", "Apper → Energy Dashboard → Innstillinger", "Appar → Energy Dashboard → Inställningar", "Apps → Energy Dashboard → Indstillinger", "App → Energy Dashboard → Impostazioni", "Applications → Energy Dashboard → Réglages", "Apps → Energy Dashboard → Definições", "Apps → Energy Dashboard → Ajustes"],
+    "Kies minstens één blok": ["Choose at least one block", "Wähle mindestens einen Block", "Velg minst én blokk", "Välj minst ett block", "Vælg mindst én blok", "Scegli almeno un blocco", "Choisissez au moins un bloc", "Escolha pelo menos um bloco", "Elige al menos un bloque"],
+    "Verkeerde pincode": ["Wrong PIN", "Falsche PIN", "Feil PIN-kode", "Fel PIN-kod", "Forkert pinkode", "PIN errato", "Code PIN incorrect", "PIN errado", "PIN incorrecto"],
+    "Te veel verkeerde pincodes. Probeer het over een minuut opnieuw.": ["Too many wrong PINs. Try again in a minute.", "Zu viele falsche PINs. Versuche es in einer Minute erneut.", "For mange feil PIN-koder. Prøv igjen om ett minutt.", "För många felaktiga PIN-koder. Försök igen om en minut.", "For mange forkerte pinkoder. Prøv igen om et minut.", "Troppi PIN errati. Riprova tra un minuto.", "Trop de codes PIN incorrects. Réessayez dans une minute.", "Demasiados PIN errados. Tente novamente dentro de um minuto.", "Demasiados PIN incorrectos. Inténtalo de nuevo dentro de un minuto."],
+    "Te veel gegevens": ["Too much data", "Zu viele Daten", "For mye data", "För mycket data", "For mange data", "Troppi dati", "Trop de données", "Demasiados dados", "Demasiados datos"],
+    "Ongeldige gegevens": ["Invalid data", "Ungültige Daten", "Ugyldige data", "Ogiltiga data", "Ugyldige data", "Dati non validi", "Données non valides", "Dados inválidos", "Datos no válidos"],
+    "Ongeldig adres": ["Invalid address", "Ungültige Adresse", "Ugyldig adresse", "Ogiltig adress", "Ugyldig adresse", "Indirizzo non valido", "Adresse non valide", "Endereço inválido", "Dirección no válida"],
+    "Niet gevonden": ["Not found", "Nicht gefunden", "Ikke funnet", "Hittades inte", "Ikke fundet", "Non trovato", "Introuvable", "Não encontrado", "No encontrado"],
+    "Toegangscode nodig": ["Access code required", "Zugangscode erforderlich", "Tilgangskode kreves", "Åtkomstkod krävs", "Adgangskode påkrævet", "Codice di accesso richiesto", "Code d'accès requis", "Código de acesso necessário", "Se requiere código de acceso"],
+    // Warnings
+    "Meldingen": ["Warnings", "Meldungen", "Varsler", "Aviseringar", "Advarsler", "Avvisi", "Alertes", "Alertas", "Avisos"],
+    "Geen meldingen": ["No warnings", "Keine Meldungen", "Ingen varsler", "Inga aviseringar", "Ingen advarsler", "Nessun avviso", "Aucune alerte", "Sem alertas", "Sin avisos"],
+    // End of net metering
+    "Einde salderen": ["End of net metering", "Ende der Saldierung", "Slutt på nettomåling", "Slut på kvittning", "Ophør af nettoafregning", "Fine dello scambio sul posto", "Fin de la compensation", "Fim da compensação", "Fin de la compensación"],
+    "per jaar extra vanaf 2027": ["extra per year from 2027", "pro Jahr mehr ab 2027", "ekstra per år fra 2027", "extra per år från 2027", "ekstra pr. år fra 2027", "in più all'anno dal 2027", "en plus par an à partir de 2027", "a mais por ano a partir de 2027", "más al año desde 2027"],
+    "op basis van vorig jaar": ["based on last year", "auf Basis des Vorjahres", "basert på i fjor", "baserat på förra året", "baseret på sidste år", "in base all'anno scorso", "sur la base de l'an dernier", "com base no ano passado", "según el año pasado"],
+    "op basis van dit jaar tot nu": ["based on this year so far", "auf Basis dieses Jahres bis jetzt", "basert på i år så langt", "baserat på i år hittills", "baseret på i år indtil nu", "in base a quest'anno finora", "sur la base de cette année jusqu'ici", "com base neste ano até agora", "según este año hasta ahora"],
+    "Daarvan gesaldeerd": ["Of which netted", "Davon saldiert", "Herav avregnet", "Varav kvittat", "Heraf modregnet", "Di cui compensati", "Dont compensés", "Dos quais compensados", "De los cuales compensados"],
+    "Elke kWh die je zelf gebruikt in plaats van teruglevert, bespaart": ["Each kWh you use yourself instead of exporting saves", "Jede kWh, die du selbst nutzt statt einzuspeisen, spart", "Hver kWh du bruker selv i stedet for å eksportere, sparer", "Varje kWh du använder själv i stället för att exportera sparar", "Hver kWh, du selv bruger i stedet for at eksportere, sparer", "Ogni kWh che usi tu invece di immetterlo fa risparmiare", "Chaque kWh que vous consommez au lieu de l'injecter fait économiser", "Cada kWh que usa em vez de injetar poupa", "Cada kWh que usas tú en lugar de inyectarlo ahorra"],
+    "Nog geen teruglevering gemeten.": ["No export measured yet.", "Noch keine Einspeisung gemessen.", "Ingen eksport målt ennå.", "Ingen export uppmätt ännu.", "Ingen eksport målt endnu.", "Nessuna immissione misurata finora.", "Aucune injection mesurée pour l'instant.", "Ainda nenhuma injeção medida.", "Aún no se ha medido ninguna inyección."],
+    "Vul je stroomcontract in bij de instellingen om dit te berekenen.": ["Fill in your electricity contract in the settings to calculate this.", "Trage deinen Stromvertrag in den Einstellungen ein, um dies zu berechnen.", "Fyll inn strømavtalen din i innstillingene for å beregne dette.", "Fyll i ditt elavtal i inställningarna för att beräkna detta.", "Udfyld din elaftale i indstillingerne for at beregne dette.", "Inserisci il tuo contratto di elettricità nelle impostazioni per calcolarlo.", "Saisissez votre contrat d'électricité dans les réglages pour le calculer.", "Introduza o seu contrato de eletricidade nas definições para calcular isto.", "Introduce tu contrato de luz en los ajustes para calcularlo."],
+    "Salderen stopt op 1 januari 2027. Daarna betaal je voor alles wat je van het net haalt, en krijg je voor teruglevering alleen de terugleververgoeding. Meer zelf gebruiken op zonnige uren of een thuisbatterij verkleint dit bedrag. Berekend met je contract uit de instellingen.": [
+      "Net metering (salderen) ends on 1 January 2027. From then on you pay for everything you take from the grid, and export only earns the export compensation. Using more yourself in sunny hours or a home battery makes this amount smaller. Calculated with your contract from the settings.",
+      "Die niederländische Saldierung (salderen) endet am 1. Januar 2027. Danach zahlst du für alles, was du aus dem Netz beziehst, und für die Einspeisung erhältst du nur noch die Einspeisevergütung. Mehr Eigenverbrauch in sonnigen Stunden oder ein Heimspeicher verringert diesen Betrag. Berechnet mit deinem Vertrag aus den Einstellungen.",
+      "Den nederlandske nettomålingen (salderen) opphører 1. januar 2027. Deretter betaler du for alt du henter fra nettet, og for eksport får du bare eksportgodtgjørelsen. Å bruke mer selv i solrike timer eller et hjemmebatteri gjør beløpet mindre. Beregnet med avtalen din fra innstillingene.",
+      "Den nederländska kvittningen (salderen) upphör den 1 januari 2027. Därefter betalar du för allt du tar från nätet, och för export får du bara ersättningen för såld el. Att använda mer själv under soliga timmar eller ett hembatteri minskar beloppet. Beräknat med ditt avtal från inställningarna.",
+      "Den nederlandske nettoafregning (salderen) ophører 1. januar 2027. Derefter betaler du for alt, du henter fra nettet, og eksport giver kun afregningsprisen. At bruge mere selv i solrige timer eller et hjemmebatteri gør beløbet mindre. Beregnet med din aftale fra indstillingerne.",
+      "Lo scambio sul posto olandese (salderen) termina il 1° gennaio 2027. Da allora paghi tutto ciò che prelevi dalla rete e per l'immissione ricevi solo il compenso di immissione. Usare più energia nelle ore di sole o una batteria domestica riduce questo importo. Calcolato con il tuo contratto dalle impostazioni.",
+      "La compensation néerlandaise (salderen) prend fin le 1er janvier 2027. Ensuite, vous payez tout ce que vous prélevez sur le réseau et l'injection ne rapporte que la rémunération d'injection. Consommer davantage aux heures ensoleillées ou une batterie domestique réduit ce montant. Calculé avec votre contrat des réglages.",
+      "A compensação neerlandesa (salderen) termina a 1 de janeiro de 2027. A partir daí paga tudo o que retira da rede, e a injeção só rende a tarifa de injeção. Usar mais nas horas de sol ou uma bateria doméstica reduz este valor. Calculado com o seu contrato das definições.",
+      "La compensación neerlandesa (salderen) termina el 1 de enero de 2027. A partir de entonces pagas todo lo que tomas de la red y la inyección solo recibe la compensación por inyección. Consumir más en las horas de sol o una batería doméstica reduce este importe. Calculado con tu contrato de los ajustes."
+    ],
+    // Battery use
+    "Batterijgebruik": ["Battery use", "Batterienutzung", "Batteribruk", "Batterianvändning", "Batteriforbrug", "Uso della batteria", "Utilisation de la batterie", "Utilização da bateria", "Uso de la batería"],
+    "Naar huis": ["To home", "Ins Haus", "Til huset", "Till huset", "Til huset", "Verso casa", "Vers la maison", "Para casa", "A casa"],
+    "Naar het net": ["To grid", "Ins Netz", "Til nettet", "Till nätet", "Til nettet", "Verso la rete", "Vers le réseau", "Para a rede", "A la red"],
+    "Van de zon": ["From solar", "Von der Sonne", "Fra solen", "Från solen", "Fra solen", "Dal sole", "Du soleil", "Do sol", "Del sol"],
+    "Herkomst onbekend": ["Source unknown", "Herkunft unbekannt", "Ukjent kilde", "Okänd källa", "Ukendt kilde", "Origine sconosciuta", "Origine inconnue", "Origem desconhecida", "Origen desconocido"],
+    "Herkomst onbekend, niet gewaardeerd": ["Source unknown, not valued", "Herkunft unbekannt, nicht bewertet", "Ukjent kilde, ikke verdsatt", "Okänd källa, ej värderad", "Ukendt kilde, ikke værdisat", "Origine sconosciuta, non valutata", "Origine inconnue, non valorisée", "Origem desconhecida, não valorizada", "Origen desconocido, sin valorar"],
+    "Na teller-reset, niet meegeteld": ["After a meter reset, not counted", "Nach Zähler-Reset, nicht gezählt", "Etter tellerreset, ikke telt", "Efter mätarnollställning, ej räknad", "Efter tællernulstilling, ikke talt", "Dopo il reset del contatore, non conteggiata", "Après réinitialisation du compteur, non comptée", "Após reinício do contador, não contada", "Tras reinicio del contador, no contada"],
+    "Misgelopen teruglevering": ["Export missed", "Entgangene Einspeisung", "Tapt eksport", "Missad export", "Mistet eksport", "Immissione persa", "Injection manquée", "Exportação perdida", "Exportación perdida"],
+    "Geladen van de zon": ["Charged from solar", "Mit Sonne geladen", "Ladet fra solen", "Laddat från solen", "Opladet fra solen", "Caricata dal sole", "Chargée par le soleil", "Carregada pelo sol", "Cargada con el sol"],
+    "Geladen van het net": ["Charged from grid", "Aus dem Netz geladen", "Ladet fra nettet", "Laddat från nätet", "Opladet fra nettet", "Caricata dalla rete", "Chargée sur le réseau", "Carregada pela rede", "Cargada de la red"],
+    "Ontladen naar huis": ["Discharged to home", "Ins Haus entladen", "Utladet til huset", "Urladdat till huset", "Afladet til huset", "Scaricata verso casa", "Déchargée vers la maison", "Descarregada para casa", "Descargada a casa"],
+    "Ontladen naar het net": ["Discharged to grid", "Ins Netz entladen", "Utladet til nettet", "Urladdat till nätet", "Afladet til nettet", "Scaricata verso la rete", "Déchargée vers le réseau", "Descarregada para a rede", "Descargada a la red"],
+    "Laden van de zon kost de teruglevering die je daardoor misloopt; ontladen bespaart de prijs van stroom van het net.": [
+      "Charging from solar costs the export you miss out on; discharging saves the price of power from the grid.",
+      "Laden mit Sonne kostet die Einspeisevergütung, die dir dadurch entgeht; Entladen spart den Preis für Strom aus dem Netz.",
+      "Lading fra solen koster eksporten du går glipp av; utlading sparer prisen på strøm fra nettet.",
+      "Laddning från solen kostar den export du går miste om; urladdning sparar priset för el från nätet.",
+      "Opladning fra solen koster den eksport, du går glip af; afladning sparer prisen på strøm fra nettet.",
+      "Caricare dal sole costa l'immissione a cui rinunci; scaricare fa risparmiare il prezzo della corrente di rete.",
+      "Charger avec le soleil coûte l'injection que vous perdez ; décharger économise le prix du courant du réseau.",
+      "Carregar com o sol custa a injeção de que abdica; descarregar poupa o preço da eletricidade da rede.",
+      "Cargar con el sol cuesta la inyección a la que renuncias; descargar ahorra el precio de la luz de la red."
+    ],
+    "Laden van de zon kost de teruglevering die je daardoor misloopt; ontladen bespaart de prijs van stroom van het net. In het jaaroverzicht is zon of net per maand bepaald, dus bij benadering.": [
+      "Charging from solar costs the export you miss out on; discharging saves the price of power from the grid. In the yearly view the source (sun or grid) is determined per month, so approximate.",
+      "Laden mit Sonne kostet die Einspeisevergütung, die dir dadurch entgeht; Entladen spart den Preis für Strom aus dem Netz. In der Jahresansicht wird die Quelle (Sonne oder Netz) pro Monat bestimmt, also nur näherungsweise.",
+      "Lading fra solen koster eksporten du går glipp av; utlading sparer prisen på strøm fra nettet. I årsvisningen er kilden (sol eller nett) bestemt per måned, så omtrentlig.",
+      "Laddning från solen kostar den export du går miste om; urladdning sparar priset för el från nätet. I årsvyn bestäms källan (sol eller nät) per månad, så ungefärligt.",
+      "Opladning fra solen koster den eksport, du går glip af; afladning sparer prisen på strøm fra nettet. I årsvisningen er kilden (sol eller net) bestemt pr. måned, så omtrentligt.",
+      "Caricare dal sole costa l'immissione a cui rinunci; scaricare fa risparmiare il prezzo della corrente di rete. Nella vista annuale la fonte (sole o rete) è determinata per mese, quindi in modo approssimativo.",
+      "Charger avec le soleil coûte l'injection que vous perdez ; décharger économise le prix du courant du réseau. Dans la vue annuelle, la source (soleil ou réseau) est déterminée par mois, donc approximative.",
+      "Carregar com o sol custa a injeção de que abdica; descarregar poupa o preço da eletricidade da rede. Na vista anual a origem (sol ou rede) é determinada por mês, logo aproximada.",
+      "Cargar con el sol cuesta la inyección a la que renuncias; descargar ahorra el precio de la luz de la red. En la vista anual el origen (sol o red) se determina por mes, así que es aproximado."
+    ],
+    // Estimates and prices from Homey
+    "geschat": ["estimated", "geschätzt", "anslått", "uppskattad", "anslået", "stimato", "estimé", "estimado", "estimado"],
+    "all-in volgens Homey": ["all-in according to Homey", "all-in laut Homey", "alt inkl. ifølge Homey", "allt inkl. enligt Homey", "alt inkl. ifølge Homey", "tutto incluso secondo Homey", "tout compris selon Homey", "tudo incluído segundo o Homey", "todo incluido según Homey"],
+    "all-in volgens Power by the Hour": ["all-in according to Power by the Hour", "all-in laut Power by the Hour", "alt inkl. ifølge Power by the Hour", "allt inkl. enligt Power by the Hour", "alt inkl. ifølge Power by the Hour", "tutto incluso secondo Power by the Hour", "tout compris selon Power by the Hour", "tudo incluído segundo o Power by the Hour", "todo incluido según Power by the Hour"],
+    "marktprijs van Homey": ["market price from Homey", "Marktpreis von Homey", "markedspris fra Homey", "marknadspris från Homey", "markedspris fra Homey", "prezzo di mercato da Homey", "prix du marché de Homey", "preço de mercado do Homey", "precio de mercado de Homey"],
+    // Monthly peak and phases through the day
+    "Maandpiek": ["Monthly peak", "Monatsspitze", "Månedstopp", "Månadstopp", "Månedsspids", "Picco mensile", "Pic mensuel", "Pico mensal", "Pico mensual"],
+    "volgens je meter": ["according to your meter", "laut deinem Zähler", "ifølge måleren din", "enligt din mätare", "ifølge din måler", "secondo il tuo contatore", "selon votre compteur", "segundo o seu contador", "según tu contador"],
+    "gemeten": ["measured", "gemessen", "målt", "uppmätt", "målt", "misurato", "mesuré", "medido", "medido"],
+    "hoogste kwartier deze maand": ["highest quarter hour this month", "höchste Viertelstunde diesen Monat", "høyeste kvarter denne måneden", "högsta kvart denna månad", "højeste kvarter denne måned", "quarto d'ora più alto di questo mese", "quart d'heure le plus élevé ce mois-ci", "quarto de hora mais alto este mês", "cuarto de hora más alto este mes"],
+    "Dit kwartier tot nu": ["This quarter hour so far", "Diese Viertelstunde bisher", "Dette kvarteret så langt", "Denna kvart hittills", "Dette kvarter indtil nu", "Questo quarto d'ora finora", "Ce quart d'heure jusqu'ici", "Este quarto de hora até agora", "Este cuarto de hora hasta ahora"],
+    "Telt mee als het minimum": ["Counts as the minimum", "Zählt als Minimum", "Teller som minimum", "Räknas som minimum", "Tæller som minimum", "Conta come il minimo", "Compte comme le minimum", "Conta como o mínimo", "Cuenta como el mínimo"],
+    "Kost deze maand": ["Cost this month", "Kosten diesen Monat", "Kostnad denne måneden", "Kostnad denna månad", "Pris denne måned", "Costo di questo mese", "Coût ce mois-ci", "Custo este mês", "Coste este mes"],
+    "Gemiddelde 12 maanden": ["Average of 12 months", "Durchschnitt 12 Monate", "Snitt 12 måneder", "Snitt 12 månader", "Gennemsnit 12 måneder", "Media di 12 mesi", "Moyenne sur 12 mois", "Média de 12 meses", "Media de 12 meses"],
+    "Nog geen piek gemeten. Het dashboard meet elk kwartier je gemiddelde afname.": [
+      "No peak measured yet. The dashboard measures your average import every quarter hour.",
+      "Noch keine Spitze gemessen. Das Dashboard misst jede Viertelstunde deinen durchschnittlichen Bezug.",
+      "Ingen topp målt ennå. Dashbordet måler det gjennomsnittlige forbruket ditt fra nettet hvert kvarter.",
+      "Ingen topp uppmätt ännu. Instrumentpanelen mäter din genomsnittliga import varje kvart.",
+      "Ingen spids målt endnu. Dashboardet måler dit gennemsnitlige forbrug fra nettet hvert kvarter.",
+      "Nessun picco misurato finora. La dashboard misura il tuo prelievo medio ogni quarto d'ora.",
+      "Aucun pic mesuré pour l'instant. Le tableau de bord mesure votre prélèvement moyen chaque quart d'heure.",
+      "Ainda nenhum pico medido. O painel mede o seu consumo médio da rede a cada quarto de hora.",
+      "Aún no se ha medido ningún pico. El panel mide tu consumo medio de la red cada cuarto de hora."
+    ],
+    "Fasebelasting vandaag": ["Phase load today", "Phasenlast heute", "Fasebelastning i dag", "Fasbelastning idag", "Fasebelastning i dag", "Carico per fase oggi", "Charge par phase aujourd'hui", "Carga por fase hoje", "Carga por fase hoy"],
+    "Beste dag": ["Best day", "Bester Tag", "Beste dag", "Bästa dag", "Bedste dag", "Giorno migliore", "Meilleur jour", "Melhor dia", "Mejor día"],
+    "Beste maand": ["Best month", "Bester Monat", "Beste måned", "Bästa månad", "Bedste måned", "Mese migliore", "Meilleur mois", "Melhor mês", "Mejor mes"],
+    // Yearly bill and heat map (0.2.30)
+    "Jaarafrekening": ["Yearly bill", "Jahresabrechnung", "Årsoppgjør", "Årsavräkning", "Årsopgørelse", "Conguaglio annuale", "Facture annuelle", "Fatura anual", "Factura anual"],
+    "Verbruik per uur": ["Use per hour", "Verbrauch pro Stunde", "Forbruk per time", "Förbrukning per timme", "Forbrug pr. time", "Consumo per ora", "Consommation par heure", "Consumo por hora", "Consumo por hora"],
+    "Opwek": ["Generation", "Erzeugung", "Produksjon", "Produktion", "Produktion", "Produzione", "Production", "Produção", "Generación"],
+    "bijbetalen": ["to pay extra", "nachzuzahlen", "å betale ekstra", "att betala extra", "at betale ekstra", "da pagare in più", "à payer en plus", "a pagar a mais", "a pagar de más"],
+    "terugkrijgen": ["to get back", "zurück", "å få tilbake", "att få tillbaka", "at få tilbage", "da riavere", "à récupérer", "a receber de volta", "a recuperar"],
+    "Verwacht voor het jaar": ["Expected for the year", "Erwartet für das Jahr", "Forventet for året", "Förväntat för året", "Forventet for året", "Previsto per l'anno", "Prévu pour l'année", "Previsto para o ano", "Previsto para el año"],
+    "Termijnen": ["Advance payments", "Abschläge", "Akontobeløp", "Förskottsbetalningar", "Acontobeløb", "Acconti", "Mensualités", "Prestações", "Cuotas"],
+    "Tot nu verbruikt": ["Used so far", "Bisher verbraucht", "Brukt så langt", "Förbrukat hittills", "Brugt indtil nu", "Consumato finora", "Consommé jusqu'ici", "Gasto até agora", "Consumido hasta ahora"],
+    "deels geschat": ["partly estimated", "teilweise geschätzt", "delvis anslått", "delvis uppskattat", "delvist anslået", "in parte stimato", "en partie estimé", "em parte estimado", "en parte estimado"],
+    "Tot nu betaald": ["Paid so far", "Bisher bezahlt", "Betalt så langt", "Betalt hittills", "Betalt indtil nu", "Pagato finora", "Payé jusqu'ici", "Pago até agora", "Pagado hasta ahora"],
+    "Eerst met normaaltarief": ["Normal rate first", "Zuerst mit Normaltarif", "Normaltariff først", "Normaltaxa först", "Normaltarif først", "Prima con la tariffa normale", "D’abord au tarif normal", "Primeiro com a tarifa normal", "Primero con la tarifa normal"],
+    "Salderen": ["Net metering", "Saldierung", "Nettomåling", "Kvittning", "Nettoafregning", "Scambio sul posto", "Compensation", "Compensação", "Compensación"],
+    "Per telwerk": ["Per counter", "Pro Zählwerk", "Per telleverk", "Per räkneverk", "Pr. tælleværk", "Per contatore", "Par compteur", "Por contador", "Por contador"],
+    "Welkomstbonus": ["Welcome bonus", "Willkommensbonus", "Velkomstbonus", "Välkomstbonus", "Velkomstbonus", "Bonus di benvenuto", "Bonus de bienvenue", "Bónus de boas-vindas", "Bono de bienvenida"],
+    "Waarvan einde salderen": ["Of which end of net metering", "Davon Ende der Saldierung", "Herav slutt på nettomåling", "Varav slut på kvittning", "Heraf ophør af nettoafregning", "Di cui fine dello scambio sul posto", "Dont fin de la compensation", "Dos quais fim da compensação", "De lo cual fin de la compensación"],
+    "Teruglevering boven afname": ["Export beyond import", "Einspeisung über Bezug", "Eksport utover import", "Export utöver import", "Eksport ud over forbrug", "Immissione oltre il prelievo", "Injection au-delà du soutirage", "Injeção acima do consumo", "Vertido por encima del consumo"],
+    "Teruglevering boven afname (niet gesaldeerd)": ["Export beyond import (not netted)", "Einspeisung über Bezug (nicht saldiert)", "Eksport utover import (ikke avregnet)", "Export utöver import (inte kvittad)", "Eksport ud over forbrug (ikke modregnet)", "Immissione oltre il prelievo (non compensata)", "Injection au-delà du soutirage (non compensée)", "Injeção acima do consumo (não compensada)", "Vertido por encima del consumo (no compensado)"],
+    "Stroom per maand nu, met salderen": ["Electricity per month now, with net metering", "Strom pro Monat jetzt, mit Saldierung", "Strøm per måned nå, med nettomåling", "El per månad nu, med kvittning", "Strøm pr. måned nu, med nettoafregning", "Elettricità al mese ora, con scambio sul posto", "Électricité par mois maintenant, avec compensation", "Eletricidade por mês agora, com compensação", "Electricidad al mes ahora, con compensación"],
+    "Stroom per maand vanaf 2027": ["Electricity per month from 2027", "Strom pro Monat ab 2027", "Strøm per måned fra 2027", "El per månad från 2027", "Strøm pr. måned fra 2027", "Elettricità al mese dal 2027", "Électricité par mois à partir de 2027", "Eletricidade por mês a partir de 2027", "Electricidad al mes desde 2027"],
+    "Vanaf 2027 zonder je thuisbatterij": ["From 2027 without your home battery", "Ab 2027 ohne deine Heimbatterie", "Fra 2027 uten hjemmebatteriet", "Från 2027 utan ditt hembatteri", "Fra 2027 uden dit hjemmebatteri", "Dal 2027 senza la tua batteria domestica", "À partir de 2027 sans ta batterie domestique", "A partir de 2027 sem a tua bateria doméstica", "Desde 2027 sin tu batería doméstica"],
+    "Je batterij scheelt dan per maand": ["Your battery then saves per month", "Deine Batterie spart dann pro Monat", "Batteriet ditt sparer da per måned", "Ditt batteri sparar då per månad", "Dit batteri sparer så pr. måned", "La tua batteria allora fa risparmiare al mese", "Ta batterie fait alors économiser par mois", "A tua bateria poupa então por mês", "Tu batería ahorra entonces al mes"],
+    "Passend termijnbedrag": ["Fitting advance payment", "Passender Abschlag", "Passende akontobeløp", "Passande förskottsbelopp", "Passende acontobeløb", "Acconto adeguato", "Mensualité adaptée", "Prestação adequada", "Cuota adecuada"],
+    "Contract loopt af": ["Contract ends", "Vertrag endet", "Kontrakten utløper", "Avtalet löper ut", "Kontrakten udløber", "Il contratto scade", "Le contrat se termine", "O contrato termina", "El contrato termina"],
+    "Contract afgelopen op": ["Contract ended on", "Vertrag endete am", "Kontrakten utløp", "Avtalet löpte ut", "Kontrakten udløb", "Contratto scaduto il", "Contrat terminé le", "Contrato terminou em", "Contrato terminado el"],
+    "Vul je termijnbedrag in bij de instellingen van de app (Jaarafrekening).": [
+      "Enter your advance payment in the settings of the app (Yearly bill).",
+      "Gib deinen Abschlag in den Einstellungen der App ein (Jahresabrechnung).",
+      "Fyll inn akontobeløpet ditt i innstillingene til appen (Årsoppgjør).",
+      "Fyll i ditt förskottsbelopp i appens inställningar (Årsavräkning).",
+      "Udfyld dit acontobeløb i appens indstillinger (Årsopgørelse).",
+      "Inserisci il tuo acconto nelle impostazioni dell'app (Conguaglio annuale).",
+      "Saisis ta mensualité dans les réglages de l'app (Facture annuelle).",
+      "Introduz a tua prestação nas definições da app (Fatura anual).",
+      "Introduce tu cuota en los ajustes de la app (Factura anual)."
+    ],
+    "Nog te weinig gemeten om het jaar te schatten.": [
+      "Too little measured yet to estimate the year.",
+      "Noch zu wenig gemessen, um das Jahr zu schätzen.",
+      "For lite målt ennå til å anslå året.",
+      "För lite uppmätt ännu för att uppskatta året.",
+      "For lidt målt endnu til at anslå året.",
+      "Troppo pochi dati misurati per stimare l'anno.",
+      "Trop peu de mesures pour estimer l'année.",
+      "Ainda pouco medido para estimar o ano.",
+      "Aún hay pocas mediciones para estimar el año."
+    ],
+    "De rest van het jaar is geschat met dezelfde maanden vorig jaar, met je contract uit de instellingen.": [
+      "The rest of the year is estimated from the same months last year, with your contract from the settings.",
+      "Der Rest des Jahres ist mit denselben Monaten des Vorjahres geschätzt, mit deinem Vertrag aus den Einstellungen.",
+      "Resten av året er anslått med de samme månedene i fjor, med kontrakten din fra innstillingene.",
+      "Resten av året är uppskattat med samma månader förra året, med ditt avtal från inställningarna.",
+      "Resten af året er anslået ud fra de samme måneder sidste år, med din kontrakt fra indstillingerne.",
+      "Il resto dell'anno è stimato con gli stessi mesi dell'anno scorso, con il tuo contratto dalle impostazioni.",
+      "Le reste de l'année est estimé avec les mêmes mois de l'an dernier, avec ton contrat des réglages.",
+      "O resto do ano é estimado com os mesmos meses do ano passado, com o teu contrato das definições.",
+      "El resto del año se estima con los mismos meses del año pasado, con tu contrato de los ajustes."
+    ],
+    "Maanden zonder metingen zijn geschat met het verbruik van je vorige jaarnota, min wat je in de gemeten maanden gebruikte; gas verdeeld met de graaddagen.": [
+      "Months without readings are estimated from the use on your last yearly bill, minus what you used in the measured months; gas spread by degree days.",
+      "Monate ohne Messungen sind mit dem Verbrauch deiner letzten Jahresabrechnung geschätzt, abzüglich dessen, was du in den gemessenen Monaten verbraucht hast; Gas nach Gradtagen verteilt.",
+      "Måneder uten målinger er anslått med forbruket på forrige årsoppgjør, minus det du brukte i de målte månedene; gass fordelt etter graddager.",
+      "Månader utan mätningar är uppskattade med förbrukningen på din senaste årsavräkning, minus det du använde under de uppmätta månaderna; gas fördelad efter graddagar.",
+      "Måneder uden målinger er anslået ud fra forbruget på din seneste årsopgørelse, minus det du brugte i de målte måneder; gas fordelt efter graddage.",
+      "I mesi senza misure sono stimati con il consumo del tuo ultimo conguaglio, meno quanto hai usato nei mesi misurati; il gas ripartito per gradi giorno.",
+      "Les mois sans relevés sont estimés avec la consommation de ta dernière facture annuelle, moins ce que tu as utilisé les mois mesurés ; le gaz réparti selon les degrés-jours.",
+      "Os meses sem medições são estimados com o consumo da tua última fatura anual, menos o que usaste nos meses medidos; o gás repartido por graus-dia.",
+      "Los meses sin mediciones se estiman con el consumo de tu última factura anual, menos lo que usaste en los meses medidos; el gas repartido por grados-día."
+    ],
+    "Maanden zonder metingen van vorig jaar zijn geschat: gas met je gas per graaddag en het weer van die maand, stroom met je gemiddelde dag.": [
+      "Months without readings from last year are estimated: gas from your gas per degree day and that month's weather, electricity from your average day.",
+      "Monate ohne Messungen aus dem Vorjahr sind geschätzt: Gas mit deinem Gas pro Gradtag und dem Wetter dieses Monats, Strom mit deinem Durchschnittstag.",
+      "Måneder uten målinger fra i fjor er anslått: gass med gassen din per graddag og været den måneden, strøm med gjennomsnittsdagen din.",
+      "Månader utan mätningar från förra året är uppskattade: gas med din gas per graddag och vädret den månaden, el med din genomsnittsdag.",
+      "Måneder uden målinger fra sidste år er anslået: gas ud fra din gas pr. graddag og vejret den måned, strøm ud fra din gennemsnitsdag.",
+      "I mesi senza misure dell'anno scorso sono stimati: gas con il tuo gas per grado giorno e il meteo di quel mese, elettricità con la tua giornata media.",
+      "Les mois sans relevés de l'an dernier sont estimés : le gaz avec ton gaz par degré-jour et la météo de ce mois, l'électricité avec ta journée moyenne.",
+      "Os meses sem medições do ano passado são estimados: gás com o teu gás por grau-dia e o tempo desse mês, eletricidade com o teu dia médio.",
+      "Los meses sin mediciones del año pasado se estiman: gas con tu gas por grado-día y el tiempo de ese mes, electricidad con tu día medio."
+    ],
+    "Maanden zonder metingen van vorig jaar zijn geschat met je gemiddelde dag.": [
+      "Months without readings from last year are estimated from your average day.",
+      "Monate ohne Messungen aus dem Vorjahr sind mit deinem Durchschnittstag geschätzt.",
+      "Måneder uten målinger fra i fjor er anslått med gjennomsnittsdagen din.",
+      "Månader utan mätningar från förra året är uppskattade med din genomsnittsdag.",
+      "Måneder uden målinger fra sidste år er anslået ud fra din gennemsnitsdag.",
+      "I mesi senza misure dell'anno scorso sono stimati con la tua giornata media.",
+      "Les mois sans relevés de l'an dernier sont estimés avec ta journée moyenne.",
+      "Os meses sem medições do ano passado são estimados com o teu dia médio.",
+      "Los meses sin mediciones del año pasado se estiman con tu día medio."
+    ],
+    "De dagen worden opgehaald uit Homey Energie…": ["The days are being read from Homey Energy…", "Die Tage werden aus Homey Energie gelesen…", "Dagene hentes fra Homey Energi…", "Dagarna hämtas från Homey Energi…", "Dagene hentes fra Homey Energi…", "I giorni vengono letti da Homey Energia…", "Les jours sont lus depuis Homey Énergie…", "Os dias estão a ser lidos do Homey Energia…", "Los días se están leyendo de Homey Energía…"],
+    "Geen dagrapporten van Homey Energie gevonden.": ["No day reports found in Homey Energy.", "Keine Tagesberichte in Homey Energie gefunden.", "Ingen dagsrapporter funnet i Homey Energi.", "Inga dagsrapporter hittades i Homey Energi.", "Ingen dagsrapporter fundet i Homey Energi.", "Nessun report giornaliero trovato in Homey Energia.", "Aucun rapport journalier trouvé dans Homey Énergie.", "Nenhum relatório diário encontrado no Homey Energia.", "No se encontraron informes diarios en Homey Energía."],
+    "Blauw is afname, paars teruglevering.": ["Blue is import, purple is export.", "Blau ist Bezug, Lila ist Einspeisung.", "Blått er import, lilla er eksport.", "Blått är import, lila är export.", "Blå er import, lilla er eksport.", "Blu è prelievo, viola è immissione.", "Bleu est le soutirage, violet l'injection.", "Azul é consumo da rede, roxo é injeção.", "Azul es consumo de red, morado es vertido."],
+    "Laden van de thuisbatterij telt als verbruik.": ["Charging the home battery counts as use.", "Laden der Heimbatterie zählt als Verbrauch.", "Lading av hjemmebatteriet teller som forbruk.", "Laddning av hembatteriet räknas som förbrukning.", "Opladning af hjemmebatteriet tæller som forbrug.", "La carica della batteria domestica conta come consumo.", "La charge de la batterie domestique compte comme consommation.", "Carregar a bateria doméstica conta como consumo.", "Cargar la batería doméstica cuenta como consumo."],
+    "Nog niet alle dagen zijn opgehaald.": ["Not all days have been read yet.", "Noch nicht alle Tage wurden gelesen.", "Ikke alle dagene er hentet ennå.", "Inte alla dagar har hämtats ännu.", "Ikke alle dage er hentet endnu.", "Non tutti i giorni sono stati letti.", "Tous les jours n'ont pas encore été lus.", "Ainda nem todos os dias foram lidos.", "Aún no se han leído todos los días."],
+    "Wat je jaarafrekening wordt: de kosten van je afrekenjaar (vanaf de datum die je bij de instellingen invulde) tegen je termijnbedragen. Gemeten maanden tellen zoals gemeten; de rest van het jaar is geschat met dezelfde maand een jaar eerder. Is die er niet, dan geldt voor gas een vast deel per dag (warm water, koken) plus een deel per graaddag (verwarming), gefit op je gemeten maanden, met het weer van die maand; voor stroom je gemiddelde dag, dus met zonnepanelen valt de winter wat te laag uit. Alles gerekend met je contract uit de instellingen, inclusief vaste kosten. Salderen stopt op 1 januari 2027: geschatte maanden vanaf dan krijgen voor teruglevering alleen de terugleververgoeding, en teruglevering boven je afname tot die datum wordt niet gesaldeerd. Een welkomstbonus gaat van het bedrag af. Het blijft een schatting: de energiebelasting en je tarieven kunnen in de loop van het jaar veranderen.": [
+      "What your yearly bill will be: the costs of your billing year (from the date you entered in the settings) against your advance payments. Measured months count as measured; the rest of the year is estimated from the same month a year earlier. Without it, gas is a fixed part per day (hot water, cooking) plus a part per degree day (heating), fitted on your measured months, with that month's weather; electricity is your average day, so with solar panels the winter comes out somewhat low. Everything is calculated with your contract from the settings, fixed costs included. It remains an estimate: the energy tax and your rates can change during the year. Net metering ends on 1 January 2027: estimated months from then on only get the export compensation for export, and export beyond your import up to that date is not netted. A welcome bonus is subtracted.",
+      "Wie deine Jahresabrechnung ausfällt: die Kosten deines Abrechnungsjahres (ab dem Datum aus den Einstellungen) gegen deine Abschläge. Gemessene Monate zählen wie gemessen; der Rest des Jahres ist mit demselben Monat ein Jahr früher geschätzt. Fehlt dieser, gilt für Gas ein fester Teil pro Tag (Warmwasser, Kochen) plus ein Teil pro Gradtag (Heizung), angepasst an deine gemessenen Monate, mit dem Wetter dieses Monats; für Strom dein Durchschnittstag, mit Solaranlage fällt der Winter also etwas zu niedrig aus. Alles mit deinem Vertrag aus den Einstellungen gerechnet, inklusive Fixkosten. Es bleibt eine Schätzung: Energiesteuer und Tarife können sich im Laufe des Jahres ändern. Die Saldierung endet am 1. Januar 2027: geschätzte Monate ab dann bekommen für Einspeisung nur die Einspeisevergütung, und Einspeisung über deinem Bezug bis zu diesem Datum wird nicht saldiert. Ein Willkommensbonus wird abgezogen.",
+      "Hva årsoppgjøret ditt blir: kostnadene i oppgjørsåret ditt (fra datoen i innstillingene) mot akontobeløpene dine. Målte måneder teller som målt; resten av året er anslått med samme måned et år tidligere. Mangler den, er gass en fast del per dag (varmtvann, matlaging) pluss en del per graddag (oppvarming), tilpasset de målte månedene dine, med været den måneden; strøm er gjennomsnittsdagen din, så med solcellepaneler blir vinteren litt lav. Alt er regnet med kontrakten din fra innstillingene, inkludert faste kostnader. Det er fortsatt et anslag: avgifter og priser kan endres i løpet av året. Nettomåling slutter 1. januar 2027: anslåtte måneder fra da får bare eksportgodtgjørelsen for eksport, og eksport utover importen frem til den datoen blir ikke avregnet. En velkomstbonus trekkes fra.",
+      "Vad din årsavräkning blir: kostnaderna för ditt avräkningsår (från datumet i inställningarna) mot dina förskottsbetalningar. Uppmätta månader räknas som uppmätta; resten av året är uppskattat med samma månad ett år tidigare. Saknas den gäller för gas en fast del per dag (varmvatten, matlagning) plus en del per graddag (uppvärmning), anpassad till dina uppmätta månader, med vädret den månaden; för el din genomsnittsdag, så med solpaneler blir vintern lite låg. Allt räknat med ditt avtal från inställningarna, inklusive fasta kostnader. Det är fortfarande en uppskattning: skatter och priser kan ändras under året. Kvittningen upphör den 1 januari 2027: uppskattade månader från dess får bara exportersättningen för export, och export utöver din import fram till det datumet kvittas inte. En välkomstbonus dras av.",
+      "Hvad din årsopgørelse bliver: omkostningerne i dit opgørelsesår (fra datoen i indstillingerne) mod dine acontobeløb. Målte måneder tæller som målt; resten af året er anslået ud fra samme måned et år tidligere. Mangler den, er gas en fast del pr. dag (varmt vand, madlavning) plus en del pr. graddag (opvarmning), tilpasset dine målte måneder, med vejret den måned; strøm er din gennemsnitsdag, så med solceller bliver vinteren lidt lav. Alt beregnet med din kontrakt fra indstillingerne, inklusive faste omkostninger. Det er stadig et skøn: afgifter og priser kan ændre sig i løbet af året. Nettoafregning ophører 1. januar 2027: anslåede måneder fra da får kun eksportgodtgørelsen for eksport, og eksport ud over dit forbrug indtil den dato modregnes ikke. En velkomstbonus trækkes fra.",
+      "Come sarà il tuo conguaglio annuale: i costi del tuo anno di fatturazione (dalla data nelle impostazioni) rispetto ai tuoi acconti. I mesi misurati contano come misurati; il resto dell'anno è stimato con lo stesso mese di un anno prima. Se manca, il gas è una parte fissa al giorno (acqua calda, cucina) più una parte per grado giorno (riscaldamento), adattata ai mesi misurati, con il meteo di quel mese; l'elettricità è la tua giornata media, quindi con pannelli solari l'inverno risulta un po' basso. Tutto calcolato con il tuo contratto dalle impostazioni, costi fissi inclusi. Resta una stima: imposte e tariffe possono cambiare durante l'anno. Lo scambio sul posto finisce il 1° gennaio 2027: i mesi stimati da allora ricevono per l’immissione solo il compenso di immissione, e l’immissione oltre il prelievo fino a quella data non viene compensata. Un bonus di benvenuto viene sottratto.",
+      "Ce que sera ta facture annuelle : les coûts de ton année de facturation (depuis la date des réglages) face à tes mensualités. Les mois mesurés comptent tels quels ; le reste de l'année est estimé avec le même mois un an plus tôt. À défaut, le gaz est une part fixe par jour (eau chaude, cuisine) plus une part par degré-jour (chauffage), ajustée sur tes mois mesurés, avec la météo de ce mois ; l'électricité est ta journée moyenne, donc avec des panneaux solaires l'hiver ressort un peu bas. Tout est calculé avec ton contrat des réglages, frais fixes compris. Cela reste une estimation : taxes et tarifs peuvent changer en cours d'année. La compensation prend fin le 1er janvier 2027 : les mois estimés à partir de là ne reçoivent pour l’injection que la rémunération d’injection, et l’injection au-delà du soutirage jusqu’à cette date n’est pas compensée. Un bonus de bienvenue est déduit.",
+      "Como será a tua fatura anual: os custos do teu ano de faturação (a partir da data nas definições) face às tuas prestações. Os meses medidos contam como medidos; o resto do ano é estimado com o mesmo mês um ano antes. Sem ele, o gás é uma parte fixa por dia (água quente, cozinhar) mais uma parte por grau-dia (aquecimento), ajustada aos meses medidos, com o tempo desse mês; a eletricidade é o teu dia médio, por isso com painéis solares o inverno fica um pouco baixo. Tudo calculado com o teu contrato das definições, custos fixos incluídos. Continua a ser uma estimativa: impostos e tarifas podem mudar durante o ano. A compensação termina a 1 de janeiro de 2027: os meses estimados a partir daí só recebem a remuneração de injeção, e a injeção acima do consumo até essa data não é compensada. Um bónus de boas-vindas é descontado.",
+      "Cómo será tu factura anual: los costes de tu año de facturación (desde la fecha de los ajustes) frente a tus cuotas. Los meses medidos cuentan como medidos; el resto del año se estima con el mismo mes un año antes. Si no existe, el gas es una parte fija por día (agua caliente, cocina) más una parte por grado-día (calefacción), ajustada a tus meses medidos, con el tiempo de ese mes; la electricidad es tu día medio, así que con paneles solares el invierno sale algo bajo. Todo calculado con tu contrato de los ajustes, costes fijos incluidos. Sigue siendo una estimación: impuestos y tarifas pueden cambiar durante el año. La compensación termina el 1 de enero de 2027: los meses estimados desde entonces solo reciben la compensación por vertido, y el vertido por encima de tu consumo hasta esa fecha no se compensa. Un bono de bienvenida se resta."
+    ],
+    "Verbruik, opwek of het net per uur over de afgelopen 4 weken: elke kolom is een dag, elke rij een uur. Uit de dagrapporten van Homey Energie (per 5 minuten), vandaag uit de meterstanden, en gisteren ook als het dagrapport niet klopt. Verbruik = afname + opwek − teruglevering. Een grijze kolom is een dag zonder bruikbaar dagrapport.": [
+      "Use, generation or the grid per hour over the last 4 weeks: each column is a day, each row an hour. From the day reports of Homey Energy (per 5 minutes), today from the meter readings, and yesterday too when its day report does not add up. Use = import + generation − export. A grey column is a day without a usable day report.",
+      "Verbrauch, Erzeugung oder Netz pro Stunde über die letzten 4 Wochen: jede Spalte ist ein Tag, jede Zeile eine Stunde. Aus den Tagesberichten von Homey Energie (pro 5 Minuten), heute aus den Zählerständen, gestern ebenso, wenn der Tagesbericht nicht stimmt. Verbrauch = Bezug + Erzeugung − Einspeisung. Eine graue Spalte ist ein Tag ohne brauchbaren Tagesbericht.",
+      "Forbruk, produksjon eller nettet per time de siste 4 ukene: hver kolonne er en dag, hver rad en time. Fra dagsrapportene i Homey Energi (per 5 minutter), i dag fra målerstandene, og i går også når dagsrapporten ikke stemmer. Forbruk = import + produksjon − eksport. En grå kolonne er en dag uten brukbar dagsrapport.",
+      "Förbrukning, produktion eller nätet per timme de senaste 4 veckorna: varje kolumn är en dag, varje rad en timme. Från dagsrapporterna i Homey Energi (per 5 minuter), idag från mätarställningarna, och igår också när dagsrapporten inte stämmer. Förbrukning = import + produktion − export. En grå kolumn är en dag utan användbar dagsrapport.",
+      "Forbrug, produktion eller nettet pr. time de seneste 4 uger: hver kolonne er en dag, hver række en time. Fra dagsrapporterne i Homey Energi (pr. 5 minutter), i dag fra målerstandene, og i går også når dagsrapporten ikke stemmer. Forbrug = import + produktion − eksport. En grå kolonne er en dag uden brugbar dagsrapport.",
+      "Consumo, produzione o rete per ora nelle ultime 4 settimane: ogni colonna è un giorno, ogni riga un'ora. Dai report giornalieri di Homey Energia (ogni 5 minuti), oggi dalle letture dei contatori, e anche ieri quando il report non torna. Consumo = prelievo + produzione − immissione. Una colonna grigia è un giorno senza report utilizzabile.",
+      "Consommation, production ou réseau par heure sur les 4 dernières semaines : chaque colonne est un jour, chaque ligne une heure. Depuis les rapports journaliers de Homey Énergie (toutes les 5 minutes), aujourd'hui depuis les relevés, et hier aussi quand le rapport ne concorde pas. Consommation = soutirage + production − injection. Une colonne grise est un jour sans rapport utilisable.",
+      "Consumo, produção ou a rede por hora nas últimas 4 semanas: cada coluna é um dia, cada linha uma hora. Dos relatórios diários do Homey Energia (a cada 5 minutos), hoje das leituras dos contadores, e ontem também quando o relatório não bate certo. Consumo = consumo da rede + produção − injeção. Uma coluna cinzenta é um dia sem relatório utilizável.",
+      "Consumo, generación o la red por hora en las últimas 4 semanas: cada columna es un día, cada fila una hora. De los informes diarios de Homey Energía (cada 5 minutos), hoy de las lecturas de los contadores, y ayer también cuando el informe no cuadra. Consumo = consumo de red + generación − vertido. Una columna gris es un día sin informe utilizable."
+    ],
+    // CO2 of the grid and dynamic gas (0.2.34)
+    "CO2 van het net": ["Grid CO2", "CO2 des Stromnetzes", "CO2 i strømnettet", "CO2 i elnätet", "CO2 i elnettet", "CO2 della rete", "CO2 du réseau", "CO2 da rede", "CO2 de la red"],
+    "CO2 per kWh nu": ["CO2 per kWh now", "CO2 pro kWh jetzt", "CO2 per kWh nå", "CO2 per kWh nu", "CO2 pr. kWh nu", "CO2 per kWh ora", "CO2 par kWh maintenant", "CO2 por kWh agora", "CO2 por kWh ahora"],
+    "schoon": ["clean", "sauber", "ren", "ren", "ren", "pulita", "propre", "limpa", "limpia"],
+    "gemiddeld": ["average", "mittel", "middels", "medel", "middel", "media", "moyen", "média", "media"],
+    "vuil": ["dirty", "schmutzig", "skitten", "smutsig", "beskidt", "sporca", "sale", "suja", "sucia"],
+    "Jouw afname vandaag": ["Your import today", "Dein Bezug heute", "Ditt uttak i dag", "Ditt uttag idag", "Dit forbrug fra nettet i dag", "Il tuo prelievo oggi", "Ton soutirage aujourd'hui", "O teu consumo da rede hoje", "Tu consumo de red hoy"],
+    "Gas nu": ["Gas now", "Gas jetzt", "Gass nå", "Gas nu", "Gas nu", "Gas ora", "Gaz maintenant", "Gás agora", "Gas ahora"],
+    "Gas vanaf 6:00": ["Gas from 6:00", "Gas ab 6:00", "Gass fra 6:00", "Gas från 6:00", "Gas fra 6:00", "Gas dalle 6:00", "Gaz à partir de 6:00", "Gás a partir das 6:00", "Gas desde las 6:00"],
+    "Voor jouw land zijn geen CO2-gegevens beschikbaar.": ["No CO2 data is available for your country.", "Für dein Land sind keine CO2-Daten verfügbar.", "Ingen CO2-data er tilgjengelig for landet ditt.", "Inga CO2-data finns för ditt land.", "Der er ingen CO2-data for dit land.", "Nessun dato CO2 disponibile per il tuo paese.", "Aucune donnée CO2 n'est disponible pour ton pays.", "Não há dados de CO2 para o teu país.", "No hay datos de CO2 para tu país."],
+    "Nog geen CO2-gegevens. Ze worden elk kwartier opgehaald.": ["No CO2 data yet. It is read every quarter of an hour.", "Noch keine CO2-Daten. Sie werden jede Viertelstunde abgerufen.", "Ingen CO2-data ennå. De hentes hvert kvarter.", "Inga CO2-data ännu. De hämtas varje kvart.", "Ingen CO2-data endnu. De hentes hvert kvarter.", "Ancora nessun dato CO2. Vengono letti ogni quarto d'ora.", "Pas encore de données CO2. Elles sont lues tous les quarts d'heure.", "Ainda sem dados de CO2. São lidos a cada quarto de hora.", "Aún no hay datos de CO2. Se leen cada cuarto de hora."],
+    "Hoeveel CO2 er vrijkomt per kWh uit het stroomnet van jouw land, per kwartier: gemeten tot nu, de rest van de dag verwacht (lichter). Laag als er veel zon en wind is. Jouw afname vandaag is per uur je afname van het net maal de CO2 van dat uur. Bron: Energy-Charts van Fraunhofer ISE (CC BY 4.0), elk kwartier opgehaald.": [
+      "How much CO2 is emitted per kWh from the grid of your country, per quarter hour: measured until now, the rest of the day expected (lighter). Low when there is much sun and wind. Your import today is, per hour, what you took from the grid times the CO2 of that hour. Source: Energy-Charts by Fraunhofer ISE (CC BY 4.0), read every quarter of an hour.",
+      "Wie viel CO2 pro kWh aus dem Stromnetz deines Landes entsteht, pro Viertelstunde: gemessen bis jetzt, der Rest des Tages erwartet (heller). Niedrig bei viel Sonne und Wind. Dein Bezug heute ist pro Stunde dein Netzbezug mal das CO2 dieser Stunde. Quelle: Energy-Charts des Fraunhofer ISE (CC BY 4.0), jede Viertelstunde abgerufen.",
+      "Hvor mye CO2 som slippes ut per kWh fra strømnettet i landet ditt, per kvarter: målt til nå, resten av dagen forventet (lysere). Lavt når det er mye sol og vind. Ditt uttak i dag er per time uttaket fra nettet ganger CO2 i den timen. Kilde: Energy-Charts fra Fraunhofer ISE (CC BY 4.0), hentet hvert kvarter.",
+      "Hur mycket CO2 som släpps ut per kWh från elnätet i ditt land, per kvart: uppmätt hittills, resten av dagen förväntat (ljusare). Lågt när det är mycket sol och vind. Ditt uttag idag är per timme uttaget från nätet gånger CO2 den timmen. Källa: Energy-Charts från Fraunhofer ISE (CC BY 4.0), hämtas varje kvart.",
+      "Hvor meget CO2 der udledes pr. kWh fra elnettet i dit land, pr. kvarter: målt indtil nu, resten af dagen forventet (lysere). Lavt når der er meget sol og vind. Dit forbrug fra nettet i dag er pr. time det, du tog fra nettet, gange timens CO2. Kilde: Energy-Charts fra Fraunhofer ISE (CC BY 4.0), hentes hvert kvarter.",
+      "Quanta CO2 viene emessa per kWh dalla rete del tuo paese, per quarto d'ora: misurata finora, il resto della giornata previsto (più chiaro). Bassa con molto sole e vento. Il tuo prelievo di oggi è, per ora, quanto hai preso dalla rete per la CO2 di quell'ora. Fonte: Energy-Charts del Fraunhofer ISE (CC BY 4.0), letta ogni quarto d'ora.",
+      "Combien de CO2 est émis par kWh du réseau de ton pays, par quart d'heure : mesuré jusqu'ici, le reste de la journée prévu (plus clair). Bas quand il y a beaucoup de soleil et de vent. Ton soutirage d'aujourd'hui est, par heure, ce que tu as pris au réseau multiplié par le CO2 de cette heure. Source : Energy-Charts du Fraunhofer ISE (CC BY 4.0), lu tous les quarts d'heure.",
+      "Quanto CO2 é emitido por kWh da rede do teu país, por quarto de hora: medido até agora, o resto do dia previsto (mais claro). Baixo quando há muito sol e vento. O teu consumo da rede hoje é, por hora, o que tiraste da rede vezes o CO2 dessa hora. Fonte: Energy-Charts do Fraunhofer ISE (CC BY 4.0), lido a cada quarto de hora.",
+      "Cuánto CO2 se emite por kWh de la red de tu país, por cuarto de hora: medido hasta ahora, el resto del día previsto (más claro). Bajo cuando hay mucho sol y viento. Tu consumo de red de hoy es, por hora, lo que tomaste de la red por el CO2 de esa hora. Fuente: Energy-Charts del Fraunhofer ISE (CC BY 4.0), leído cada cuarto de hora."
+    ]
+  };
+  const PERIOD = "(vandaag|gisteren|deze week|deze maand|dit jaar)";
+  const PATTERNS = [
+    [/^(.+) – (.+), donker onder (.+)° zon$/, ["$1 – $2, dark below $3° sun", "$1 – $2, dunkel unter $3° Sonne", "$1 – $2, mørkt under $3° sol", "$1 – $2, mörkt under $3° sol", "$1 – $2, mørkt under $3° sol", "$1 – $2, buio sotto $3° di sole", "$1 – $2, nuit sous $3° de soleil", "$1 – $2, escuro abaixo de $3° de sol", "$1 – $2, oscuro por debajo de $3° de sol"]],
+    [/^(.+) nachten: (.+) \/ (.+) kWh(.*)$/, ["$1 nights: $2 / $3 kWh$4", "$1 Nächte: $2 / $3 kWh$4", "$1 netter: $2 / $3 kWh$4", "$1 nätter: $2 / $3 kWh$4", "$1 nætter: $2 / $3 kWh$4", "$1 notti: $2 / $3 kWh$4", "$1 nuits : $2 / $3 kWh$4", "$1 noites: $2 / $3 kWh$4", "$1 noches: $2 / $3 kWh$4"]],
+    [/^(.+) maanden uit maandtotalen, gefit op (\d+), afwijking ± (.+)%$/, ["$1 months from month totals, fitted on $2, off by ± $3%", "$1 Monate aus Monatssummen, angepasst an $2, Abweichung ± $3 %", "$1 måneder fra månedstotaler, tilpasset $2, avvik ± $3 %", "$1 månader från månadstotaler, anpassat på $2, avvikelse ± $3 %", "$1 måneder fra månedstotaler, tilpasset $2, afvigelse ± $3 %", "$1 mesi dai totali mensili, adattato su $2, scarto ± $3%", "$1 mois à partir des totaux mensuels, ajusté sur $2, écart ± $3 %", "$1 meses a partir dos totais mensais, ajustado a $2, desvio ± $3%", "$1 meses a partir de los totales mensuales, ajustado a $2, desviación ± $3 %"]],
+    [/^(.+) maanden uit maandtotalen, gefit op (\d+)$/, ["$1 months from month totals, fitted on $2", "$1 Monate aus Monatssummen, angepasst an $2", "$1 måneder fra månedstotaler, tilpasset $2", "$1 månader från månadstotaler, anpassat på $2", "$1 måneder fra månedstotaler, tilpasset $2", "$1 mesi dai totali mensili, adattato su $2", "$1 mois à partir des totaux mensuels, ajusté sur $2", "$1 meses a partir dos totais mensais, ajustado a $2", "$1 meses a partir de los totales mensuales, ajustado a $2"]],
+    [/^niet gebruikt, afwijking ± (.+)%$/, ["not used, off by ± $1%", "nicht verwendet, Abweichung ± $1 %", "ikke brukt, avvik ± $1 %", "används inte, avvikelse ± $1 %", "ikke brugt, afvigelse ± $1 %", "non usato, scarto ± $1%", "non utilisé, écart ± $1 %", "não usado, desvio ± $1%", "no usado, desviación ± $1 %"]],
+    [/^(.+) nachten, wordt aangevuld$/, ["$1 nights, being filled in", "$1 Nächte, wird ergänzt", "$1 netter, fylles inn", "$1 nätter, fylls på", "$1 nætter, udfyldes", "$1 notti, in completamento", "$1 nuits, en cours de complétion", "$1 noites, a completar", "$1 noches, completándose"]],
+    [/^(.+) nachten$/, ["$1 nights", "$1 Nächte", "$1 netter", "$1 nätter", "$1 nætter", "$1 notti", "$1 nuits", "$1 noites", "$1 noches"]],
+    [/^vast (.+)$/, ["fixed $1", "fest $1", "fast $1", "fast $1", "fast $1", "fisso $1", "fixe $1", "fixo $1", "fijo $1"]],
+    [/^Negatieve stroomprijs \((.+)\/kWh\) terwijl je (.+) kW teruglevert$/, [
+      "Negative electricity price ($1/kWh) while you export $2 kW",
+      "Negativer Strompreis ($1/kWh), während du $2 kW einspeist",
+      "Negativ strømpris ($1/kWh) mens du eksporterer $2 kW",
+      "Negativt elpris ($1/kWh) medan du exporterar $2 kW",
+      "Negativ elpris ($1/kWh), mens du eksporterer $2 kW",
+      "Prezzo dell'elettricità negativo ($1/kWh) mentre immetti $2 kW",
+      "Prix de l'électricité négatif ($1/kWh) alors que vous injectez $2 kW",
+      "Preço da eletricidade negativo ($1/kWh) enquanto injeta $2 kW",
+      "Precio de la luz negativo ($1/kWh) mientras inyectas $2 kW"
+    ]],
+    [/^Dit kwartier (.+) kW, boven je maandpiek van (.+) kW$/, [
+      "This quarter hour $1 kW, above your monthly peak of $2 kW",
+      "Diese Viertelstunde $1 kW, über deiner Monatsspitze von $2 kW",
+      "Dette kvarteret $1 kW, over månedstoppen din på $2 kW",
+      "Denna kvart $1 kW, över din månadstopp på $2 kW",
+      "Dette kvarter $1 kW, over din månedsspids på $2 kW",
+      "Questo quarto d'ora $1 kW, sopra il tuo picco mensile di $2 kW",
+      "Ce quart d'heure $1 kW, au-dessus de votre pic mensuel de $2 kW",
+      "Este quarto de hora $1 kW, acima do seu pico mensal de $2 kW",
+      "Este cuarto de hora $1 kW, por encima de tu pico mensual de $2 kW"
+    ]],
+    [/^Rapport maken mislukt: (.+)$/, ["Making the report failed: #1", "Bericht konnte nicht erstellt werden: #1", "Kunne ikke lage rapporten: #1", "Det gick inte att skapa rapporten: #1", "Rapporten kunne ikke laves: #1", "Creazione del rapporto non riuscita: #1", "Impossible de créer le rapport : #1", "Não foi possível criar o relatório: #1", "No se pudo crear el informe: #1"]],
+    [/^Momentopname van (.+)\.$/, ["Snapshot of $1.", "Momentaufnahme vom $1.", "Øyeblikksbilde fra $1.", "Ögonblicksbild från $1.", "Øjebliksbillede fra $1.", "Istantanea del $1.", "Instantané du $1.", "Instantâneo de $1.", "Instantánea del $1."]],
+    [/^gemeten sinds (.+)$/, ["measured since $1", "gemessen seit $1", "målt siden $1", "uppmätt sedan $1", "målt siden $1", "misurato dal $1", "mesuré depuis le $1", "medido desde $1", "medido desde el $1"]],
+    [/^(.+) per kWh$/, ["$1 per kWh", "$1 pro kWh", "$1 per kWh", "$1 per kWh", "$1 pr. kWh", "$1 per kWh", "$1 par kWh", "$1 por kWh", "$1 por kWh"]],
+    [/^af (.+) · terug (.+) kWh$/, ["import $1 · export $2 kWh", "Bezug $1 · Einspeisung $2 kWh", "import $1 · eksport $2 kWh", "import $1 · export $2 kWh", "import $1 · eksport $2 kWh", "prelievo $1 · immissione $2 kWh", "soutirage $1 · injection $2 kWh", "consumo $1 · injeção $2 kWh", "consumo $1 · inyección $2 kWh"]],
+    [/^in (.+) · uit (.+) kWh$/, ["in $1 · out $2 kWh", "rein $1 · raus $2 kWh", "inn $1 · ut $2 kWh", "in $1 · ut $2 kWh", "ind $1 · ud $2 kWh", "entrata $1 · uscita $2 kWh", "entrée $1 · sortie $2 kWh", "entrada $1 · saída $2 kWh", "entrada $1 · salida $2 kWh"]],
+    [/^Batterij (\d+%)$/, ["Battery $1", "Batterie $1", "Batteri $1", "Batteri $1", "Batteri $1", "Batteria $1", "Batterie $1", "Bateria $1", "Batería $1"]],
+    [/^(\d+) meldingen$/, ["$1 warnings", "$1 Meldungen", "$1 varsler", "$1 aviseringar", "$1 advarsler", "$1 avvisi", "$1 alertes", "$1 alertas", "$1 avisos"]],
+    [/^kWh = vandaag tot (.+)$/, ["kWh = today until $1", "kWh = heute bis $1", "kWh = i dag til $1", "kWh = idag till $1", "kWh = i dag til $1", "kWh = oggi fino alle $1", "kWh = aujourd'hui jusqu'à $1", "kWh = hoje até às $1", "kWh = hoy hasta las $1"]],
+    [/^kWh = gisteren tot (.+)$/, ["kWh = yesterday until $1", "kWh = gestern bis $1", "kWh = i går til $1", "kWh = igår till $1", "kWh = i går til $1", "kWh = ieri fino alle $1", "kWh = hier jusqu'à $1", "kWh = ontem até às $1", "kWh = ayer hasta las $1"]],
+    [/^Terugkijken · (.+)$/, ["Looking back · $1", "Rückblick · $1", "Ser tilbake · $1", "Tittar tillbaka · $1", "Ser tilbage · $1", "Indietro nel tempo · $1", "Retour en arrière · $1", "A rever · $1", "Revisando · $1"]],
+    [/^kWh = vandaag · (.+)$/, ["kWh = today · $1", "kWh = heute · $1", "kWh = i dag · $1", "kWh = idag · $1", "kWh = i dag · $1", "kWh = oggi · $1", "kWh = aujourd'hui · $1", "kWh = hoje · $1", "kWh = hoy · $1"]],
+    [/^bijgewerkt (.+)$/, ["updated $1", "aktualisiert $1", "oppdatert $1", "uppdaterad $1", "opdateret $1", "aggiornato $1", "mis à jour $1", "atualizado $1", "actualizado $1"]],
+    [/^(\d+) van (\d+) keer$/, ["$1 of $2 times", "$1 von $2 Mal", "$1 av $2 ganger", "$1 av $2 gånger", "$1 af $2 gange", "$1 volte su $2", "$1 fois sur $2", "$1 de $2 vezes", "$1 de $2 veces"]],
+    [/^(\d+) onduidelijk$/, ["$1 unclear", "$1 unklar", "$1 uklare", "$1 oklara", "$1 uklare", "$1 incerti", "$1 incertains", "$1 incertos", "$1 dudosos"]],
+    [/^Ijken met de douchetoets: (\d+) metingen gelukt\.$/, ["Calibrating with the shower button: $1 measurements succeeded.", "Kalibrierung mit dem Duschtaster: $1 Messungen erfolgreich.", "Kalibrering med dusjknappen: $1 målinger vellykket.", "Kalibrering med duschknappen: $1 mätningar lyckades.", "Kalibrering med brusetasten: $1 målinger lykkedes.", "Calibrazione con il pulsante della doccia: $1 misure riuscite.", "Étalonnage avec le bouton de douche : $1 mesures réussies.", "Calibração com o botão do duche: $1 medições concluídas.", "Calibración con el botón de la ducha: $1 mediciones logradas."]],
+    [/^Ijken met de douchetoets: (\d+) van de (\d+) metingen gelukt\.$/, ["Calibrating with the shower button: $1 of $2 measurements succeeded.", "Kalibrierung mit dem Duschtaster: $1 von $2 Messungen erfolgreich.", "Kalibrering med dusjknappen: $1 av $2 målinger vellykket.", "Kalibrering med duschknappen: $1 av $2 mätningar lyckades.", "Kalibrering med brusetasten: $1 af $2 målinger lykkedes.", "Calibrazione con il pulsante della doccia: $1 misure riuscite su $2.", "Étalonnage avec le bouton de douche : $1 mesures réussies sur $2.", "Calibração com o botão do duche: $1 de $2 medições concluídas.", "Calibración con el botón de la ducha: $1 de $2 mediciones logradas."]],
+    [/^Doucheminuten zijn geijkt: (.+) L boiler, douchen op (.+) °C met (.+) L\/min \(gemeten bij (\d+) douches\)\.$/, [
+      "Shower minutes are calibrated: $1 L tank, showering at $2 °C with $3 L/min (measured over $4 showers).",
+      "Duschminuten sind kalibriert: $1 L Speicher, Duschen bei $2 °C mit $3 L/min (gemessen bei $4 Duschen).",
+      "Dusjminutter er kalibrert: $1 L bereder, dusj på $2 °C med $3 L/min (målt på $4 dusjer).",
+      "Duschminuter är kalibrerade: $1 L beredare, dusch på $2 °C med $3 L/min (uppmätt vid $4 duschar).",
+      "Bruseminutter er kalibreret: $1 L beholder, brusebad på $2 °C med $3 L/min (målt ved $4 brusebade).",
+      "I minuti di doccia sono calibrati: scaldabagno da $1 L, doccia a $2 °C con $3 L/min (misurati su $4 docce).",
+      "Les minutes de douche sont étalonnées : ballon de $1 L, douche à $2 °C avec $3 L/min (mesuré sur $4 douches).",
+      "Os minutos de duche estão calibrados: depósito de $1 L, duche a $2 °C com $3 L/min (medido em $4 duches).",
+      "Los minutos de ducha están calibrados: depósito de $1 L, ducha a $2 °C con $3 L/min (medido en $4 duchas)."
+    ]],
+    [/^Doucheminuten zijn een schatting: (.+) L boiler, douchen op (.+) °C met (.+) L\/min\.$/, [
+      "Shower minutes are an estimate: $1 L tank, showering at $2 °C with $3 L/min.",
+      "Duschminuten sind eine Schätzung: $1 L Speicher, Duschen bei $2 °C mit $3 L/min.",
+      "Dusjminutter er et anslag: $1 L bereder, dusj på $2 °C med $3 L/min.",
+      "Duschminuter är en uppskattning: $1 L beredare, dusch på $2 °C med $3 L/min.",
+      "Bruseminutter er et skøn: $1 L beholder, brusebad på $2 °C med $3 L/min.",
+      "I minuti di doccia sono una stima: scaldabagno da $1 L, doccia a $2 °C con $3 L/min.",
+      "Les minutes de douche sont une estimation : ballon de $1 L, douche à $2 °C avec $3 L/min.",
+      "Os minutos de duche são uma estimativa: depósito de $1 L, duche a $2 °C com $3 L/min.",
+      "Los minutos de ducha son una estimación: depósito de $1 L, ducha a $2 °C con $3 L/min."
+    ]],
+    [/^ingesteld (.+)$/, ["set to $1", "Soll $1", "innstilt $1", "inställt $1", "indstillet $1", "impostato $1", "consigne $1", "definido $1", "objetivo $1"]],
+    [/^(.*) · ingesteld (.+)$/, ["$1 · set to $2", "$1 · Soll $2", "$1 · innstilt $2", "$1 · inställt $2", "$1 · indstillet $2", "$1 · impostato $2", "$1 · consigne $2", "$1 · definido $2", "$1 · objetivo $2"]],
+    [new RegExp("^Stroom ".concat(PERIOD, "$")), ["Electricity @1", "Strom @1", "Strøm @1", "El @1", "Strøm @1", "Elettricità @1", "Électricité @1", "Eletricidade @1", "Electricidad @1"]],
+    [new RegExp("^Gas ".concat(PERIOD, " \\(hele huis\\)$")), ["Gas @1 (whole house)", "Gas @1 (ganzes Haus)", "Gass @1 (hele huset)", "Gas @1 (hela huset)", "Gas @1 (hele huset)", "Gas @1 (tutta la casa)", "Gaz @1 (toute la maison)", "Gás @1 (toda a casa)", "Gas @1 (toda la casa)"]],
+    [new RegExp("^Geladen ".concat(PERIOD, "$")), ["Charged @1", "Geladen @1", "Ladet @1", "Laddat @1", "Opladet @1", "Caricata @1", "Chargé @1", "Carregado @1", "Cargado @1"]],
+    [new RegExp("^Ontladen ".concat(PERIOD, "$")), ["Discharged @1", "Entladen @1", "Utladet @1", "Urladdat @1", "Afladet @1", "Scaricata @1", "Déchargé @1", "Descarregado @1", "Descargado @1"]],
+    [new RegExp("^Bereik ".concat(PERIOD, "$")), ["Range @1", "Bereich @1", "Område @1", "Intervall @1", "Interval @1", "Intervallo @1", "Plage @1", "Intervalo @1", "Rango @1"]],
+    [new RegExp("^Cycli ".concat(PERIOD, "$")), ["Cycles @1", "Zyklen @1", "Sykluser @1", "Cykler @1", "Cyklusser @1", "Cicli @1", "Cycles @1", "Ciclos @1", "Ciclos @1"]],
+    [/^(.+): (.+) kWh geladen$/, ["$1: $2 kWh charged", "$1: $2 kWh geladen", "$1: $2 kWh ladet", "$1: $2 kWh laddat", "$1: $2 kWh opladet", "$1: $2 kWh caricati", "$1 : $2 kWh chargés", "$1: $2 kWh carregados", "$1: $2 kWh cargados"]],
+    [/^(.+): (.+) kWh ontladen$/, ["$1: $2 kWh discharged", "$1: $2 kWh entladen", "$1: $2 kWh utladet", "$1: $2 kWh urladdat", "$1: $2 kWh afladet", "$1: $2 kWh scaricati", "$1 : $2 kWh déchargés", "$1: $2 kWh descarregados", "$1: $2 kWh descargados"]],
+    [/^Laadsessie (.+)$/, ["Charging session $1", "Ladevorgang $1", "Ladeøkt $1", "Laddsession $1", "Ladesession $1", "Sessione di ricarica $1", "Session de charge $1", "Sessão de carregamento $1", "Sesión de carga $1"]],
+    [/^Accu (.+)$/, ["Battery $1", "Batterie $1", "Batteri $1", "Batteri $1", "Batteri $1", "Batteria $1", "Batterie $1", "Bateria $1", "Batería $1"]],
+    [/^laadt (.+)$/, ["charging $1", "lädt $1", "lader $1", "laddar $1", "lader $1", "in carica $1", "charge $1", "a carregar $1", "cargando $1"]],
+    [/^(.+) reageert niet$/, ["$1 does not respond", "$1 reagiert nicht", "$1 svarer ikke", "$1 svarar inte", "$1 svarer ikke", "$1 non risponde", "$1 ne répond pas", "$1 não responde", "$1 no responde"]],
+    [/^Sluipverbruik is (\d+) W, normaal (\d+) W$/, ["Standby use is $1 W, usually $2 W", "Standby-Verbrauch ist $1 W, normal $2 W", "Standby-forbruk er $1 W, normalt $2 W", "Standby-förbrukningen är $1 W, normalt $2 W", "Standbyforbrug er $1 W, normalt $2 W", "Il consumo in standby è $1 W, di solito $2 W", "La consommation en veille est de $1 W, habituellement $2 W", "O consumo em standby é $1 W, normalmente $2 W", "El consumo en espera es $1 W, normalmente $2 W"]],
+    [/^(.+) staat al (\d+) uur aan \((.+)\)$/, ["$1 has been on for $2 hours ($3)", "$1 ist seit $2 Stunden an ($3)", "$1 har vært på i $2 timer ($3)", "$1 har varit på i $2 timmar ($3)", "$1 har været tændt i $2 timer ($3)", "$1 è acceso da $2 ore ($3)", "$1 est allumé depuis $2 heures ($3)", "$1 está ligado há $2 horas ($3)", "$1 lleva $2 horas encendido ($3)"]],
+    [/^(\d+) thuisbatterijen gevonden: (.+)\. Is dit dezelfde batterij via twee apps\? Kies er één bij de instellingen\.$/, [
+      "$1 home batteries found: $2. Is this the same battery through two apps? Choose one in the settings.",
+      "$1 Heimspeicher gefunden: $2. Ist das derselbe Speicher über zwei Apps? Wähle einen in den Einstellungen.",
+      "$1 hjemmebatterier funnet: $2. Er dette samme batteri via to apper? Velg ett i innstillingene.",
+      "$1 hembatterier hittades: $2. Är det samma batteri via två appar? Välj ett i inställningarna.",
+      "$1 hjemmebatterier fundet: $2. Er det det samme batteri via to apps? Vælg et i indstillingerne.",
+      "$1 batterie domestiche trovate: $2. È la stessa batteria tramite due app? Scegline una nelle impostazioni.",
+      "$1 batteries domestiques trouvées : $2. S'agit-il de la même batterie via deux applications ? Choisissez-en une dans les réglages.",
+      "$1 baterias domésticas encontradas: $2. É a mesma bateria através de duas apps? Escolha uma nas definições.",
+      "Se encontraron $1 baterías domésticas: $2. ¿Es la misma batería a través de dos apps? Elige una en los ajustes."
+    ]],
+    [/^(.+) m³ · (.+) m³ per graaddag$/, ["$1 m³ · $2 m³ per degree day", "$1 m³ · $2 m³ pro Gradtag", "$1 m³ · $2 m³ per graddag", "$1 m³ · $2 m³ per graddag", "$1 m³ · $2 m³ pr. graddag", "$1 m³ · $2 m³ per grado giorno", "$1 m³ · $2 m³ par degré-jour", "$1 m³ · $2 m³ por grau-dia", "$1 m³ · $2 m³ por grado-día"]],
+    [/^(.+) m³ per graaddag$/, ["$1 m³ per degree day", "$1 m³ pro Gradtag", "$1 m³ per graddag", "$1 m³ per graddag", "$1 m³ pr. graddag", "$1 m³ per grado giorno", "$1 m³ par degré-jour", "$1 m³ por grau-dia", "$1 m³ por grado-día"]],
+    [new RegExp("^Saldo ".concat(PERIOD, "$")), ["Balance @1", "Saldo @1", "Saldo @1", "Saldo @1", "Saldo @1", "Saldo @1", "Solde @1", "Saldo @1", "Saldo @1"]],
+    [new RegExp("^Saldo ".concat(PERIOD, " \\(zonder prijs voor een deel\\)$")), ["Balance @1 (partly without a price)", "Saldo @1 (teils ohne Preis)", "Saldo @1 (delvis uten pris)", "Saldo @1 (delvis utan pris)", "Saldo @1 (delvis uden pris)", "Saldo @1 (in parte senza prezzo)", "Solde @1 (en partie sans prix)", "Saldo @1 (em parte sem preço)", "Saldo @1 (en parte sin precio)"]],
+    [/^levert (.+)$/, ["supplying $1", "liefert $1", "leverer $1", "levererar $1", "leverer $1", "fornisce $1", "fournit $1", "fornece $1", "suministra $1"]],
+    [/^t\.o\.v\. (.+)$/, ["compared to @1", "vs. @1", "mot @1", "jämfört med @1", "i forhold til @1", "vs @1", "vs @1", "vs. @1", "vs. @1"]],
+    [/^(.+) · kWh$/, ["@1 · kWh", "@1 · kWh", "@1 · kWh", "@1 · kWh", "@1 · kWh", "@1 · kWh", "@1 · kWh", "@1 · kWh", "@1 · kWh"]],
+    [/^Vermogen (vandaag|gisteren)$/, ["Power @1", "Leistung @1", "Effekt @1", "Effekt @1", "Effekt @1", "Potenza @1", "Puissance @1", "Potência @1", "Potencia @1"]],
+    [/^(vandaag|gisteren) · verbruik (.+) kWh · zon (.+) kWh$/, ["@1 · consumption $2 kWh · solar $3 kWh", "@1 · Verbrauch $2 kWh · Solar $3 kWh", "@1 · forbruk $2 kWh · sol $3 kWh", "@1 · förbrukning $2 kWh · sol $3 kWh", "@1 · forbrug $2 kWh · sol $3 kWh", "@1 · consumo $2 kWh · solare $3 kWh", "@1 · consommation $2 kWh · solaire $3 kWh", "@1 · consumo $2 kWh · solar $3 kWh", "@1 · consumo $2 kWh · solar $3 kWh"]],
+    [/^(vandaag|gisteren) · verbruik (.+) kWh$/, ["@1 · consumption $2 kWh", "@1 · Verbrauch $2 kWh", "@1 · forbruk $2 kWh", "@1 · förbrukning $2 kWh", "@1 · forbrug $2 kWh", "@1 · consumo $2 kWh", "@1 · consommation $2 kWh", "@1 · consumo $2 kWh", "@1 · consumo $2 kWh"]],
+    [/^(\d\d:\d\d) · verbruik (.+) · zon (.+)$/, ["$1 · consumption $2 · solar $3", "$1 · Verbrauch $2 · Solar $3", "$1 · forbruk $2 · sol $3", "$1 · förbrukning $2 · sol $3", "$1 · forbrug $2 · sol $3", "$1 · consumo $2 · solare $3", "$1 · consommation $2 · solaire $3", "$1 · consumo $2 · solar $3", "$1 · consumo $2 · solar $3"]],
+    [/^(\d\d:\d\d) · verbruik (.+)$/, ["$1 · consumption $2", "$1 · Verbrauch $2", "$1 · forbruk $2", "$1 · förbrukning $2", "$1 · forbrug $2", "$1 · consumo $2", "$1 · consommation $2", "$1 · consumo $2", "$1 · consumo $2"]],
+    [/^Geen prijzen: (.+)$/, ["No prices: #1", "Keine Preise: #1", "Ingen priser: #1", "Inga priser: #1", "Ingen priser: #1", "Nessun prezzo: #1", "Pas de prix : #1", "Sem preços: #1", "Sin precios: #1"]],
+    [/^Prijzen niet beschikbaar \((.+)\)$/, ["Prices not available ($1)", "Preise nicht verfügbar ($1)", "Priser ikke tilgjengelig ($1)", "Priser inte tillgängliga ($1)", "Priser ikke tilgængelige ($1)", "Prezzi non disponibili ($1)", "Prix non disponibles ($1)", "Preços indisponíveis ($1)", "Precios no disponibles ($1)"]],
+    [/^(.+) · incl\. btw \+ opslag$/, ["$1 · incl. VAT + surcharge", "$1 · inkl. MwSt. + Aufschlag", "$1 · inkl. mva + påslag", "$1 · inkl. moms + påslag", "$1 · inkl. moms + tillæg", "$1 · IVA incl. + maggiorazione", "$1 · TTC + marge", "$1 · c/ IVA + margem", "$1 · con IVA + margen"]],
+    [/^(.+) · incl\. btw$/, ["$1 · incl. VAT", "$1 · inkl. MwSt.", "$1 · inkl. mva", "$1 · inkl. moms", "$1 · inkl. moms", "$1 · IVA incl.", "$1 · TTC", "$1 · c/ IVA", "$1 · con IVA"]],
+    [/^Goedkoopste (\d+) uur$/, ["Cheapest $1 hours", "Günstigste $1 Stunden", "Billigste $1 timer", "Billigaste $1 timmarna", "Billigste $1 timer", "$1 ore più economiche", "$1 heures les moins chères", "$1 horas mais baratas", "$1 horas más baratas"]],
+    [/^morgen (.+)$/, ["tomorrow $1", "morgen $1", "i morgen $1", "imorgon $1", "i morgen $1", "domani $1", "demain $1", "amanhã $1", "mañana $1"]],
+    [/^(.*)nu ([\d.,]+ L\/min)$/, ["$1now $2", "$1jetzt $2", "$1nå $2", "$1nu $2", "$1nu $2", "$1ora $2", "$1maintenant $2", "$1agora $2", "$1ahora $2"]],
+    [/^hoofdzekering (.+) A$/, ["main fuse $1 A", "Hauptsicherung $1 A", "hovedsikring $1 A", "huvudsäkring $1 A", "hovedsikring $1 A", "fusibile principale $1 A", "disjoncteur principal $1 A", "disjuntor principal $1 A", "fusible principal $1 A"]],
+    [/^vorige periode (.+)$/, ["previous period $1", "vorheriger Zeitraum $1", "forrige periode $1", "föregående period $1", "forrige periode $1", "periodo precedente $1", "période précédente $1", "período anterior $1", "periodo anterior $1"]],
+    [/^· verwacht vandaag (.+) kWh · morgen (.+) kWh$/, ["· expected today $1 kWh · tomorrow $2 kWh", "· erwartet heute $1 kWh · morgen $2 kWh", "· forventet i dag $1 kWh · i morgen $2 kWh", "· förväntat idag $1 kWh · imorgon $2 kWh", "· forventet i dag $1 kWh · i morgen $2 kWh", "· previsto oggi $1 kWh · domani $2 kWh", "· prévu aujourd'hui $1 kWh · demain $2 kWh", "· previsto hoje $1 kWh · amanhã $2 kWh", "· previsto hoy $1 kWh · mañana $2 kWh"]],
+    [/^· verwacht vandaag (.+) kWh$/, ["· expected today $1 kWh", "· erwartet heute $1 kWh", "· forventet i dag $1 kWh", "· förväntat idag $1 kWh", "· forventet i dag $1 kWh", "· previsto oggi $1 kWh", "· prévu aujourd'hui $1 kWh", "· previsto hoje $1 kWh", "· previsto hoy $1 kWh"]],
+    [/^(.+) per uur$/, ["$1 per hour", "$1 pro Stunde", "$1 per time", "$1 per timme", "$1 pr. time", "$1 all'ora", "$1 par heure", "$1 por hora", "$1 por hora"]],
+    [/^Bewerken lukt niet: (.+)$/, ["Cannot edit: #1", "Bearbeiten nicht möglich: #1", "Kan ikke redigere: #1", "Kan inte redigera: #1", "Kan ikke redigere: #1", "Impossibile modificare: #1", "Modification impossible : #1", "Não é possível editar: #1", "No se puede editar: #1"]],
+    [/^\+ (.+)$/, ["+ @1", "+ @1", "+ @1", "+ @1", "+ @1", "+ @1", "+ @1", "+ @1", "+ @1"]],
+    [/^Niet gevonden: (.+)\.$/, ["Not found: &1.", "Nicht gefunden: &1.", "Ikke funnet: &1.", "Hittades inte: &1.", "Ikke fundet: &1.", "Non trovato: &1.", "Introuvable : &1.", "Não encontrado: &1.", "No encontrado: &1."]],
+    [/^Onbekend blok: (.+)$/, ["Unknown block: $1", "Unbekannter Block: $1", "Ukjent blokk: $1", "Okänt block: $1", "Ukendt blok: $1", "Blocco sconosciuto: $1", "Bloc inconnu : $1", "Bloco desconhecido: $1", "Bloque desconocido: $1"]],
+    [/^Onbekende breedte: (.+)$/, ["Unknown width: $1", "Unbekannte Breite: $1", "Ukjent bredde: $1", "Okänd bredd: $1", "Ukendt bredde: $1", "Larghezza sconosciuta: $1", "Largeur inconnue : $1", "Largura desconhecida: $1", "Ancho desconocido: $1"]],
+    [/^Onbekende hoogte: (.+)$/, ["Unknown height: $1", "Unbekannte Höhe: $1", "Ukjent høyde: $1", "Okänd höjd: $1", "Ukendt højde: $1", "Altezza sconosciuta: $1", "Hauteur inconnue : $1", "Altura desconhecida: $1", "Altura desconocida: $1"]],
+    [/^(.+) → (.+): (.+)$/, ["@1 → @2: $3", "@1 → @2: $3", "@1 → @2: $3", "@1 → @2: $3", "@1 → @2: $3", "@1 → @2: $3", "@1 → @2: $3", "@1 → @2: $3", "@1 → @2: $3"]],
+    [/^(.+): ([\d.,]+ k?Wh?)$/, ["@1: $2", "@1: $2", "@1: $2", "@1: $2", "@1: $2", "@1: $2", "@1: $2", "@1: $2", "@1: $2"]],
+    [/^Fout (\d+)$/, ["Error $1", "Fehler $1", "Feil $1", "Fel $1", "Fejl $1", "Errore $1", "Erreur $1", "Erro $1", "Error $1"]],
+    [/^Homey gaf (\d+) op (.+)$/, ["Homey returned $1 for $2", "Homey gab $1 für $2 zurück", "Homey returnerte $1 for $2", "Homey returnerade $1 för $2", "Homey returnerede $1 for $2", "Homey ha restituito $1 per $2", "Homey a renvoyé $1 pour $2", "O Homey devolveu $1 para $2", "Homey devolvió $1 para $2"]],
+    [/^Donkerder is meer, tot (.+) kWh per uur\.$/, ["Darker is more, up to $1 kWh per hour.", "Dunkler ist mehr, bis $1 kWh pro Stunde.", "Mørkere er mer, opptil $1 kWh per time.", "Mörkare är mer, upp till $1 kWh per timme.", "Mørkere er mere, op til $1 kWh pr. time.", "Più scuro è di più, fino a $1 kWh per ora.", "Plus foncé est plus, jusqu’à $1 kWh par heure.", "Mais escuro é mais, até $1 kWh por hora.", "Más oscuro es más, hasta $1 kWh por hora."]],
+    [/^(.+): geen gegevens$/, ["$1: no data", "$1: keine Daten", "$1: ingen data", "$1: inga data", "$1: ingen data", "$1: nessun dato", "$1 : aucune donnée", "$1: sem dados", "$1: sin datos"]],
+    [/^(.+) \+ feestdagen$/, ["#1 + public holidays", "#1 + Feiertage", "#1 + helligdager", "#1 + helgdagar", "#1 + helligdage", "#1 + festivi", "#1 + jours fériés", "#1 + feriados", "#1 + festivos"]],
+    [/^(.+) \+ weekend$/, ["#1 + weekend", "#1 + Wochenende", "#1 + helg", "#1 + helg", "#1 + weekend", "#1 + fine settimana", "#1 + week-end", "#1 + fim de semana", "#1 + fin de semana"]],
+    [/^Schoonste (\d+) uur$/, ["Cleanest $1 hours", "Sauberste $1 Stunden", "Reneste $1 timer", "Renaste $1 timmar", "Reneste $1 timer", "Le $1 ore più pulite", "Les $1 heures les plus propres", "As $1 horas mais limpas", "Las $1 horas más limpias"]],
+    [/^(.+) \(verwacht\)$/, ["$1 (expected)", "$1 (erwartet)", "$1 (forventet)", "$1 (förväntat)", "$1 (forventet)", "$1 (previsto)", "$1 (prévu)", "$1 (previsto)", "$1 (previsto)"]]
+  ];
+  const word = (text) => {
+    var _a, _b;
+    return (_b = (_a = WORDS[text]) == null ? void 0 : _a[column]) != null ? _b : text;
+  };
+  const list = (text) => text.split(", ").map(word).join(", ");
+  function fill(template, found) {
+    return template.replace(/([$@#&])(\d)/g, (_, kind, n) => {
+      var _a;
+      const text = (_a = found[n - 1]) != null ? _a : "";
+      if (kind === "@") return word(text);
+      if (kind === "#") return translate(text);
+      if (kind === "&") return list(text);
+      return text;
+    });
+  }
+  function translate(text) {
+    var _a;
+    if (column < 0 || !text) return text;
+    const core = text.trim();
+    if (!core || !/[a-z]/i.test(core)) return text;
+    let out = (_a = WORDS[core]) == null ? void 0 : _a[column];
+    if (out === void 0) {
+      for (const [pattern, templates] of PATTERNS) {
+        const found = core.match(pattern);
+        if (found) {
+          out = fill(templates[column], found.slice(1));
+          break;
+        }
+      }
+    }
+    if (out === void 0 || out === core) return text;
+    return text.replace(core, out);
+  }
+  const ATTRIBUTES = ["title", "aria-label", "placeholder"];
+  function translateAttributes(el) {
+    for (const name of ATTRIBUTES) {
+      const value = el.getAttribute(name);
+      if (value === null) continue;
+      const out = translate(value);
+      if (out !== value) el.setAttribute(name, out);
+    }
+  }
+  function translateText(node) {
+    const out = translate(node.nodeValue);
+    if (out !== node.nodeValue) node.nodeValue = out;
+  }
+  function translateTree(root) {
+    if (root.nodeType === Node.TEXT_NODE) return translateText(root);
+    if (root.nodeType !== Node.ELEMENT_NODE && root.nodeType !== Node.DOCUMENT_FRAGMENT_NODE) return;
+    if (root.nodeType === Node.ELEMENT_NODE) {
+      if (root.tagName === "SCRIPT" || root.tagName === "STYLE") return;
+      if (root.classList.contains("lang-switch")) return;
+      translateAttributes(root);
+      if (root.tagName === "TEMPLATE") translateTree(root.content);
+    }
+    for (const child of root.childNodes) translateTree(child);
+  }
+  function addSwitch() {
+    const actions = document.querySelector(".header-actions");
+    if (!actions) return;
+    const select = document.createElement("select");
+    select.className = "lang-switch";
+    select.setAttribute("aria-label", translate("Taal"));
+    select.innerHTML = Object.entries(LANGUAGES).map(([code, [name]]) => '<option value="'.concat(code, '" lang="').concat(code, '"').concat(code === lang ? " selected" : "", ">").concat(name, "</option>")).join("");
+    select.addEventListener("change", () => {
+      try {
+        localStorage.setItem(KEY, select.value);
+      } catch {
+      }
+      location.reload();
+    });
+    actions.insertBefore(select, actions.firstChild);
+  }
+  function start() {
+    document.documentElement.lang = lang;
+    addSwitch();
+    if (column < 0) return;
+    document.title = translate(document.title);
+    translateTree(document.body);
+    new MutationObserver((records) => {
+      for (const record of records) {
+        if (record.type === "characterData") translateText(record.target);
+        else if (record.type === "attributes") translateAttributes(record.target);
+        else record.addedNodes.forEach(translateTree);
+      }
+    }).observe(document.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATTRIBUTES });
+  }
+  window.EnergyI18n = {
+    lang,
+    locale: LANGUAGES[lang][1],
+    translate,
+    start
+  };
+})();

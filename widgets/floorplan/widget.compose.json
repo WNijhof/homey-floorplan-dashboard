@@ -16,15 +16,23 @@
       "title": { "en": "Level", "nl": "Verdieping" }
     },
     {
+      "id": "start",
+      "type": "dropdown",
+      "title": { "en": "Start on", "nl": "Begint op" },
+      "value": "level",
+      "values": [
+        { "id": "level", "title": { "en": "The floor plan", "nl": "De plattegrond" } },
+        { "id": "house", "title": { "en": "The house with its energy", "nl": "Het huis met zijn energie" } }
+      ]
+    },
+    {
       "id": "view",
       "type": "dropdown",
       "title": { "en": "View", "nl": "Weergave" },
       "value": "2d",
       "values": [
         { "id": "2d", "title": { "en": "2D", "nl": "2D" } },
-        { "id": "iso", "title": { "en": "2.5D isometric (35°)", "nl": "2.5D isometrisch (35°)" } },
-        { "id": "game", "title": { "en": "2.5D game-style (30°)", "nl": "2.5D game-stijl (30°)" } },
-        { "id": "steep", "title": { "en": "2.5D steep (50°)", "nl": "2.5D steil (50°)" } }
+        { "id": "steep", "title": { "en": "2.5D", "nl": "2.5D" } }
       ]
     },
     {
@@ -130,6 +138,8 @@
     "getPlan": { "method": "GET", "path": "/plan" },
     "getWeather": { "method": "GET", "path": "/weather" },
     "getAgenda": { "method": "GET", "path": "/agenda" },
+    "getEnergy": { "method": "GET", "path": "/energy" },
+    "getEnergyDetail": { "method": "GET", "path": "/energy-detail" },
     "setCapability": { "method": "POST", "path": "/capability" }
   }
 }

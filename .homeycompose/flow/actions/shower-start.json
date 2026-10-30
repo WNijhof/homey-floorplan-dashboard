@@ -1,0 +1,10 @@
+{
+  "title": {
+    "en": "Shower started",
+    "nl": "Douche gestart"
+  },
+  "hint": {
+    "en": "Only used when calibrating the shower minutes is turned on in the app settings. Run it when the shower is turned on.",
+    "nl": "Alleen in gebruik als het ijken van de doucheminuten aanstaat in de app-instellingen. Voer het uit als de douche aangaat."
+  }
+}

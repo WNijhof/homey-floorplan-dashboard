@@ -1,0 +1,216 @@
+:root {
+  --bg: #f2f2f7;
+  --card: #ffffff;
+  --text: #1c1c1e;
+  --muted: #8a8a8e;
+  --track: rgba(118, 118, 128, 0.12);
+  --accent: #0a84ff;
+  --error: #ff4d4f;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #000000;
+    --card: #1c1c1e;
+    --text: #f5f5f7;
+    --muted: #98989f;
+    --track: rgba(118, 118, 128, 0.24);
+    color-scheme: dark;
+  }
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 16px;
+  background: var(--bg);
+  color: var(--text);
+  font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+}
+
+.card {
+  background: var(--card);
+  border-radius: 18px;
+  padding: 16px 18px;
+  margin-bottom: 16px;
+}
+
+h2 { font-size: 17px; margin: 0 0 8px; }
+h3 { font-size: 15px; margin: 18px 0 8px; }
+p { margin: 0 0 8px; }
+.muted { color: var(--muted); font-size: 13px; }
+.error { color: var(--error); }
+
+.url { font-size: 17px; font-weight: 600; color: var(--accent); word-break: break-all; }
+
+form label {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  font-size: 14px;
+  margin-bottom: 8px;
+}
+select,
+input[type="number"],
+input[type="text"],
+input[type="date"] {
+  font: inherit;
+  font-size: 14px;
+  color: var(--text);
+  background: var(--track);
+  border: 0;
+  border-radius: 8px;
+  padding: 7px 10px;
+  width: 180px;
+  max-width: 55%;
+}
+/* Homey's own form style can set a dark text color on the fields, unreadable on the dark
+   background in dark mode; set the color so that it wins */
+body form select,
+body form input[type="number"],
+body form input[type="text"],
+body form input[type="date"],
+body form input[type="password"] {
+  color: var(--text) !important;
+  -webkit-text-fill-color: var(--text);
+  caret-color: var(--text);
+}
+body form input::placeholder { color: var(--muted); -webkit-text-fill-color: var(--muted); opacity: 1; }
+fieldset { border: 0; padding: 0; margin: 0; }
+legend { font-size: 14px; margin-bottom: 6px; }
+
+/* Homey adds its own form style to settings pages (small capitals for labels); keep the
+   labels and the explanations under check boxes readable */
+body form label,
+body form legend,
+body form label span,
+body .checks label {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 14px;
+  font-weight: 400;
+  color: var(--text);
+}
+body form label small.muted,
+body form label small {
+  text-transform: none;
+  letter-spacing: normal;
+  font-size: 12px;
+  color: var(--muted);
+}
+.checks { display: grid; gap: 6px; }
+.checks label { justify-content: flex-start; margin: 0; }
+
+.layout-list { list-style: none; margin: 0 0 8px; padding: 0; display: grid; gap: 6px; }
+.layout-list li {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--track);
+  border-radius: 10px;
+  padding: 6px 8px;
+  font-size: 14px;
+}
+.layout-list li.off { opacity: 0.55; }
+.layout-list .name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.layout-list select { width: auto; max-width: none; padding: 4px 6px; background: var(--card); }
+.layout-list .move {
+  font: inherit;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--text);
+  cursor: pointer;
+}
+.layout-list .move:disabled { opacity: 0.3; cursor: default; }
+#shower-log .shower-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 4px 0; }
+button.secondary {
+  font: inherit;
+  font-size: 14px;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 4px 0;
+  cursor: pointer;
+}
+
+/* The diagnosis report, shown before it is shared */
+.report {
+  width: 100%;
+  min-height: 180px;
+  margin-top: 10px;
+  box-sizing: border-box;
+  font: 11px/1.4 ui-monospace, Menlo, Consolas, monospace;
+  color: var(--text);
+  background: var(--card);
+  border: 1px solid var(--line, rgba(128, 128, 128, 0.3));
+  border-radius: 10px;
+  padding: 8px;
+}
+
+/* Roof planes of the solar forecast */
+.plane p { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 4px; }
+button.link {
+  font: inherit;
+  font-size: 13px;
+  color: var(--accent);
+  background: none;
+  border: 0;
+  padding: 0;
+  cursor: pointer;
+}
+
+.form-actions { display: flex; align-items: center; gap: 12px; margin-top: 16px; }
+.form-actions button {
+  font: inherit;
+  font-weight: 600;
+  color: #fff;
+  background: var(--accent);
+  border: 0;
+  border-radius: 10px;
+  padding: 9px 18px;
+  cursor: pointer;
+}
+
+.check-row { align-items: flex-start; margin-top: 4px; }
+.check-row small { font-size: 12px; }
+
+.layout-list .chip {
+  font: inherit;
+  font-size: 12px;
+  border: 0;
+  border-radius: 999px;
+  padding: 4px 8px;
+  background: var(--card);
+  color: var(--accent);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.inline { display: inline-flex; align-items: center; gap: 6px; }
+.inline input { width: 64px; }
+[hidden] { display: none !important; }
+.warning { font-size: 13px; padding: 8px 10px; border-radius: 10px; background: rgba(255, 159, 10, 0.14); border-left: 3px solid #ff9f0a; }
+.warning:empty { display: none; }
+
+/* Groups in the fuse box: each group set apart, the device choices below them */
+#groups .plane { padding: 8px 0; border-top: 1px solid rgba(128, 128, 128, 0.25); }
+#groups .plane:first-child { border-top: 0; }
+.group-devices { margin-top: 12px; }
+#group-extras .plane { padding: 8px 0; border-top: 1px solid rgba(128, 128, 128, 0.25); }
+#group-extras .plane:first-child { border-top: 0; }
+/* A device on more groups: its choices under each other */
+.group-choice { display: flex; flex-direction: column; gap: 4px; width: 180px; max-width: 55%; }
+.group-choice select { width: 100%; max-width: none; }
+
+/* On the dashboard's own web page (settings-web.js): not wider than reads well */
+body.web { max-width: 760px; margin-left: auto; margin-right: auto; }
+.web-back { margin: 4px 4px 12px; }
+
+/* Ko-fi link at the bottom */
+.support { text-align: center; margin: 8px 0 16px; }
+.support img { height: 29px; width: auto; }

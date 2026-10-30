@@ -1,7 +1,7 @@
 'use strict';
 
-// Screenshots of the demo house for forum posts and the App Store: dashboard (2D, 3D, quick controls,
-// first floor), editor (catalogue, 3D editing) and picture recognition. No Homey needed.
+// Screenshots of the demo house for forum posts and the README: the house by day and night, the storeys in 2D and 3D,
+// the Energy page, and the editor. With "nl" also the App Store images (assets/images). No Homey needed.
 // Usage: node scripts/forum-shots.js <out-dir> [nl|en] [width] [height]
 const fs = require('fs');
 const os = require('os');
@@ -14,11 +14,7 @@ const outDir = process.argv[2] || 'docs/shots';
 const lang = process.argv[3] === 'en' ? 'en' : 'nl';
 const width = Number(process.argv[4] || 1400);
 const height = Number(process.argv[5] || 860);
-const browser = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  '/usr/bin/google-chrome', '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-].find((b) => fs.existsSync(b));
+const browser = require('./browser').pickBrowser();
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function cdp(debugPort) {
@@ -46,25 +42,49 @@ const settings = (s) => `HomeyWeb.Homey.setSettings(${JSON.stringify(s)})`;
 const base = { view: '2d', names: 'devices', sidebar: 'right', sideWeather: true, sideAgenda: true, tapAction: 'controls', level: null };
 
 const SHOTS = [
-  // [name, scheme, url, settings, script after load, script after that]
-  ['1-dashboard-3d', 'dark', '/', { view: '3d' }],
-  ['2-dashboard-2d', 'dark', '/', { view: '2d' }],
-  ['3-dashboard-3d-light', 'light', '/', { view: '3d' }, null, tap('i_dining')],
-  ['4-dashboard-first-floor', 'dark', '/', { view: '3d' }, "document.querySelectorAll('#levels [data-level]')[1].click()"],
+  // [name, scheme, url, settings, script after load, script after that, hour of the demo]
+  ['1-dashboard-3d', 'dark', '/', { view: '3d' }, null, null, 13],
+  ['2-dashboard-2d', 'light', '/', { view: '2d' }, "document.querySelectorAll('#levels [data-level]')[1].click()", null, 13],
+  ['3-dashboard-3d-light', 'light', '/', { view: '3d' }, "document.querySelectorAll('#levels [data-level]')[1].click()", null, 13],
+  ['4-dashboard-first-floor', 'dark', '/', { view: '3d' }, "document.querySelectorAll('#levels [data-level]')[2].click()", null, 21],
+  ['8-house-night', 'dark', '/', { view: '3d' }, null, null, 21],
+  ['9-energy', 'dark', '/energy/', null, null, null, 13],
   ['5-editor-furniture', 'light', '/editor', null, "document.querySelector('[data-tool=furniture]').click()"],
   ['6-editor-3d', 'light', '/editor', null, "document.getElementById('view-3d').click()", "(() => { const S = __editorState(); S.v3d.hooks.tap('item', 'i_thermo'); })()"],
   ['7-editor-recognise', 'light', '/editor', null, `(() => { const S = __editorState(); const lv = S.plan.levels[0]; lv.background = { src: 'data:image/png;base64,${raster.toPng(raster.rasterPlan({ scale: 0.8, names: false })).toString('base64')}', x: -120, y: -120, w: 1540, h: 1040, ratio: 1040 / 1540, opacity: 0.6, calibrated: true }; lv.rooms = []; lv.openings = []; lv.items = []; document.querySelector('[data-tool=picture]').click(); document.getElementById('zoom-fit').click(); document.querySelector('[data-action=detect-run]').click(); })()`],
 ];
 
+// The App Store images: the house by itself, at the three sizes the store asks for.
+async function storeImages(c, app, port) {
+  app.demoHour = 13;
+  await c.send('Emulation.setDeviceMetricsOverride', { width: 1000, height: 700, deviceScaleFactor: 1, mobile: false });
+  await c.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: 'light' }] });
+  await c.send('Page.navigate', { url: `http://localhost:${port}/` });
+  await sleep(6000);
+  await c.send('Runtime.evaluate', { expression: `(() => {
+    const css = document.createElement('style');
+    css.textContent = '.top, .fp-strip, .fp-side, .fp3-labels, #people { display: none !important; } .fp-web .fp-app { padding: 0 !important; } .card { border-radius: 0 !important; box-shadow: none !important; }';
+    document.head.appendChild(css);
+    window.dispatchEvent(new Event('resize'));
+    __widgetState().house.sharp.set(2);
+  })()` });
+  await sleep(4000);
+  for (const [name, scale] of [['xlarge', 1], ['large', 0.5], ['small', 0.25]]) {
+    const shot = await c.send('Page.captureScreenshot', { format: 'png', clip: { x: 0, y: 0, width: 1000, height: 700, scale } });
+    fs.writeFileSync(path.join(__dirname, '..', 'assets', 'images', `${name}.png`), Buffer.from(shot.data, 'base64'));
+  }
+  console.log('wrote the store images');
+}
+
 (async () => {
   fs.mkdirSync(outDir, { recursive: true });
   const port = 9900 + Math.floor(Math.random() * 50);
-  const app = createDevApp({ port, siblingPort: 8686, demoLang: lang });
+  const app = createDevApp({ port, demoLang: lang });
   app.log = () => {};
   await app.webServer.start(port);
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'fp-forum-'));
   const debugPort = 9600 + Math.floor(Math.random() * 200);
-  const proc = spawn(browser, ['--headless=new', '--enable-unsafe-swiftshader', '--use-angle=swiftshader', `--lang=${lang}`, `--remote-debugging-port=${debugPort}`, `--user-data-dir=${dir}`, `--window-size=${width},${height}`, 'about:blank'], { stdio: 'ignore' });
+  const proc = spawn(browser.path, [...browser.args, `--lang=${lang}`, `--remote-debugging-port=${debugPort}`, `--user-data-dir=${dir}`, `--window-size=${width},${height}`, 'about:blank'], { stdio: 'ignore' });
   try {
     const c = await cdp(debugPort);
     await c.send('Emulation.setDeviceMetricsOverride', { width, height, deviceScaleFactor: 1.5, mobile: false });
@@ -75,7 +95,8 @@ const SHOTS = [
     await c.send('Emulation.setUserAgentOverride', { userAgent: version.userAgent, acceptLanguage: `${locale},${lang}` });
     await c.send('Page.enable');
     await c.send('Page.addScriptToEvaluateOnNewDocument', { source: `Object.defineProperty(navigator, 'language', { get: () => '${locale}' }); Object.defineProperty(navigator, 'languages', { get: () => ['${locale}', '${lang}'] });` });
-    for (const [name, scheme, url, s, js, js2] of SHOTS) {
+    for (const [name, scheme, url, s, js, js2, hour] of SHOTS) {
+      app.demoHour = hour === undefined ? null : hour;
       await c.send('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-color-scheme', value: scheme }] });
       await c.send('Page.navigate', { url: `http://localhost:${port}${url}` });
       await sleep(1500);
@@ -90,6 +111,7 @@ const SHOTS = [
       fs.writeFileSync(file, Buffer.from(shot.data, 'base64'));
       console.log('wrote', file);
     }
+    if (lang === 'nl') await storeImages(c, app, port);
     c.close();
   } finally {
     proc.kill();

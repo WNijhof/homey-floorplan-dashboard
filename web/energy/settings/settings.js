@@ -1,0 +1,923 @@
+'use strict';
+
+// Homey settings page: links to the dashboard and edits the app settings
+
+const BOILER_FIELDS = ['liters', 'coldWaterTemp', 'showerTemp', 'showerFlow', 'warmFrom'];
+const BOILER_SENSORS = ['topSensor', 'bottomSensor'];
+const DEFAULT_BOILER = { liters: 80, coldWaterTemp: null, showerTemp: 40, showerFlow: 8, warmFrom: 50, topSensor: '', bottomSensor: '', calibrate: false, valve: false, tapCheck: false, tapCheckSince: '', tapCheckPower: '' };
+
+function onHomeyReady(Homey) {
+  const form = document.getElementById('settings-form');
+  // Texts in the language of Homey, from /locales
+  const __ = (key, tokens) => Homey.__(`settings.${key}`, tokens);
+  const blockTitle = block => Homey.__(`blocks.${block.id}`) || block.title;
+  // On the dashboard's own web page the port, access code and PIN are not shown: they can only
+  // be changed in Homey
+  if (Homey.web) {
+    document.getElementById('homey-only').hidden = true;
+    document.getElementById('homey-only-note').hidden = false;
+  }
+  form.editPin.placeholder = __('none');
+  form.accessCode.placeholder = __('none');
+
+  // Amounts are text fields so a comma works as well as a dot; a number field in Homey only took
+  // a dot and kept refusing to save. The example shows how an amount looks.
+  const decimal = __('decimalSeparator') || '.';
+  const amounts = [...form.querySelectorAll('[data-amount]')];
+  const readAmount = text => {
+    const clean = String(text).trim().replace(/\s|€|kr|£|\$|zł|chf/gi, '').replace(',', '.');
+    return clean === '' ? undefined : /^-?(\d+\.?\d*|\.\d+)$/.test(clean) ? Number(clean) : NaN;
+  };
+  const showAmount = value => (value === null || value === undefined || value === '' ? '' : String(value).replace('.', decimal));
+  const checkAmount = input => {
+    const value = readAmount(input.value);
+    const min = input.dataset.min === undefined ? -Infinity : Number(input.dataset.min);
+    input.setCustomValidity(Number.isNaN(value) ? __('amountInvalid', { example: input.placeholder })
+      : value < min ? __('amountNegative') : '');
+  };
+  amounts.forEach(input => {
+    input.placeholder = showAmount(input.dataset.example);
+    input.addEventListener('input', () => checkAmount(input));
+  });
+
+  const call = (method, path, body = null) => new Promise((resolve, reject) => {
+    Homey.api(method, path, body, (err, result) => (err ? reject(err) : resolve(result)));
+  });
+  const getSetting = key => new Promise((resolve, reject) => {
+    Homey.get(key, (err, value) => (err ? reject(err) : resolve(value)));
+  });
+  const setSetting = (key, value) => new Promise((resolve, reject) => {
+    Homey.set(key, value, err => (err ? reject(err) : resolve()));
+  });
+
+  // Every change is saved by itself: the check mark at the top of Homey only closes the page,
+  // so a choice made without pressing Save was lost
+  let loaded = false;
+  let saveTimer = null;
+  const autosave = () => {
+    if (!loaded) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(() => form.requestSubmit(), 400);
+  };
+  form.addEventListener('change', autosave);
+  window.addEventListener('pagehide', () => { if (saveTimer) form.requestSubmit(); });
+
+  // The Ko-fi link opens outside the settings view
+  document.getElementById('support-link').addEventListener('click', event => {
+    event.preventDefault();
+    if (Homey.openURL) Homey.openURL(event.currentTarget.href);
+    else window.open(event.currentTarget.href, '_blank');
+  });
+
+  loadSettings().finally(() => { loaded = true; Homey.ready(); });
+
+  async function loadSettings() {
+    const status = document.getElementById('save-status');
+    try {
+      const [config = {}, list] = await Promise.all([getSetting('config').then(c => c || {}), call('GET', '/settings-info')]);
+      showDashboard(list);
+      form.port.value = config.port || 8686;
+      const devices = config.devices || {};
+      const name = id => list.devices.find(d => d.id === id)?.name;
+      const autoLabel = id => `${__('automatic')}${name(id) ? ` (${name(id)})` : ''}`;
+
+      fillSelect(form.p1, list.devices, devices.p1, autoLabel(list.found.p1));
+      fillSelect(form.boiler, list.devices, devices.boiler, autoLabel(list.found.boiler));
+      fillSelect(form.thermostat, list.devices, devices.thermostat, autoLabel(list.found.thermostat));
+      // Only devices with a water counter; one chosen before without it falls back to automatic
+      fillSelect(form.water, list.devices.filter(d => d.waterMeter), devices.water, autoLabel(list.found.water));
+      form.fuseAmps.value = config.grid?.fuseAmps ?? 25;
+      form.capacityTariff.value = showAmount(config.grid?.capacityTariff);
+      form.capacityMin.value = config.grid?.capacityMin ?? 2.5;
+      form.editPin.value = config.editPin || '';
+      form.accessCode.value = config.accessCode || '';
+      fillPriceSource(config.prices || {}, list.prices);
+      fillContract(list.contract, list.suppliers);
+      fillForecast(config.forecast || {});
+      form.alertHours.value = config.alerts?.hours ?? 4;
+      form.alertNotify.checked = Boolean(config.alerts?.notify);
+      fillChecks('heating-list', 'heating', list.devices, devices.heating || [],
+        d => d.class === 'heatpump' || d.class === 'boiler' || d.heatPump || /warmtepomp|heat|cv|ketel/i.test(d.name),
+        __('noHeating'));
+      fillChecks('ev-list', 'evChargers', list.devices, devices.evChargers || [],
+        d => d.class === 'evcharger' || /laadpa|charger|wallbox|easee|zaptec|alfen/i.test(d.name),
+        __('noEv'));
+      initLayout(list);
+      fillGroups(config.groups || [], list.devices, config.groupsSolarPhases, config.groupsBatteryPhases, config.groupsExtra);
+      document.getElementById('group-battery').hidden = !list.found.batteries.length;
+
+      fillChecks('solar-list', 'solar', list.devices, devices.solar || [],
+        d => d.class === 'solarpanel' || /solar|zon|omvormer|inverter|pv/i.test(d.name),
+        __('noSolar'));
+      fillChecks('battery-list', 'batteries', list.devices, devices.batteries || [],
+        d => d.class === 'battery' || /batter|zendure|solarflow|accu/i.test(d.name),
+        __('noBattery'));
+      form.invertPower.checked = Boolean(config.battery?.invertPower);
+      fillCount(list.devices, devices.count || {});
+
+      const boiler = { ...DEFAULT_BOILER, ...config.boiler };
+      BOILER_FIELDS.forEach(key => { form[key].value = key === 'coldWaterTemp' && boiler[key] === 10 ? '' : boiler[key] ?? ''; });
+      form.calibrate.checked = Boolean(boiler.calibrate);
+      form.valve.checked = Boolean(boiler.valve);
+      form.tapCheck.checked = Boolean(boiler.tapCheck);
+      // A date alone (before the time was added) is midnight
+      form.tapCheckSince.value = /^\d{4}-\d{2}-\d{2}$/.test(boiler.tapCheckSince || '') ? `${boiler.tapCheckSince}T00:00` : boiler.tapCheckSince || '';
+      fillSelect(form.tapCheckPower, list.devices.filter(d => d.power), boiler.tapCheckPower, __('tapCheckNoPower'));
+      const showTapCheck = () => document.querySelectorAll('[data-tapcheck]').forEach(el => { el.hidden = !form.tapCheck.checked; });
+      form.tapCheck.addEventListener('change', showTapCheck);
+      showTapCheck();
+      // Open the extra functions when one of them is on
+      if (boiler.valve || boiler.tapCheck) document.querySelector('details.extras').open = true;
+      const fillSensors = () => {
+        const id = form.boiler.value || list.found.boiler;
+        const temps = list.devices.find(d => d.id === id)?.temps || [];
+        const options = (first, selected) => `<option value="">${escapeText(__('automatic'))}</option>${first}`
+          + temps.map(t => `<option value="${t}" ${t === selected ? 'selected' : ''}>${escapeText(t.replace('measure_temperature', 'temperature'))}</option>`).join('');
+        form.topSensor.innerHTML = options('', boiler.topSensor);
+        form.bottomSensor.innerHTML = options(`<option value="none" ${boiler.bottomSensor === 'none' ? 'selected' : ''}>${escapeText(__('boilerNoBottom'))}</option>`, boiler.bottomSensor);
+      };
+      fillSensors();
+      form.boiler.addEventListener('change', () => { boiler.topSensor = ''; boiler.bottomSensor = ''; fillSensors(); });
+    } catch (err) {
+      status.textContent = __('loadFailed', { error: err.message || err });
+    }
+
+    form.addEventListener('submit', async event => {
+      event.preventDefault();
+      clearTimeout(saveTimer);
+      saveTimer = null;
+      const number = key => (form[key].dataset.amount === undefined
+        ? (form[key].value === '' ? undefined : Number(form[key].value))
+        : readAmount(form[key].value));
+      const config = {
+        port: number('port') ?? 8686,
+        editPin: form.editPin.value.trim(),
+        accessCode: form.accessCode.value.trim(),
+        devices: {
+          p1: form.p1.value,
+          boiler: form.boiler.value,
+          solar: checkedValues('solar'),
+          batteries: checkedValues('batteries'),
+          heating: checkedValues('heating'),
+          thermostat: form.thermostat.value,
+          evChargers: checkedValues('evChargers'),
+          water: form.water.value,
+          count: countToSave(),
+        },
+        grid: { fuseAmps: number('fuseAmps') ?? 25, capacityTariff: number('capacityTariff') ?? null, capacityMin: number('capacityMin') ?? 2.5 },
+        prices: { source: form.priceSource.value, chosen: true, currency: form.currency.value === 'auto' ? '' : form.currency.value },
+        contract: contractToSave(number),
+        forecast: forecastToSave(),
+        alerts: { hours: number('alertHours') ?? 4, notify: form.alertNotify.checked },
+        layout: layoutToSave(),
+        groups: groupsToSave(),
+        groupsExtra: extrasToSave(),
+        groupsSolarPhases: phasesFrom(form.groupsSolarPhases.value),
+        groupsBatteryPhases: phasesFrom(form.groupsBatteryPhases.value),
+        battery: { invertPower: form.invertPower.checked },
+        boiler: {
+          ...Object.fromEntries(BOILER_FIELDS.map(key => [key, number(key) ?? DEFAULT_BOILER[key]])),
+          ...Object.fromEntries(BOILER_SENSORS.map(key => [key, form[key].value])),
+          calibrate: form.calibrate.checked,
+          valve: form.valve.checked,
+          tapCheck: form.tapCheck.checked,
+          tapCheckSince: /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(form.tapCheckSince.value) ? form.tapCheckSince.value : '',
+          tapCheckPower: form.tapCheckPower.value,
+        },
+      };
+      if (config.boiler.showerTemp <= (config.boiler.coldWaterTemp ?? 17)) {
+        status.textContent = __('showerTooCold');
+        return;
+      }
+      if (config.port < 1024 || config.port > 65535) {
+        status.textContent = __('portRange');
+        return;
+      }
+      if (config.accessCode && config.accessCode.length < 4) {
+        status.textContent = __('accessCodeLength');
+        return;
+      }
+      try {
+        // Keeps what this page does not edit, such as the named layouts saved on the dashboard
+        const saved = await getSetting('config').then(c => c || {});
+        await setSetting('config', { ...saved, ...config });
+        status.textContent = __('saved');
+        // The app restarts the web server on a new port, give it a moment
+        setTimeout(() => call('GET', '/settings-info').then(showDashboard).catch(() => {}), 1500);
+      } catch (err) {
+        status.textContent = __('saveFailed', { error: err.message || err });
+      }
+    });
+  }
+
+  // ---------- Prices ----------
+
+  // Before this list existed, "energyzero" was saved for every price block that was on; only a
+  // source chosen here counts as a choice. The note says what is in use and what Homey has.
+  function fillPriceSource(prices, info) {
+    form.priceSource.value = prices.source === 'energyzero' && !prices.chosen ? 'auto' : prices.source || 'auto';
+    const note = document.getElementById('price-source-note');
+    const homey = info?.homey;
+    const parts = [info?.source === 'homey' ? __('sourceInUseHomey') : info?.source === 'powerhour' ? __('sourceInUsePowerhour')
+      : info?.source === 'off' ? __('sourceInUseOff') : __('sourceInUseEnergyZero')];
+    if (prices.source === 'powerhour' && info?.source !== 'powerhour') parts.unshift(__('powerhourMissing'));
+    if (homey?.type === 'dynamic') {
+      parts.push(homey.usable ? __('homeyFormula', { formula: homey.formula }) : __('homeyNoFormula'));
+    } else if (homey?.type === 'fixed' && homey.fixed) {
+      parts.push(__('homeyFixed', { price: homey.fixed }));
+    } else if (homey) {
+      parts.push(__('homeyNoPrices'));
+    }
+    note.textContent = parts.join(' ');
+    // Automatic is the currency of Homey Energy, or euro when Homey does not give one
+    form.currency.value = prices.currency || 'auto';
+    form.currency.options[0].textContent = `${__('automatic')} (${homey?.currency ? `Homey: ${homey.currency}` : 'EUR'})`;
+    const showCurrency = () => showSymbol(form.currency.value === 'auto' ? homey?.currency : form.currency.value);
+    form.currency.onchange = showCurrency;
+    showCurrency();
+  }
+
+  // The € in the texts about amounts becomes the sign of the chosen currency
+  const SYMBOLS = { EUR: '€', GBP: '£', USD: '$', NOK: 'kr', SEK: 'kr', DKK: 'kr', CHF: 'CHF', PLN: 'zł' };
+  function showSymbol(currency) {
+    const symbol = SYMBOLS[currency || 'EUR'] || currency;
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+      if (el.dataset.euro === undefined && !el.textContent.includes('€')) return;
+      if (el.dataset.euro === undefined) el.dataset.euro = el.textContent;
+      el.textContent = el.dataset.euro.split('€').join(symbol);
+    });
+  }
+
+  // ---------- Solar forecast ----------
+
+  // Roof planes: two to start with, up to 10 (Forecast.Solar asks one plane per request)
+  const MAX_PLANES = 10;
+  const DIRECTIONS = [['-90', 'east'], ['-45', 'southEast'], ['0', 'south'], ['45', 'southWest'], ['90', 'west'], ['180', 'north']];
+  let planes = [];
+
+  function renderPlanes() {
+    const box = document.getElementById('planes');
+    box.innerHTML = planes.map((p, i) => `
+      <div class="plane" data-plane="${i}">
+        <p class="muted">${escapeText(__(i === 0 ? 'planeFirst' : 'planeOptional', { n: i + 1 }))}
+          ${i >= 2 ? `<button type="button" class="link" data-remove="${i}">${escapeText(__('removePlane'))}</button>` : ''}</p>
+        <label><span>${escapeText(__('kwp'))}</span> <input data-field="kwp" type="number" min="0" max="100" step="0.01" value="${p.kwp ?? ''}"></label>
+        <label><span>${escapeText(__('tilt'))}</span> <input data-field="tilt" type="number" min="0" max="90" step="1" value="${p.tilt ?? 35}"></label>
+        <label><span>${escapeText(__('azimuth'))}</span>
+          <select data-field="azimuth">${DIRECTIONS.map(([value, key]) => `<option value="${value}" ${String(p.azimuth) === value ? 'selected' : ''}>${escapeText(__(key))}</option>`).join('')}</select>
+        </label>
+      </div>`).join('');
+    document.getElementById('plane-add').hidden = planes.length >= MAX_PLANES;
+  }
+
+  // Keeps what was typed, so adding or removing a plane does not lose it
+  function readPlanes() {
+    document.querySelectorAll('#planes .plane').forEach(el => {
+      const p = planes[Number(el.dataset.plane)];
+      el.querySelectorAll('[data-field]').forEach(input => {
+        p[input.dataset.field] = input.value === '' ? undefined : Number(input.value);
+      });
+    });
+  }
+
+  function fillForecast(forecast) {
+    form.forecastOn.checked = Boolean(forecast.enabled);
+    planes = (forecast.planes || []).map(p => ({ kwp: p.kwp, tilt: p.tilt ?? 35, azimuth: p.azimuth ?? 0 }));
+    while (planes.length < 2) planes.push({ tilt: 35, azimuth: planes.length === 0 ? 0 : 90 });
+    renderPlanes();
+    document.getElementById('plane-add').onclick = () => {
+      readPlanes();
+      if (planes.length < MAX_PLANES) planes.push({ tilt: 35, azimuth: 0 });
+      renderPlanes();
+    };
+    document.getElementById('planes').onclick = event => {
+      const remove = event.target.closest('[data-remove]');
+      if (!remove) return;
+      readPlanes();
+      planes.splice(Number(remove.dataset.remove), 1);
+      renderPlanes();
+    };
+    const show = () => { document.querySelector('[data-forecast]').hidden = !form.forecastOn.checked; };
+    form.forecastOn.onchange = show;
+    show();
+  }
+
+  // Planes without a size are left out
+  function forecastToSave() {
+    readPlanes();
+    const kept = planes
+      .map(p => ({ kwp: p.kwp, tilt: p.tilt ?? 35, azimuth: p.azimuth ?? 0 }))
+      .filter(p => p.kwp > 0);
+    return { enabled: form.forecastOn.checked && kept.length > 0, planes: kept };
+  }
+
+  // ---------- Groups ----------
+
+  // Groups in the fuse box with their fuse, and per device with a power meter (or an estimate in
+  // Homey) the groups it is on: usually one, a Perilex hob two (its power is split evenly).
+  // Devices that are not in Homey get a name and a use, and are given groups the same way.
+  // Groups without a name are not saved.
+  const MAX_GROUPS = 40;
+  const MAX_EXTRAS = 40;
+  let groups = [];
+  let groupDevices = [];
+  let extras = [];
+  let newGroup = 0;
+
+  function renderGroups() {
+    document.getElementById('groups').innerHTML = groups.map((g, i) => `
+      <div class="plane" data-group="${i}">
+        <label><span>${escapeText(__('groupName'))}</span> <input data-field="name" type="text" maxlength="40" value="${escapeText(g.name || '')}" placeholder="${escapeText(__('groupPlaceholder', { n: i + 1 }))}"></label>
+        <label><span>${escapeText(__('groupFuse'))}</span> <input data-field="fuseAmps" type="number" min="1" max="80" step="1" value="${g.fuseAmps ?? 16}"></label>
+        <label><span>${escapeText(__('groupPhases'))}</span>
+          <select data-field="phases">${phaseOptions(g.phases)}</select>
+        </label>
+        <label><span>${escapeText(__('groupFixed'))}</span> <input data-field="fixedWatts" type="number" min="0" max="10000" step="1" value="${g.fixedWatts || ''}" placeholder="0"></label>
+        <p class="muted">${escapeText(__('groupFixedHelp'))}</p>
+        <p><span></span><button type="button" class="link" data-remove-group="${i}">${escapeText(__('removeGroup'))}</button></p>
+      </div>`).join('');
+    document.getElementById('group-add').hidden = groups.length >= MAX_GROUPS;
+    renderGroupDevices();
+  }
+
+  // One list of devices with a choice of group each: easier than a list of devices per group.
+  // A device in a group gets one more empty choice, for a second group.
+  function renderGroupDevices() {
+    const box = document.getElementById('group-devices');
+    const named = groups.filter(g => g.name);
+    if (!named.length) { box.innerHTML = ''; return; }
+    const options = (selected, taken) => `<option value="">–</option>${named
+      .filter(g => g.id === selected || !taken.includes(g.id))
+      .map(g => `<option value="${escapeText(g.id)}" ${g.id === selected ? 'selected' : ''}>${escapeText(g.name)}</option>`).join('')}`;
+    const own = extras.filter(x => x.name && x.watts > 0)
+      .map(x => ({ id: x.id, name: `${x.name} (${__('groupExtraUse', { watts: x.watts })})` }));
+    const list = groupDevices.map(d => ({ id: d.id, name: d.power ? d.name : `${d.name} (${__('groupEstimate')})` })).concat(own);
+    box.innerHTML = `<p class="muted">${escapeText(__('groupDevicesHelp'))}</p>`
+      + list.map(d => {
+        const on = named.filter(g => g.devices.includes(d.id)).map(g => g.id);
+        const choices = on.length < named.length ? [...on, ''] : on;
+        const selects = choices.map(id => `<select data-group-device="${escapeText(d.id)}">${options(id, on)}</select>`).join('');
+        return `<label><span>${escapeText(d.name)}</span> <span class="group-choice">${selects}</span></label>`;
+      }).join('');
+  }
+
+  // Devices that are not in Homey: a name and a use in watts each
+  function renderExtras() {
+    document.getElementById('group-extras').innerHTML = extras.map((x, i) => `
+      <div class="plane" data-extra="${i}">
+        <label><span>${escapeText(__('groupName'))}</span> <input data-extra-field="name" type="text" maxlength="40" value="${escapeText(x.name || '')}" placeholder="${escapeText(__('groupExtraPlaceholder'))}"></label>
+        <label><span>${escapeText(__('groupExtraWatts'))}</span> <input data-extra-field="watts" type="number" min="1" max="20000" step="1" value="${x.watts || ''}"></label>
+        <p><span></span><button type="button" class="link" data-remove-extra="${i}">${escapeText(__('removeExtra'))}</button></p>
+      </div>`).join('');
+    document.getElementById('group-extra-add').hidden = extras.length >= MAX_EXTRAS;
+  }
+
+  function readExtras() {
+    document.querySelectorAll('#group-extras [data-extra]').forEach(el => {
+      const x = extras[Number(el.dataset.extra)];
+      x.name = el.querySelector('[data-extra-field="name"]').value.trim();
+      x.watts = Math.round(Number(el.querySelector('[data-extra-field="watts"]').value)) || 0;
+    });
+  }
+
+  function readGroups() {
+    document.querySelectorAll('#groups [data-group]').forEach(el => {
+      const g = groups[Number(el.dataset.group)];
+      el.querySelectorAll('[data-field]').forEach(input => {
+        const field = input.dataset.field;
+        g[field] = field === 'name' ? input.value.trim() : field === 'phases' ? phasesFrom(input.value) : Number(input.value) || undefined;
+      });
+    });
+    readExtras();
+    const chosen = new Map();
+    document.querySelectorAll('#group-devices [data-group-device]').forEach(select => {
+      const id = select.dataset.groupDevice;
+      if (!chosen.has(id)) chosen.set(id, new Set());
+      if (select.value) chosen.get(id).add(select.value);
+    });
+    for (const [id, on] of chosen) {
+      groups.forEach(g => {
+        g.devices = g.devices.filter(x => x !== id);
+        if (on.has(g.id)) g.devices.push(id);
+      });
+    }
+    // A device not in Homey that was removed leaves its groups too
+    const known = new Set(extras.map(x => x.id));
+    groups.forEach(g => { g.devices = g.devices.filter(id => !id.startsWith('extra-') || known.has(id)); });
+  }
+
+  function fillGroups(saved, devices, solarOn, batteryOn, savedExtras = []) {
+    // Summaries of Power by the Hour (Σ) copy other meters and a P1 meter measures the whole house;
+    // one already in a group stays listed
+    // so it can be taken out
+    const assigned = new Set(saved.flatMap(g => g.devices || []));
+    groupDevices = devices.filter(d => (d.power || d.estimate) && (!(d.copy || d.gridMeter) || assigned.has(d.id)));
+    groups = saved.map(g => ({ id: String(g.id || g.name), name: g.name || '', fuseAmps: g.fuseAmps ?? 16, phases: g.phases === 3 ? [1, 2, 3] : phasesFrom(g.phases), fixedWatts: g.fixedWatts || 0, devices: [...(g.devices || [])] }));
+    extras = (Array.isArray(savedExtras) ? savedExtras : []).map(x => ({ id: String(x.id), name: x.name || '', watts: Number(x.watts) || 0 }));
+    renderExtras();
+    form.groupsSolarPhases.innerHTML = phaseOptions(phasesFrom(solarOn), __('allPhases'));
+    form.groupsBatteryPhases.innerHTML = phaseOptions(phasesFrom(batteryOn), __('allPhases'));
+    renderGroups();
+    document.getElementById('group-add').onclick = () => {
+      readGroups();
+      if (groups.length < MAX_GROUPS) groups.push({ id: `g${Date.now().toString(36)}${newGroup++}`, name: '', fuseAmps: 16, phases: [], fixedWatts: 0, devices: [] });
+      renderGroups();
+      document.querySelector(`#groups [data-group="${groups.length - 1}"] input`)?.focus();
+    };
+    document.getElementById('groups').onclick = event => {
+      const remove = event.target.closest('[data-remove-group]');
+      if (!remove) return;
+      readGroups();
+      groups.splice(Number(remove.dataset.removeGroup), 1);
+      renderGroups();
+      autosave();
+    };
+    // A new or renamed group shows up in the device choices
+    document.getElementById('groups').addEventListener('change', () => { readGroups(); renderGroupDevices(); });
+    // A group chosen for a device adds a choice for another; a device not in Homey shows up in the list
+    document.getElementById('group-devices').addEventListener('change', () => { readGroups(); renderGroupDevices(); });
+    document.getElementById('group-extras').addEventListener('change', () => { readGroups(); renderGroupDevices(); });
+    document.getElementById('group-extra-add').onclick = () => {
+      readGroups();
+      if (extras.length < MAX_EXTRAS) extras.push({ id: `extra-${Date.now().toString(36)}${newGroup++}`, name: '', watts: 0 });
+      renderExtras();
+      document.querySelector(`#group-extras [data-extra="${extras.length - 1}"] input`)?.focus();
+    };
+    document.getElementById('group-extras').onclick = event => {
+      const remove = event.target.closest('[data-remove-extra]');
+      if (!remove) return;
+      readGroups();
+      extras.splice(Number(remove.dataset.removeExtra), 1);
+      renderExtras();
+      readGroups();
+      renderGroupDevices();
+      autosave();
+    };
+  }
+
+  function groupsToSave() {
+    readGroups();
+    return groups
+      .filter(g => g.name)
+      .map(g => ({ id: g.id, name: g.name, fuseAmps: g.fuseAmps || 16, phases: g.phases, fixedWatts: g.fixedWatts || 0, devices: g.devices }));
+  }
+
+  function extrasToSave() {
+    readExtras();
+    return extras.filter(x => x.name && x.watts > 0).map(x => ({ id: x.id, name: x.name, watts: x.watts }));
+  }
+
+  // The phases of a group as a choice: unknown, one phase, or two or three together
+  const PHASE_CHOICES = ['', '1', '2', '3', '1,2', '1,3', '2,3', '1,2,3'];
+  const phasesFrom = text => [...new Set(String(text ?? '').split(',').map(Number).filter(n => n >= 1 && n <= 3))].sort();
+  function phaseOptions(phases, empty = '–') {
+    const chosen = (phases || []).join(',');
+    return PHASE_CHOICES.map(v => `<option value="${v}" ${v === chosen ? 'selected' : ''}>${escapeText(v ? v.split(',').map(n => `L${n}`).join(' + ') : empty)}</option>`).join('');
+  }
+
+  // ---------- Contract ----------
+
+  // Shows the fields of the chosen contract type
+  function showContractFields() {
+    document.querySelectorAll('[data-contract]').forEach(el => {
+      const [kind, type] = el.dataset.contract.split('-');
+      el.hidden = form[kind === 'elec' ? 'elecType' : 'gasType'].value !== type;
+    });
+  }
+
+  function fillContract(contract, suppliers) {
+    const e = contract.electricity;
+    const g = contract.gas;
+    const value = showAmount;
+    form.elecType.value = e.type;
+    form.elecNormal.value = value(e.normal);
+    form.elecLow.value = value(e.low);
+    form.elecExport.value = value(e.export);
+    form.exportAfter.value = value(e.exportAfter);
+    form.lowFrom.value = e.lowFrom;
+    form.lowTo.value = e.lowTo;
+    form.lowWeekend.checked = e.lowWeekend;
+    form.lowHolidays.checked = e.lowHolidays;
+    form.supplier.innerHTML = suppliers
+      .map(s => `<option value="${s.id}">${escapeText(s.id === 'other' ? __('otherSupplier') : s.name)}</option>`)
+      .join('');
+    form.supplier.value = e.supplier;
+    form.elecMarkup.value = value(e.markup);
+    form.elecTax.value = value(e.energyTax);
+    form.netting.checked = e.netting;
+    form.nettingOrder.value = e.nettingOrder || 'normal';
+    form.exportFee.value = value(e.exportFee);
+    form.gasType.value = g.type;
+    form.gasPrice.value = value(g.price);
+    form.gasMarkup.value = value(g.markup);
+    form.gasTax.value = value(g.energyTax);
+    form.monthly.value = value(contract.monthly);
+    form.taxReduction.value = value(contract.taxReduction);
+    form.waterPrice.value = value(contract.water);
+    form.advance.value = value(contract.advance);
+    form.bonus.value = value(contract.bonus);
+    form.billStart.value = contract.billStart || '';
+    form.contractEnd.value = contract.end || '';
+    form.prevImport.value = value(contract.previous?.import);
+    form.prevExport.value = value(contract.previous?.export);
+    form.prevGas.value = value(contract.previous?.gas);
+    form.startImport.value = value(contract.startReadings?.import);
+    form.startExport.value = value(contract.startReadings?.export);
+    form.startGas.value = value(contract.startReadings?.gas);
+    // Choosing a supplier fills in its usual markup, which can still be changed; the note says
+    // whether the supplier publishes these amounts itself
+    const showSupplierNote = supplier => {
+      const note = document.getElementById('supplier-note');
+      if (!supplier || supplier.id === 'other') {
+        note.textContent = __('supplierOther');
+        return;
+      }
+      const confirmed = supplier.confirmed || {};
+      const gasKnown = typeof supplier.gasMarkup === 'number';
+      const key = confirmed.markup && (confirmed.gasMarkup || !gasKnown)
+        ? 'supplierConfirmed'
+        : confirmed.markup ? 'supplierPartly' : 'supplierUnconfirmed';
+      note.textContent = `${__(key, { name: supplier.name })}${gasKnown ? '' : ` ${__('supplierNoGas')}`}`;
+    };
+    form.supplier.onchange = () => {
+      const supplier = suppliers.find(s => s.id === form.supplier.value);
+      showSupplierNote(supplier);
+      if (!supplier || supplier.id === 'other') return;
+      form.elecMarkup.value = showAmount(supplier.markup);
+      // An unknown gas markup is left empty rather than keeping another supplier's amount
+      form.gasMarkup.value = typeof supplier.gasMarkup === 'number' ? showAmount(supplier.gasMarkup) : '';
+      checkAmount(form.elecMarkup);
+      checkAmount(form.gasMarkup);
+    };
+    showSupplierNote(suppliers.find(s => s.id === e.supplier));
+    // Amounts that look like a mistake: a monthly tax reduction in the yearly field, or an export
+    // fee near the electricity price (a user's yearly bill came out hundreds of euros off)
+    const showContractNotes = () => {
+      const reduction = readAmount(form.taxReduction.value);
+      document.getElementById('tax-reduction-note').textContent = reduction > 0 && reduction < 200
+        ? __('taxReductionMonthly') : '';
+      const fee = readAmount(form.exportFee.value);
+      const normal = readAmount(form.elecNormal.value);
+      document.getElementById('export-fee-note').textContent = form.elecType.value === 'fixed' && fee > 0 && normal > 0 && fee >= normal / 2
+        ? __('exportFeeHigh') : '';
+    };
+    [form.taxReduction, form.exportFee, form.elecNormal].forEach(input => input.addEventListener('input', showContractNotes));
+    showContractNotes();
+    form.elecType.onchange = () => { showContractFields(); showContractNotes(); };
+    form.gasType.onchange = showContractFields;
+    showContractFields();
+  }
+
+  function contractToSave(number) {
+    const empty = key => (number(key) === undefined ? null : number(key));
+    return {
+      electricity: {
+        type: form.elecType.value,
+        normal: empty('elecNormal'),
+        low: empty('elecLow'),
+        export: empty('elecExport'),
+        exportAfter: empty('exportAfter'),
+        lowFrom: number('lowFrom') ?? 23,
+        lowTo: number('lowTo') ?? 7,
+        lowWeekend: form.lowWeekend.checked,
+        lowHolidays: form.lowHolidays.checked,
+        supplier: form.supplier.value,
+        markup: number('elecMarkup') ?? 0,
+        energyTax: empty('elecTax'),
+        netting: form.netting.checked,
+        nettingOrder: form.nettingOrder.value,
+        exportFee: number('exportFee') ?? 0,
+      },
+      gas: {
+        type: form.gasType.value,
+        price: empty('gasPrice'),
+        markup: number('gasMarkup') ?? 0,
+        energyTax: empty('gasTax'),
+      },
+      water: empty('waterPrice'),
+      monthly: empty('monthly'),
+      taxReduction: empty('taxReduction'),
+      advance: empty('advance'),
+      bonus: empty('bonus'),
+      billStart: form.billStart.value || null,
+      end: form.contractEnd.value || null,
+      previous: { import: empty('prevImport'), export: empty('prevExport'), gas: empty('prevGas') },
+      startReadings: { import: empty('startImport'), export: empty('startExport'), gas: empty('startGas') },
+    };
+  }
+
+  function showDashboard(info) {
+    const link = document.getElementById('dashboard-url');
+    link.textContent = info.dashboardUrl;
+    link.href = info.dashboardUrl;
+    const status = document.getElementById('server-status');
+    const reason = info.server.reason === 'portInUse' ? __('portInUse', { port: info.server.port }) : info.server.message || '';
+    status.textContent = info.server.running ? __('serverRunning') : `${__('serverStopped')} ${reason}`;
+    status.className = info.server.running ? 'muted' : 'error';
+  }
+
+  // ---------- Layout ----------
+
+  // All blocks: the shown ones in their order first, then the hidden ones
+  let layoutItems = [];
+  let layoutCustom = false;
+
+  function layoutFrom(layout, blocks) {
+    const shown = layout.map(b => ({ ...b, on: true }));
+    const hidden = blocks
+      .filter(b => !shown.some(s => s.id === b.id))
+      .map(b => ({ id: b.id, size: b.size, on: false }));
+    return [...shown, ...hidden].map(b => ({ ...b, title: blockTitle(blocks.find(x => x.id === b.id)) }));
+  }
+
+  function initLayout(info) {
+    layoutCustom = info.customLayout;
+    layoutItems = layoutFrom(info.layout, info.blocks);
+    renderLayout();
+    document.getElementById('layout-reset').onclick = () => {
+      layoutCustom = false;
+      layoutItems = layoutFrom(info.defaultLayout, info.blocks);
+      renderLayout();
+      autosave();
+    };
+  }
+
+  const SIZE_LABELS = { small: __('sizeSmall'), half: __('sizeHalf'), large: __('sizeLarge'), full: __('sizeFull') };
+
+  function renderLayout() {
+    const list = document.getElementById('layout-list');
+    list.innerHTML = layoutItems.map((b, i) => `
+      <li class="${b.on ? '' : 'off'}" data-i="${i}">
+        <input type="checkbox" data-action="toggle" ${b.on ? 'checked' : ''} aria-label="${escapeText(__('show', { name: b.title }))}">
+        <span class="name">${escapeText(b.title)}</span>
+        <select data-action="size" aria-label="${escapeText(__('width'))}">
+          ${Object.entries(SIZE_LABELS).map(([id, label]) => `<option value="${id}" ${b.size === id ? 'selected' : ''}>${label}</option>`).join('')}
+        </select>
+        ${b.rows ? `<button type="button" class="chip" data-action="auto-height" title="${escapeText(__('ownHeightHelp'))}">${escapeText(__('ownHeight'))}</button>` : ''}
+        <button type="button" class="move" data-action="up" ${i === 0 ? 'disabled' : ''} aria-label="${escapeText(__('moveUp'))}">↑</button>
+        <button type="button" class="move" data-action="down" ${i === layoutItems.length - 1 ? 'disabled' : ''} aria-label="${escapeText(__('moveDown'))}">↓</button>
+      </li>`).join('');
+    document.getElementById('layout-mode').textContent = layoutCustom
+      ? __('layoutCustom')
+      : __('layoutDefault');
+  }
+
+  document.getElementById('layout-list').addEventListener('input', onLayoutChange);
+  document.getElementById('layout-list').addEventListener('click', onLayoutChange);
+
+  function onLayoutChange(event) {
+    const action = event.target.dataset.action;
+    const li = event.target.closest('li');
+    if (!action || !li) return;
+    if ((action === 'toggle' || action === 'size') && event.type !== 'input') return;
+    if ((action === 'up' || action === 'down' || action === 'auto-height') && event.type !== 'click') return;
+    const i = Number(li.dataset.i);
+    const item = layoutItems[i];
+    if (action === 'toggle') item.on = event.target.checked;
+    if (action === 'size') item.size = event.target.value;
+    if (action === 'auto-height') delete item.rows;
+    if (action === 'up' && i > 0) [layoutItems[i - 1], layoutItems[i]] = [layoutItems[i], layoutItems[i - 1]];
+    if (action === 'down' && i < layoutItems.length - 1) [layoutItems[i + 1], layoutItems[i]] = [layoutItems[i], layoutItems[i + 1]];
+    layoutCustom = true;
+    renderLayout();
+    if (event.type === 'click') autosave();
+  }
+
+  // null keeps the automatic layout, which adapts when new devices are added
+  function layoutToSave() {
+    if (!layoutCustom) return null;
+    return layoutItems.filter(b => b.on).map(({ id, size, rows }) => (rows ? { id, size, rows } : { id, size }));
+  }
+
+  function checkedValues(name) {
+    return [...form.querySelectorAll(`input[name="${name}"]:checked`)].map(input => input.value);
+  }
+
+  // Checkboxes for devices that look like a match; none checked means "find automatically"
+  function fillChecks(id, name, devices, selected, looksLike, emptyText) {
+    document.getElementById(id).innerHTML = devices
+      .filter(d => looksLike(d) || selected.includes(d.id))
+      .map(d => `<label class="check"><input type="checkbox" name="${name}" value="${d.id}" ${selected.includes(d.id) ? 'checked' : ''}> ${escapeText(d.name)}</label>`)
+      .join('') || `<span class="muted">${escapeText(emptyText)}</span>`;
+  }
+
+  // Consumers: devices the dashboard leaves out by itself can be counted anyway (with the reason
+  // they are left out), and counted devices can be left out (folded away, the list is long)
+  function fillCount(devices, count) {
+    const row = (d, name, note) => `<label class="check"><input type="checkbox" name="${name}" value="${d.id}" ${count[d.id] === (name === 'countInclude' ? 'include' : 'exclude') ? 'checked' : ''}> ${escapeText(d.name)}${note ? ` <small class="muted">(${escapeText(note)})</small>` : ''}</label>`;
+    const reasons = { excluded: __('countExcluded'), copy: __('countCopy'), meter: __('countMeter') };
+    document.getElementById('count-include').innerHTML = devices
+      .filter(d => reasons[d.consumer])
+      .map(d => row(d, 'countInclude', reasons[d.consumer]))
+      .join('') || `<span class="muted">${escapeText(__('countNone'))}</span>`;
+    document.getElementById('count-exclude').innerHTML = devices
+      .filter(d => d.consumer === 'counted')
+      .map(d => row(d, 'countExclude'))
+      .join('');
+  }
+
+  function countToSave() {
+    const count = {};
+    checkedValues('countInclude').forEach(id => { count[id] = 'include'; });
+    checkedValues('countExclude').forEach(id => { count[id] = 'exclude'; });
+    return count;
+  }
+
+  function fillSelect(select, devices, selected, autoLabel) {
+    select.innerHTML = `<option value="">${escapeText(autoLabel)}</option>`
+      + devices.map(d => `<option value="${d.id}" ${d.id === selected ? 'selected' : ''}>${escapeText(d.name)}</option>`).join('');
+  }
+
+  // ---------- Meter export for the battery size block ----------
+
+  // The file is read here and sent to the app in parts of whole lines, so a year of quarters
+  // (a few MB) fits through Homey's settings API; the app turns it into nights.
+  const IMPORT_PART = 100 * 1000;
+  const importStatus = document.getElementById('import-status');
+  const importClear = document.getElementById('import-clear');
+  async function showImport() {
+    const current = await getSetting('nightImport').catch(() => null);
+    const nights = current?.nights ? Object.values(current.nights).filter(n => !n.skipped).length : 0;
+    document.getElementById('import-current').textContent = current
+      ? __('importCurrent', { nights, from: current.from, to: current.to })
+      : '';
+    importClear.hidden = !current;
+  }
+  document.getElementById('import-file').onchange = async event => {
+    const file = event.target.files[0];
+    if (!file) return;
+    importStatus.textContent = __('importBusy');
+    try {
+      const text = await file.text();
+      const parts = [];
+      let start = 0;
+      while (start < text.length) {
+        let end = Math.min(text.length, start + IMPORT_PART);
+        // Cut after a whole line, unless one line is longer than a part
+        const line = text.lastIndexOf('\n', end) + 1;
+        if (end < text.length && line > start) end = line;
+        parts.push(text.slice(start, end));
+        start = end;
+      }
+      const id = `${Date.now()}`;
+      let result = null;
+      for (let i = 0; i < parts.length; i++) {
+        importStatus.textContent = __('importSending', { part: i + 1, parts: parts.length });
+        result = await call('POST', '/night-import', { id, part: i, parts: parts.length, text: parts[i] });
+      }
+      importStatus.textContent = __('importDone', { nights: result.nights, from: result.from, to: result.to, skipped: result.skipped });
+    } catch (err) {
+      importStatus.textContent = __('importFailed', { error: err.message || err });
+    }
+    event.target.value = '';
+    showImport();
+  };
+  importClear.onclick = async () => {
+    await call('POST', '/night-import/clear', {}).catch(() => null);
+    importStatus.textContent = __('importCleared');
+    showImport();
+  };
+  showImport();
+
+  // ---------- The app's own history and its backup ----------
+
+  const backupStatus = document.getElementById('backup-status');
+  async function showHistory() {
+    const info = await call('GET', '/history-info').catch(() => null);
+    document.getElementById('history-current').textContent = info && info.days + info.months
+      ? __('historyCurrent', { days: info.days, months: info.months, from: info.from || '' })
+      : __('historyEmpty');
+  }
+  // In parts of text like the meter export: a backup of years can be a few MB
+  document.getElementById('backup-file').onchange = async event => {
+    const file = event.target.files[0];
+    if (!file) return;
+    backupStatus.textContent = __('importBusy');
+    try {
+      const text = await file.text();
+      const parts = [];
+      for (let start = 0; start < text.length; start += IMPORT_PART) parts.push(text.slice(start, start + IMPORT_PART));
+      const id = `${Date.now()}`;
+      let result = null;
+      for (let i = 0; i < parts.length; i++) {
+        backupStatus.textContent = __('importSending', { part: i + 1, parts: parts.length });
+        result = await call('POST', '/backup-import', { id, part: i, parts: parts.length, text: parts[i] });
+      }
+      backupStatus.textContent = __('backupDone', { logs: result.restored, days: result.days, months: result.months });
+    } catch (err) {
+      backupStatus.textContent = __('importFailed', { error: err.message || err });
+    }
+    event.target.value = '';
+    showHistory();
+  };
+  showHistory();
+
+  // ---------- Showers measured with the shower button ----------
+
+  // Shown while the calibration is on; a wrong shower (a bath filling, a long tap) can be removed
+  const showerLog = document.getElementById('shower-log');
+  async function showShowers() {
+    showerLog.hidden = !form.calibrate.checked;
+    if (showerLog.hidden) return;
+    const { samples } = await call('GET', '/shower-log').catch(() => ({ samples: [] }));
+    const list = samples.slice().reverse();
+    showerLog.innerHTML = `<p class="muted">${escapeText(list.length ? __('showersTitle', { count: list.length }) : __('showersNone'))}</p>`
+      + list.map(s => {
+        const when = new Date(s.at).toLocaleString(document.documentElement.lang || undefined, { dateStyle: 'short', timeStyle: 'short' });
+        const how = s.source === 'water' ? __('showerByWater', { liters: s.liters }) : __('showerByTemperature', { drop: s.drop });
+        return `<p class="shower-row"><span>${escapeText(__('showerRow', { when, flow: s.flow, minutes: s.minutes, how }))}</span>`
+          + `<button type="button" class="secondary" data-remove="${s.at}">${escapeText(__('showerRemove'))}</button></p>`;
+      }).join('');
+  }
+  showerLog.onclick = async event => {
+    const at = event.target.dataset?.remove;
+    if (!at) return;
+    await call('POST', '/shower-log/remove', { at: Number(at) }).catch(() => null);
+    showShowers();
+  };
+  form.calibrate.addEventListener('change', showShowers);
+  showShowers();
+
+  // ---------- Share diagnosis ----------
+
+  // Sharing makes the report, shows it below the buttons, copies it and opens an e-mail to the
+  // developer (the default, no account needed) or a GitHub issue, with the report filled in when
+  // it fits in the address; otherwise the user pastes it from the clipboard. Nothing is sent
+  // until the user sends the e-mail or submits the issue, where they see the report too.
+  const ISSUES = 'https://github.com/WNijhof/homey-energy-dashboard/issues/new';
+  // Mail programs cut off long mailto addresses, GitHub allows more
+  const MAIL_LIMIT = 1800;
+  const GITHUB_LIMIT = 7000;
+  const shareStatus = document.getElementById('share-status');
+  const reportBox = document.getElementById('share-report');
+  let shared = null;
+
+  // A fresh report for each share; false when it could not be made
+  async function makeReport() {
+    shareStatus.textContent = '…';
+    try {
+      const snapshot = document.getElementById('share-snapshot').checked;
+      shared = await call('GET', `/diagnosis-report${snapshot ? '?snapshot=1' : ''}`);
+      reportBox.value = JSON.stringify(shared.report, null, 2);
+      reportBox.hidden = false;
+      shareStatus.textContent = '';
+      return true;
+    } catch (err) {
+      shareStatus.textContent = __('shareFailed', { error: err.message || err });
+      return false;
+    }
+  }
+
+  async function copyReport() {
+    try {
+      await navigator.clipboard.writeText(reportBox.value);
+    } catch {
+      reportBox.select();
+      try { document.execCommand('copy'); } catch { /* the user can still select it */ }
+    }
+  }
+
+  // The apps of the devices, e.g. com.tweakers.zendure, as the subject or title
+  function subject() {
+    const r = shared.report;
+    const apps = [...new Set([...(r.found?.batteries || []), ...(r.found?.solar || []), ...(r.batteryLike || []), r.found?.p1]
+      .map(d => /^homey:app:([^:]+)/.exec(d?.app || '')?.[1]).filter(Boolean))];
+    return __('shareIssueTitle', { apps: apps.join(', ') || r.version });
+  }
+
+  function open(url) {
+    shareStatus.textContent = __('shareCopied');
+    if (Homey.openURL) Homey.openURL(url);
+    else window.open(url, '_blank');
+  }
+
+  document.getElementById('share-mail').onclick = async () => {
+    if (!await makeReport()) return;
+    await copyReport();
+    // Without a contact address in the manifest, GitHub is the way
+    if (!shared.email) {
+      document.getElementById('share-github').onclick(false);
+      return;
+    }
+    // Without spaces the report takes less room, so more often fits in the mail itself
+    const compact = JSON.stringify(shared.report);
+    const full = `${__('shareIssueIntro')}\n\n\n${compact}\n`;
+    const body = encodeURIComponent(full).length < MAIL_LIMIT ? full : `${__('shareIssueIntro')}\n\n\n${__('sharePaste')}\n`;
+    open(`mailto:${shared.email}?subject=${encodeURIComponent(subject())}&body=${encodeURIComponent(body)}`);
+  };
+
+  // A click makes a new report; from the e-mail button (fresh = false) it is already made
+  document.getElementById('share-github').onclick = async fresh => {
+    if (fresh !== false && !await makeReport()) return;
+    await copyReport();
+    const full = `${__('shareIssueIntro')}\n\n\n\`\`\`json\n${reportBox.value}\n\`\`\`\n`;
+    const body = encodeURIComponent(full).length < GITHUB_LIMIT ? full : `${__('shareIssueIntro')}\n\n\n${__('sharePaste')}\n`;
+    open(`${ISSUES}?title=${encodeURIComponent(subject())}&body=${encodeURIComponent(body)}`);
+  };
+
+  function escapeText(text) {
+    const span = document.createElement('span');
+    span.textContent = text;
+    return span.innerHTML;
+  }
+}

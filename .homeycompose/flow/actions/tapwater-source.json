@@ -1,0 +1,30 @@
+{
+  "title": {
+    "en": "Hot tap water comes from",
+    "nl": "Warm tapwater komt uit"
+  },
+  "titleFormatted": {
+    "en": "Hot tap water comes [[source]] (reason: [[reason]])",
+    "nl": "Warm tapwater komt [[source]] (reden: [[reason]])"
+  },
+  "hint": {
+    "en": "Only used when the three-way valve is turned on in the app settings (Water heater). For a three-way valve between the water heater and the gas boiler. Run it after the Flow switched the valve; the Heating block shows the source and the last three switches. It shows what the Flow commanded, not a reading of the valve.",
+    "nl": "Alleen in gebruik als de driewegklep aanstaat in de app-instellingen (Boiler). Voor een driewegklep tussen de boiler en de cv-ketel. Voer het uit nadat de Flow de klep heeft omgezet; het blok Verwarming toont de bron en de laatste drie omschakelingen. Het toont wat de Flow opdroeg, geen meting van de klep."
+  },
+  "args": [
+    {
+      "name": "source",
+      "type": "dropdown",
+      "values": [
+        { "id": "boiler", "title": { "en": "straight from the water heater", "nl": "direct uit de boiler" } },
+        { "id": "cv", "title": { "en": "through the gas boiler (reheating)", "nl": "via de cv-ketel (naverwarming)" } }
+      ]
+    },
+    {
+      "name": "reason",
+      "type": "text",
+      "required": false,
+      "placeholder": { "en": "optional", "nl": "mag leeg" }
+    }
+  ]
+}

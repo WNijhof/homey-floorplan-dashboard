@@ -129,6 +129,13 @@ function demoDevices(lang) {
   const d = (id, name, zone, cls, caps) => ({ id, name, zone, cls, available: true, caps, units: {} });
   return [
     d('d_floor', N.floorLamp, 'z_living', 'light', { onoff: true, dim: 0.6, light_temperature: 0.85, light_mode: 'temperature' }),
+    d('d_alarm', lang === 'nl' ? 'Huisalarm' : 'House alarm', 'z_hall', 'homealarm', { homealarm_state: 'disarmed', alarm_generic: false }),
+    d('d_speaker', lang === 'nl' ? 'Speaker woonkamer' : 'Living room speaker', 'z_living', 'speaker', { speaker_playing: false, speaker_track: 'Blue in Green', speaker_artist: 'Miles Davis', volume_set: 0.3 }),
+    d('d_vacuum', lang === 'nl' ? 'Robotstofzuiger' : 'Robot vacuum', 'z_living', 'vacuumcleaner', { vacuumcleaner_state: 'docked', measure_battery: 87 }),
+    d('d_out_door', lang === 'nl' ? 'Lamp voordeur' : 'Front door light', 'z_hall', 'light', { onoff: true }),
+    d('d_out_path', lang === 'nl' ? 'Lampjes tuinpad' : 'Path lights', 'z_hall', 'light', { onoff: true }),
+    d('d_out_drive', lang === 'nl' ? 'Lampen oprit' : 'Driveway lights', 'z_hall', 'light', { onoff: true }),
+    d('d_out_garden', lang === 'nl' ? 'Tuinverlichting' : 'Garden lights', 'z_hall', 'light', { onoff: true }),
     d('d_dining', N.diningLamp, 'z_living', 'light', { onoff: true, dim: 0.9, light_temperature: 0.7, light_mode: 'temperature' }),
     d('d_thermo', N.thermostat, 'z_living', 'thermostat', { measure_temperature: 20.6, target_temperature: 21, measure_humidity: 52 }),
     d('d_blind', N.blind, 'z_living', 'windowcoverings', { windowcoverings_set: 0.7 }),

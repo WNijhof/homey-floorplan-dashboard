@@ -1,0 +1,44 @@
+{
+  "title": {
+    "en": "Put on a list",
+    "nl": "Zet op een lijst"
+  },
+  "titleFormatted": {
+    "en": "Put [[text]] on [[list]]",
+    "nl": "Zet [[text]] op [[list]]"
+  },
+  "args": [
+    {
+      "type": "dropdown",
+      "name": "list",
+      "title": {
+        "en": "List",
+        "nl": "Lijst"
+      },
+      "values": [
+        {
+          "id": "shopping",
+          "label": {
+            "en": "the shopping list",
+            "nl": "de boodschappenlijst"
+          }
+        },
+        {
+          "id": "tasks",
+          "label": {
+            "en": "the tasks",
+            "nl": "de taken"
+          }
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "text",
+      "title": {
+        "en": "Text",
+        "nl": "Tekst"
+      }
+    }
+  ]
+}

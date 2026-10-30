@@ -18,7 +18,11 @@
       house: 'House', home: 'House', solar: 'Solar panels', grid: 'Grid', gridIn: 'From the grid', gridOut: 'To the grid', battery: 'Battery',
       charging: 'Charging', discharging: 'Supplying', idle: 'Resting', car: 'Car', heatpump: 'Heat pump', airco: 'Air conditioning', off: 'Off',
       now: 'Now', session: 'This session', soc: 'Charge', use: 'Use', noEnergy: 'No reading yet',
+      expectedToday: 'Expected today', expectedTomorrow: 'Expected tomorrow', produced: 'Produced', forecast: 'Forecast',
+      importedToday: 'From the grid today', exportedToday: 'To the grid today', chargedToday: 'Charged today', dischargedToday: 'Supplied today',
+      socToday: 'Charge level today', gridNote: 'Above the line power comes from the grid, below it goes back.',
       solarToHome: 'Used in the house', solarToGrid: 'To the grid', solarToBattery: 'Into the battery',
+      costToday: 'Costs today', priceNow: 'Price now', allEnergy: 'All energy', cheapest: 'Cheapest 3 hours', gas: 'Gas', water: 'Water', gasToday: 'Gas today', waterToday: 'Water today', meter: 'Meter', fullAt: 'Full at', emptyAt: 'Empty at', vacuumRoom: 'Vacuum this room', thermostat_mode: 'Mode', fan_mode: 'Fan',
     },
     nl: {
       noPlan: 'Nog geen plattegrond. Teken er een in de editor van HomeDeck.',
@@ -33,7 +37,11 @@
       house: 'Huis', home: 'Huis', solar: 'Zonnepanelen', grid: 'Net', gridIn: 'Van het net', gridOut: 'Naar het net', battery: 'Accu',
       charging: 'Laden', discharging: 'Levert', idle: 'In rust', car: 'Auto', heatpump: 'Warmtepomp', airco: 'Airco', off: 'Uit',
       now: 'Nu', session: 'Deze sessie', soc: 'Lading', use: 'Verbruik', noEnergy: 'Nog geen meting',
+      expectedToday: 'Verwacht vandaag', expectedTomorrow: 'Verwacht morgen', produced: 'Opgewekt', forecast: 'Verwachting',
+      importedToday: 'Van het net vandaag', exportedToday: 'Naar het net vandaag', chargedToday: 'Geladen vandaag', dischargedToday: 'Geleverd vandaag',
+      socToday: 'Lading vandaag', gridNote: 'Boven de lijn komt stroom van het net, eronder gaat het terug.',
       solarToHome: 'In huis gebruikt', solarToGrid: 'Naar het net', solarToBattery: 'In de accu',
+      costToday: 'Kosten vandaag', priceNow: 'Prijs nu', allEnergy: 'Alle energie', cheapest: 'Goedkoopste 3 uur', gas: 'Gas', water: 'Water', gasToday: 'Gas vandaag', waterToday: 'Water vandaag', meter: 'Meterstand', fullAt: 'Vol om', emptyAt: 'Leeg om', vacuumRoom: 'Deze kamer stofzuigen', thermostat_mode: 'Stand', fan_mode: 'Ventilator',
     },
   };
   const lang = (navigator.language || 'en').slice(0, 2);
@@ -59,6 +67,7 @@
   const HOUSE = 'house'; // the levelId of the house view
 
   function isDark() {
+    if (window.FpTheme) return window.FpTheme.isDark();
     const root = document.documentElement;
     if (root.classList.contains('homey-dark-mode') || document.body.classList.contains('homey-dark-mode')) return true;
     return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
@@ -79,19 +88,27 @@
   }
 
   function has3d() {
-    return !!($('view3d') && window.FloorplanView3D && window.FloorplanView3D.supported);
+    return !state.settings.simple && !!($('view3d') && window.FloorplanView3D && window.FloorplanView3D.supported);
   }
 
   // The house from outside (web page only, house3d.js), above the storeys.
+  // Without 3D (older tablets) the house is a fixed drawing (HouseCore.drawing).
   function hasHouse() {
-    return !!($('house3d') && window.FloorplanHouse3D && window.FloorplanHouse3D.supported && window.HouseCore);
+    return !!($('house3d') && window.HouseCore);
   }
+  function house3d() {
+    return !state.settings.simple && !!(window.FloorplanHouse3D && window.FloorplanHouse3D.supported);
+  }
+  // Browsers with import maps load house3d.js a moment after the page: they wait for it instead of drawing first
+  const waits3d = !!(window.HTMLScriptElement && HTMLScriptElement.supports && HTMLScriptElement.supports('importmap'));
   function inHouse() {
     return state.levelId === HOUSE && hasHouse();
   }
   // The web page starts on the house, unless this screen chose to start on a storey or pinned one.
+  // A widget on a Homey dashboard keeps starting on its plan unless its settings choose the house.
   function startOnHouse() {
-    return hasHouse() && state.settings.start !== 'level' && !(state.settings.level && state.settings.level.id);
+    const choice = state.settings.start || (state.Homey && state.Homey.isWeb ? 'house' : 'level');
+    return hasHouse() && choice === 'house' && !(state.settings.level && state.settings.level.id);
   }
 
   function render() {
@@ -111,13 +128,39 @@
     const houseBox = $('house3d');
     const house = inHouse();
     if (houseBox) houseBox.hidden = !house;
-    $('btn-view').hidden = house;
-    $('btn-turn').hidden = house;
+    // On the web page they keep their place, so the tabs beside them do not move
+    for (const id of ['btn-view', 'btn-turn']) {
+      if (state.Homey && state.Homey.isWeb) $(id).style.visibility = house ? 'hidden' : '';
+      else $(id).hidden = house;
+    }
     if (house) {
+      if (!state.energy && !state.energyAsked) { state.energyAsked = true; loadEnergy(); }
       if (box3d) box3d.hidden = true;
-      svg.style.display = 'none';
-      if (!state.house) state.house = window.FloorplanHouse3D.create(houseBox, { tap: houseTap });
-      state.house.sync({ plan: state.plan, energy: state.energy, devices: state.devices, dark, lang, texts: T });
+      // An own photo takes the place of the model, on every screen
+      const photo = window.HouseCore.settings(state.plan).photo;
+      if (house3d() && !photo) {
+        svg.style.display = 'none';
+        if (!state.house) state.house = window.FloorplanHouse3D.create(houseBox, { tap: houseTap });
+        state.house.sync({ plan: state.plan, energy: state.energy, devices: state.devices, dark, lang, texts: T, weather: state.weather });
+      } else {
+        houseBox.hidden = true;
+        svg.style.display = '';
+        if (photo) {
+          const out = window.HouseCore.photoView(state.plan, { energy: state.energy, dark, lang, texts: T });
+          svg.setAttribute('viewBox', out.viewBox.map((v) => v.toFixed(2)).join(' '));
+          // the same picture is not decoded again, and the flow lines keep running
+          if (state.photoSvg !== out.svg || !svg.querySelector('image')) { svg.innerHTML = out.svg; state.photoSvg = out.svg; }
+        } else if (waits3d && state.Homey.isWeb && !state.settings.simple && !window.FloorplanHouse3D && !state.waited3d) {
+          // the 3D house is on its way; draw the plain one only if it does not come
+          svg.innerHTML = '';
+          if (!state.waitTimer) state.waitTimer = setTimeout(() => { state.waited3d = true; scheduleRender(); }, 3000);
+        } else {
+          const lit = new Set(state.plan.levels.filter((l) => (l.items || []).some((it) => it.kind === 'device' && core.isLampItem(it, state.devices.get(it.deviceId)) && core.isOn(state.devices.get(it.deviceId)))).map((l) => l.id));
+          const out = window.HouseCore.drawing(state.plan, { energy: state.energy, dark, lang, texts: T, lit });
+          svg.setAttribute('viewBox', out.viewBox.map((v) => v.toFixed(2)).join(' '));
+          svg.innerHTML = out.svg;
+        }
+      }
       renderLevels();
       if (state.sheet) renderSheet();
       return;
@@ -132,7 +175,7 @@
         state.v3d = window.FloorplanView3D.create(box3d, { tap: (kind, id) => tapFor({ kind, id }) });
         setupGestures(box3d);
       }
-      state.v3d.sync({ plan: state.plan, level, devices: state.devices, dark, furniture: s.furniture !== false, turn: state.turn, values: s.values !== false, names: s.names || 'devices' });
+      state.v3d.sync({ plan: state.plan, level, devices: state.devices, dark, night: state.energy ? state.energy.night : undefined, furniture: s.furniture !== false, turn: state.turn, values: s.values !== false, names: s.names || 'devices' });
       renderLevels();
       if (state.sheet) renderSheet();
       if (state.quick) renderQuick();
@@ -142,7 +185,7 @@
       plan: state.plan,
       level,
       devices: state.devices,
-      view: { mode: state.view === '3d' ? 'iso' : state.view, turn: state.turn },
+      view: { mode: state.view === '3d' ? 'steep' : state.view, turn: state.turn },
       palette: dark ? core.DARK_PALETTE : core.LIGHT_PALETTE,
       modelBase: state.Homey && state.Homey.isWeb ? 'models/' : null,
       glow: s.glow || 'soft',
@@ -151,6 +194,7 @@
       values: s.values !== false,
       names: s.names || 'devices',
       idPrefix: 'w',
+      soft: true,
     };
     let out = core.render(opts);
     const [bx, by, bw, bh] = out.viewBox;
@@ -165,10 +209,77 @@
     const reset = document.querySelector('.fp-zoom-reset');
     if (reset) reset.hidden = !z;
     svg.setAttribute('viewBox', out.viewBox.map((v) => v.toFixed(1)).join(' '));
+    const before = lampPools(svg);
     svg.innerHTML = out.svg;
+    fadeLamps(svg, before, `${level.id}|${state.view}|${state.turn}`);
     renderLevels();
     if (state.sheet) renderSheet();
     if (state.quick) renderQuick();
+  }
+
+  // The light of a lamp fades instead of jumping. The drawing is replaced on every update, so a fade keeps its start time
+  // and its old light, and goes on where it was when the next update arrives.
+  const LAMP_FADE = 450;
+
+  function lampPools(svg) {
+    const pools = new Map();
+    for (const el of svg.querySelectorAll('[data-lamp]')) pools.set(el.dataset.lamp, { key: el.dataset.key, el, light: oldLight(svg, el) });
+    return pools;
+  }
+
+  function oldLight(svg, el) {
+    const pool = el.cloneNode(true);
+    pool.removeAttribute('data-lamp');
+    pool.setAttribute('class', 'fp-lamp-out');
+    pool.removeAttribute('style');
+    const parts = [];
+    const fill = /url\(#(.+)\)/.exec(pool.getAttribute('fill') || '');
+    const gradient = fill && svg.getElementById(fill[1]);
+    if (gradient) {
+      const copy = gradient.cloneNode(true);
+      copy.id = `${fill[1]}-old`;
+      pool.setAttribute('fill', `url(#${copy.id})`);
+      parts.push(copy);
+    }
+    const area = /url\(#(.+)\)/.exec(pool.getAttribute('clip-path') || '');
+    const clip = area && svg.getElementById(area[1]);
+    if (clip) {
+      const copy = clip.cloneNode(true);
+      copy.id = `${area[1]}-old`;
+      pool.setAttribute('clip-path', `url(#${copy.id})`);
+      parts.push(copy);
+    }
+    return { pool, parts };
+  }
+
+  function fadeLamps(svg, before, scope) {
+    const fresh = state.lampScope !== scope;
+    state.lampScope = scope;
+    if (fresh) state.lampFades = new Map();
+    const now = Date.now();
+    const pools = lampPools(svg);
+    const glow = svg.querySelector('.fp-glow');
+    const defs = svg.querySelector('defs');
+    for (const [id, f] of state.lampFades) if (now - f.start > LAMP_FADE) state.lampFades.delete(id);
+    if (!fresh) {
+      for (const id of new Set([...before.keys(), ...pools.keys()])) {
+        const was = before.get(id); const is = pools.get(id);
+        if ((was && was.key) === (is && is.key)) continue;
+        state.lampFades.set(id, { start: now, old: was && was.light ? was.light : null });
+      }
+    }
+    if (!glow || !defs) return;
+    for (const [id, f] of state.lampFades) {
+      const delay = `-${now - f.start}ms`;
+      const is = pools.get(id);
+      if (is) { is.el.classList.add('fp-lamp-in'); is.el.style.animationDelay = delay; }
+      if (f.old) {
+        for (const part of f.old.parts) defs.appendChild(part.cloneNode(true));
+        const pool = f.old.pool.cloneNode(true);
+        pool.style.animationDelay = delay;
+        glow.appendChild(pool);
+      }
+    }
   }
 
   function renderLevels() {
@@ -190,18 +301,47 @@
     if (state.Homey.hapticFeedback) state.Homey.hapticFeedback();
     if (kind === 'level') {
       if (!id || !state.plan.levels.some((l) => l.id === id)) return;
-      state.levelId = id;
-      if (has3d()) state.view = '3d';
-      closeSheet();
-      scheduleRender();
+      const open = () => {
+        state.levelId = id;
+        if (has3d()) state.view = '3d';
+        closeSheet();
+        scheduleRender();
+      };
+      if (state.house && house3d() && !window.HouseCore.settings(state.plan).photo) state.house.fly(id, open); else open();
+      return;
+    }
+    // An outdoor lamp on the house: all lamps of that place switch together
+    if (kind === 'lamp') {
+      const ids = window.HouseCore.outdoorLamps(state.plan, state.devices)[id] || [];
+      const on = ids.some((d) => core.isOn(state.devices.get(d)));
+      ids.forEach((d) => setCap(d, 'onoff', !on));
       return;
     }
     openSheet({ type: 'energy', id: kind });
+    loadDetail(kind);
+  }
+
+  // Today's power of a part (and the solar forecast), for its page; the house card itself has no curve.
+  const DETAIL = { solar: 'solar', battery: 'battery', grid: 'grid', home: 'grid', car: 'car', heatpump: 'heatpump', airco: 'airco' };
+  async function loadDetail(kind) {
+    const part = DETAIL[kind];
+    if (!part) return;
+    try {
+      state.details = state.details || {};
+      // The house shows everything together: what the sun, the grid and the battery do
+      const parts = kind === 'home' ? ['grid', 'solar', 'battery'] : kind === 'car' ? ['car', 'grid'] : [part];
+      await Promise.all(parts.map(async (p) => {
+        state.details[p] = await state.Homey.api('GET', `/energy-detail?kind=${p}${state.plan ? `&plan=${encodeURIComponent(state.plan.id)}` : ''}`);
+      }));
+      if (!state.weather && kind === 'solar') state.weather = await state.Homey.api('GET', '/weather').catch(() => null);
+      if (state.sheet && state.sheet.type === 'energy' && state.sheet.id === kind) renderSheet();
+    } catch (err) { /* the page shows the values of now */ }
   }
 
   async function loadEnergy() {
     try {
       state.energy = await state.Homey.api('GET', '/energy');
+      if (window.FpTheme && typeof state.energy.night === 'boolean') window.FpTheme.setNight(state.energy.night);
       if (inHouse()) scheduleRender();
     } catch (err) { /* the house shows without values */ }
   }
@@ -214,26 +354,190 @@
   const row = (name, value) => `<div class="fp-row"><span class="fp-name">${esc(name)}</span><span class="fp-val">${esc(value)}</span></div>`;
   const degrees = (v) => `${v.toLocaleString(lang)}°`;
 
-  // The details of a part of the house; the full pages with history and forecast come later.
+  const kwh = (v) => (typeof v === 'number' ? `${v.toLocaleString(lang, { maximumFractionDigits: 1 })} kWh` : '–');
+  const clock = (t) => new Date(t).toLocaleTimeString(navigator.language, { hour: '2-digit', minute: '2-digit' });
+  const stat = (name, value) => `<div class="fp-stat"><span>${esc(name)}</span><b>${esc(value)}</b></div>`;
+  const money = (v, currency, digits) => v.toLocaleString(lang, currency ? { style: 'currency', currency, minimumFractionDigits: digits, maximumFractionDigits: digits } : { minimumFractionDigits: digits, maximumFractionDigits: digits });
+
+  /*
+   * A chart of one day: series [{ points: [{ t, w }], cls, area, dash, name }] from `from` to `to`, one y-axis.
+   * The points are kept for the crosshair (onChartMove).
+   */
+  function dayChart(series, from, to, unit) {
+    const W = 600; const H = 200; const L = 44; const R = 8; const TOP = 10; const B = 22;
+    const all = series.flatMap((s) => s.points.filter((p) => p.w !== null).map((p) => p.w));
+    const lo = Math.min(0, ...all);
+    const top = unit === '%' ? 100 : Math.max(...all, 1);
+    const step = unit === '%' ? 25 : niceStep((top - lo) / 3);
+    const max = unit === '%' ? 100 : Math.ceil(top / step) * step;
+    const min = lo < 0 ? -Math.ceil(-lo / step) * step : 0;
+    const x = (t) => L + ((t - from) / (to - from)) * (W - L - R);
+    const y = (v) => TOP + ((max - v) / (max - min || 1)) * (H - TOP - B);
+    const label = (v) => (unit === '%' ? `${v}%` : Math.abs(v) >= 1000 ? `${(v / 1000).toLocaleString(lang, { maximumFractionDigits: 1 })} kW` : `${v} W`);
+    const grid = [];
+    for (let v = min; v <= max + 1e-6; v += step) {
+      grid.push(`<line class="fp-ch-grid${v === 0 ? ' zero' : ''}" x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/><text class="fp-ch-tick" x="${L - 6}" y="${(y(v) + 4).toFixed(1)}" text-anchor="end">${esc(label(v))}</text>`);
+    }
+    for (let h = 0; h <= 24; h += 6) {
+      const t = from + h * 3600000;
+      if (t > to) break;
+      grid.push(`<text class="fp-ch-tick" x="${x(t).toFixed(1)}" y="${H - 6}" text-anchor="middle">${String(h % 24).padStart(2, '0')}:00</text>`);
+    }
+    const marks = series.map((s) => {
+      // gaps in the readings break the line
+      const runs = []; let run = [];
+      for (const p of s.points) { if (p.w === null || p.t < from || p.t > to) { if (run.length) runs.push(run); run = []; } else run.push(p); }
+      if (run.length) runs.push(run);
+      return runs.map((r) => {
+        const d = r.map((p, i) => `${i ? 'L' : 'M'}${x(p.t).toFixed(1)},${y(p.w).toFixed(1)}`).join('');
+        const area = s.area ? `<path class="fp-ch-area ${s.cls}" d="${d}L${x(r[r.length - 1].t).toFixed(1)},${y(0).toFixed(1)}L${x(r[0].t).toFixed(1)},${y(0).toFixed(1)}Z"/>` : '';
+        return `${area}<path class="fp-ch-line ${s.cls}${s.dash ? ' dash' : ''}" d="${d}"/>`;
+      }).join('');
+    }).join('');
+    const legend = series.length > 1 ? `<div class="fp-ch-legend">${series.map((s) => `<span><i class="${s.cls}${s.dash ? ' dash' : ''}"></i>${esc(s.name)}</span>`).join('')}</div>` : '';
+    state.chart = { series, from, to, unit, L, R, W, label };
+    return `${legend}<div class="fp-chart"><svg viewBox="0 0 ${W} ${H}" role="img">${grid.join('')}${marks}<line class="fp-ch-cross" x1="0" x2="0" y1="${TOP}" y2="${H - B}" visibility="hidden"/></svg><div class="fp-ch-tip" hidden></div></div>`;
+  }
+  function niceStep(raw) {
+    const p = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+    const n = raw / p;
+    return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p;
+  }
+
+  // Crosshair and tooltip: the values of every series at the time under the finger or mouse.
+  function onChartMove(ev) {
+    const box = ev.target.closest && ev.target.closest('.fp-chart');
+    const c = state.chart;
+    if (!box || !c) return;
+    const svg = box.querySelector('svg');
+    const r = svg.getBoundingClientRect();
+    const fx = (ev.clientX - r.left) / r.width * c.W;
+    const t = c.from + ((fx - c.L) / (c.W - c.L - c.R)) * (c.to - c.from);
+    const cross = svg.querySelector('.fp-ch-cross');
+    const tip = box.querySelector('.fp-ch-tip');
+    if (t < c.from || t > c.to) { cross.setAttribute('visibility', 'hidden'); tip.hidden = true; return; }
+    const lines = c.series.map((s) => {
+      let best = null;
+      for (const p of s.points) if (p.w !== null && (!best || Math.abs(p.t - t) < Math.abs(best.t - t))) best = p;
+      return best && Math.abs(best.t - t) <= 20 * 60000 ? `<div><i class="${s.cls}${s.dash ? ' dash' : ''}"></i>${esc(s.name)} <b>${esc(c.label(Math.round(best.w)))}</b></div>` : '';
+    }).join('');
+    if (!lines) { cross.setAttribute('visibility', 'hidden'); tip.hidden = true; return; }
+    cross.setAttribute('x1', fx.toFixed(1)); cross.setAttribute('x2', fx.toFixed(1)); cross.setAttribute('visibility', 'visible');
+    tip.innerHTML = `<span>${esc(new Date(t).toLocaleTimeString(navigator.language, { hour: '2-digit', minute: '2-digit' }))}</span>${lines}`;
+    tip.hidden = false;
+    const px = ev.clientX - box.getBoundingClientRect().left;
+    tip.style.left = `${Math.min(Math.max(px, 70), box.clientWidth - 70)}px`;
+  }
+
+  // The weather of the coming hours, on the solar page.
+  function weatherStrip() {
+    const data = state.weather;
+    const hours = (Array.isArray(data && data.hourly) ? data.hourly : []).filter((h) => pickTemp(h) != null).slice(0, 8);
+    if (!hours.length) return '';
+    return `<div class="fp-hours fp-detail-hours">${hours.map((h) => {
+      const d = toDate(h);
+      return `<div class="fp-hour"><span>${esc(d ? d.toLocaleTimeString(navigator.language, { hour: '2-digit' }) : '')}</span><div>${weatherIcon(h.iconId)}</div><b>${Math.round(pickTemp(h))}°</b></div>`;
+    }).join('')}</div>`;
+  }
+
+  // When the battery is full or empty at the pace of the last hour; from the charge itself, so no size is needed.
+  function batteryTime(d, battery) {
+    const points = d && d.soc ? d.soc.filter((p) => p.w !== null && p.t > Date.now() - 3600000) : [];
+    if (points.length < 3 || typeof battery.soc !== 'number') return null;
+    const a = points[0]; const b = points[points.length - 1];
+    const perHour = ((b.w - a.w) / (b.t - a.t)) * 3600000;
+    if (Math.abs(perHour) < 2) return null;
+    const hours = (perHour > 0 ? 100 - battery.soc : -battery.soc) / perHour;
+    return hours > 0 && hours < 24 ? { full: perHour > 0, at: Date.now() + hours * 3600000 } : null;
+  }
+
+  // The page of a part of the house: the values of now, today's totals and a chart of the day.
   function energySheet(kind) {
     const e = state.energy;
     const title = T[kind] || T.house;
     if (!e) return { title, body: `<p class="fp-sub">${esc(T.noEnergy)}</p>` };
+    const d = state.details && state.details[DETAIL[kind]];
+    const dayFrom = d ? d.from : new Date().setHours(0, 0, 0, 0);
+    const dayTo = dayFrom + 86400000;
     const rows = [];
+    let stats = [];
+    let chart = '';
     if (kind === 'solar') {
-      rows.push(row(T.now, fmtW(e.solarW)));
+      const fc = d && d.forecast && !d.forecast.error ? d.forecast : null;
+      const keyOf = (t) => { const x = new Date(t); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
+      stats = [stat(T.now, fmtW(e.solarW)), stat(T.today, kwh(d && d.kWh))];
+      if (fc && fc.days) {
+        stats.push(stat(T.expectedToday, kwh(fc.days[keyOf(dayFrom)])));
+        if (fc.days[keyOf(dayTo)] != null) stats.push(stat(T.expectedTomorrow, kwh(fc.days[keyOf(dayTo)])));
+      }
+      if (d && d.curve) {
+        const series = [{ points: d.curve, cls: 's1', area: true, name: T.produced }];
+        if (fc && fc.watts && fc.watts.length) series.push({ points: fc.watts, cls: 's2', dash: true, name: T.forecast });
+        chart = dayChart(series, dayFrom, dayTo, 'W');
+      }
       if (e.flows) {
         rows.push(row(T.solarToHome, fmtW(e.flows.solarToHome)));
         if (e.battery) rows.push(row(T.solarToBattery, fmtW(e.flows.solarToBattery)));
         rows.push(row(T.solarToGrid, fmtW(e.flows.solarToGrid)));
       }
+      chart += weatherStrip();
+      if (d && d.forecast && d.forecast.error) rows.push(`<p class="fp-sub">${esc(d.forecast.error)}</p>`);
+    } else if (kind === 'water' && e.water) {
+      stats = [stat(T.now, typeof e.water.perMinute === 'number' ? `${e.water.perMinute.toLocaleString(lang)} L/min` : '–')];
+      if (typeof e.water.total === 'number') stats.push(stat(T.meter, `${e.water.total.toLocaleString(lang)} m³`));
+    } else if (kind === 'gas') {
+      stats = [stat(T.meter, typeof e.gasM3 === 'number' ? `${e.gasM3.toLocaleString(lang)} m³` : '–')];
     } else if (kind === 'grid') {
-      rows.push(row(typeof e.gridW === 'number' && e.gridW < 0 ? T.gridOut : T.gridIn, fmtW(e.gridW)));
+      stats = [stat(typeof e.gridW === 'number' && e.gridW < 0 ? T.gridOut : T.gridIn, fmtW(e.gridW))];
+      if (d) stats.push(stat(T.importedToday, kwh(d.imported)), stat(T.exportedToday, kwh(d.exported)));
+      if (d && typeof d.cost === 'number') stats.push(stat(T.costToday, money(d.cost, d.currency, 2)));
+      if (d && typeof d.price === 'number') stats.push(stat(T.priceNow, money(d.price, d.currency, 3)));
+      const gas = d && typeof d.gasToday === 'number' ? d.gasToday : e.gasToday;
+      if (typeof gas === 'number') stats.push(stat(T.gasToday, `${gas.toLocaleString(lang, { maximumFractionDigits: 2 })} m³`));
+      if (d && typeof d.waterToday === 'number') stats.push(stat(T.waterToday, `${Math.round(d.waterToday).toLocaleString(lang)} L`));
+      if (d && d.curve) chart = dayChart([{ points: d.curve, cls: 's2', area: true, name: T.grid }], dayFrom, dayTo, 'W');
+      rows.push(`<p class="fp-sub">${esc(T.gridNote)}</p>`);
     } else if (kind === 'battery' && e.battery) {
-      if (typeof e.battery.soc === 'number') rows.push(row(T.soc, `${Math.round(e.battery.soc)}%`));
       const w = e.battery.watts;
-      rows.push(row(Math.abs(w) < 20 ? T.idle : w > 0 ? T.charging : T.discharging, fmtW(w)));
+      stats = [stat(T.soc, typeof e.battery.soc === 'number' ? `${Math.round(e.battery.soc)}%` : '–'), stat(Math.abs(w) < 20 ? T.idle : w > 0 ? T.charging : T.discharging, Math.abs(w) < 20 ? '–' : fmtW(w))];
+      if (d) stats.push(stat(T.chargedToday, kwh(d.charged)), stat(T.dischargedToday, kwh(d.discharged)));
+      const left = batteryTime(d, e.battery);
+      if (left) stats.push(stat(left.full ? T.fullAt : T.emptyAt, clock(left.at)));
+      if (d && d.soc && d.soc.some((p) => p.w !== null)) chart = `<p class="fp-sub">${esc(T.socToday)}</p>${dayChart([{ points: d.soc, cls: 's1', area: true, name: T.soc }], dayFrom, dayTo, '%')}`;
+      else if (d && d.curve) chart = dayChart([{ points: d.curve, cls: 's1', area: true, name: T.battery }], dayFrom, dayTo, 'W');
     } else if (kind === 'car' && e.ev) {
+      stats = [stat(e.ev.charging ? T.charging : T.now, fmtW(e.ev.watts))];
+      if (e.ev.car && typeof e.ev.car.soc === 'number') stats.push(stat(T.soc, `${Math.round(e.ev.car.soc)}%`));
+      if (e.ev.session && typeof e.ev.session.kWh === 'number') stats.push(stat(T.session, kwh(e.ev.session.kWh)));
+      if (d) stats.push(stat(T.today, kwh(d.kWh)));
+      if (d && d.curve) chart = dayChart([{ points: d.curve, cls: 's2', area: true, name: T.car }], dayFrom, dayTo, 'W');
+      if (e.ev.state) rows.push(row(T.car, e.ev.state));
+    } else if ((kind === 'heatpump' && e.heating) || (kind === 'airco' && e.airco)) {
+      const units = kind === 'heatpump' ? e.heating.devices.map((h) => ({ name: h.name, on: h.watts > 30, watts: h.watts, temperature: h.temperature })) : e.airco;
+      const now = units.reduce((s, u) => s + (u.on ? u.watts || 0 : 0), 0);
+      stats.push(stat(T.now, now ? fmtW(now) : T.off));
+      if (d) stats.push(stat(T.today, kwh(d.kWh)));
+      if (d && d.curve) chart = dayChart([{ points: d.curve, cls: 's2', area: true, name: T[kind] }], dayFrom, dayTo, 'W');
+      for (const u of units) {
+        rows.push(row(u.name, u.on ? fmtW(u.watts) : T.off));
+        if (typeof u.temperature === 'number') rows.push(row(T.temperature, degrees(u.temperature)));
+      }
+    }
+    if (kind === 'home' && d && state.details) {
+      const series = [];
+      const add = (p, cls, name) => { const x = state.details[p]; if (x && x.curve && x.curve.some((c) => c.w !== null)) series.push({ points: x.curve, cls, name }); };
+      add('solar', 's1', T.solar); add('grid', 's2', T.grid); add('battery', 's3', T.battery);
+      if (series.length) {
+        chart = dayChart(series, dayFrom, dayTo, 'W');
+        stats = [stat(T.use, fmtW(e.homeW))];
+      }
+    }
+    if (kind === 'grid' || kind === 'car') {
+      const c = state.details && state.details.grid && state.details.grid.cheapest;
+      if (c) stats.push(stat(T.cheapest, `${clock(Date.parse(c.start))}–${clock(Date.parse(c.start) + c.hours * 3600000)}`));
+    }
+    if (stats.length || chart) return { title, body: `${stats.length ? `<div class="fp-stats">${stats.join('')}</div>` : ''}${chart}${rows.join('')}`, wide: true };
+    if (kind === 'car' && e.ev) {
       rows.push(row(e.ev.charging ? T.charging : T.now, fmtW(e.ev.watts)));
       if (e.ev.state) rows.push(row(T.car, e.ev.state));
       if (e.ev.session && typeof e.ev.session.kWh === 'number') rows.push(row(T.session, `${e.ev.session.kWh.toLocaleString(lang)} kWh`));
@@ -304,6 +608,7 @@
   function closeSheet() {
     state.sheet = null;
     $('sheet').hidden = true;
+    $('sheet').classList.remove('wide');
   }
 
   function deviceControls(dev) {
@@ -318,6 +623,10 @@
     if (typeof c.target_temperature === 'number') {
       const u = (dev.units && dev.units.target_temperature) || {};
       rows.push(`<div class="fp-row"><span class="fp-name">${T.target}</span><div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="${esc(dev.id)}" data-cap="target_temperature" data-step="${-(u.step || 0.5)}">−</button><span class="fp-big">${c.target_temperature}°</span><button type="button" class="fp-step" data-act="step" data-dev="${esc(dev.id)}" data-cap="target_temperature" data-step="${u.step || 0.5}">+</button></div></div>`);
+    }
+    for (const cap of ['thermostat_mode', 'fan_mode']) {
+      const values = dev.units && dev.units[cap] && dev.units[cap].values;
+      if (values && cap in c) rows.push(`<div class="fp-row"><span class="fp-name">${esc(T[cap])}</span><select data-act="set-value" data-dev="${esc(dev.id)}" data-cap="${cap}">${values.map((v) => `<option value="${esc(v.id)}"${v.id === c[cap] ? ' selected' : ''}>${esc(v.title[lang] || v.title.en || v.id)}</option>`).join('')}</select></div>`);
     }
     if ('locked' in c) {
       const armed = state.unlockArmed === dev.id;
@@ -350,7 +659,9 @@
     if (type === 'energy') {
       const out = energySheet(id);
       $('sheet-title').textContent = out.title;
-      $('sheet-body').innerHTML = out.body;
+      // On the web page every part leads on to the Energy page
+      $('sheet-body').innerHTML = out.body + (state.Homey.isWeb ? `<a class="fp-link" href="energy/">⚡ ${esc(T.allEnergy)} ›</a>` : '');
+      $('sheet').classList.toggle('wide', !!out.wide);
       return;
     }
     let title = ''; let body = '';
@@ -378,8 +689,15 @@
       const devs = itemsInRoom(level, room).map((i) => ({ item: i, dev: state.devices.get(i.deviceId) })).filter((x) => x.dev);
       const lights = devs.filter((x) => core.deviceKind(x.dev) === 'light' && 'onoff' in x.dev.caps);
       if (lights.length) {
+        const dimmable = lights.filter((x) => 'dim' in x.dev.caps);
+        if (dimmable.length > 1) {
+          const lit = dimmable.filter((x) => x.dev.caps.onoff);
+          const level = lit.length ? Math.round((lit.reduce((s, x) => s + (x.dev.caps.dim || 0), 0) / lit.length) * 100) : 0;
+          parts.push(`<div class="fp-row"><span class="fp-name">${T.brightness}</span><input type="range" min="0" max="100" value="${level}" data-act="room-dim" data-room="${esc(room.id)}"></div>`);
+        }
         parts.push(`<div class="fp-row"><span class="fp-name">${T.lights}</span><div class="fp-btns"><button type="button" class="fp-btn" data-act="room-lights" data-room="${esc(room.id)}" data-value="1">${T.allOn}</button><button type="button" class="fp-btn" data-act="room-lights" data-room="${esc(room.id)}" data-value="0">${T.allOff}</button></div></div>`);
       }
+      if (room.vacuum && state.Homey.isWeb) parts.push(`<button type="button" class="fp-btn" data-act="vacuum-room" data-room="${esc(room.id)}">🧹 ${esc(T.vacuumRoom)}</button>`);
       for (const x of devs) {
         const c = x.dev.caps;
         const value = core.deviceValueText(x.dev) || '';
@@ -418,6 +736,7 @@
       setCap(dev.id, el.dataset.cap, v);
     }
     if (act === 'lock' && dev) {
+      if (dev.caps.locked && state.settings.guest) return;
       if (!dev.caps.locked) setCap(dev.id, 'locked', true);
       else if (state.unlockArmed === dev.id) { state.unlockArmed = null; setCap(dev.id, 'locked', false); }
       else { state.unlockArmed = dev.id; refreshPanels(); setTimeout(() => { if (state.unlockArmed === dev.id) { state.unlockArmed = null; refreshPanels(); } }, 4000); }
@@ -431,6 +750,10 @@
         if (d && core.deviceKind(d) === 'light' && 'onoff' in d.caps && d.caps.onoff !== on) setCap(d.id, 'onoff', on);
       }
     }
+    if (act === 'vacuum-room') {
+      const room = currentLevel().rooms.find((r) => r.id === el.dataset.room);
+      state.Homey.api('POST', '/actions/run', { plan: state.plan.id, kind: room.vacuum.kind, id: room.vacuum.id }).catch(() => {});
+    }
     if (act === 'open-item') openSheet({ type: 'device', id: el.dataset.item });
     if (act === 'more') { const q = state.quick; closeQuick(); if (q) openSheet(q.target); }
     if (state.Homey.hapticFeedback) state.Homey.hapticFeedback();
@@ -438,6 +761,18 @@
 
   function onSheetChange(ev) {
     const el = ev.target;
+    if (el.dataset.act === 'set-value') { setCap(el.dataset.dev, el.dataset.cap, el.value); return; }
+    if (el.dataset.act === 'room-dim') {
+      const level = currentLevel();
+      const value = Number(el.value) / 100;
+      for (const i of itemsInRoom(level, level.rooms.find((r) => r.id === el.dataset.room))) {
+        const d = state.devices.get(i.deviceId);
+        if (!d || core.deviceKind(d) !== 'light' || !('dim' in d.caps)) continue;
+        if (value > 0) setCap(d.id, 'dim', value);
+        if ('onoff' in d.caps && d.caps.onoff !== (value > 0)) setCap(d.id, 'onoff', value > 0);
+      }
+      return;
+    }
     if (el.dataset.act !== 'range') return;
     setCap(el.dataset.dev, el.dataset.cap, Number(el.value) / Number(el.dataset.scale || 1));
     el.blur();
@@ -727,6 +1062,7 @@
   async function loadWeather() {
     try {
       const data = await state.Homey.api('GET', '/weather');
+      state.weather = data;
       const now = data && data.now;
       const hours = (Array.isArray(data && data.hourly) ? data.hourly : []).filter((h) => pickTemp(h) != null).slice(0, 6);
       const days = (Array.isArray(data && data.daily) ? data.daily : []).filter((h) => typeof h.temperatureMax === 'number').slice(1, 5);
@@ -781,9 +1117,10 @@
 
   function setupSide() {
     const mode = state.settings.sidebar || 'none';
-    $('side').hidden = mode === 'none';
+    // 'energy': the Energy page takes the place of the side panel (dashboard-extras.js)
+    $('side').hidden = mode === 'none' || mode === 'energy';
     $('app').classList.toggle('side-bottom', mode === 'bottom');
-    if (mode === 'none') return;
+    if ($('side').hidden) return;
     tickClock();
     setInterval(tickClock, 15000);
     if (state.settings.sideWeather !== false) {
@@ -832,13 +1169,20 @@
   window.onHomeyReady = async function onHomeyReady(Homey) {
     state.Homey = Homey;
     state.settings = Homey.getSettings() || {};
-    const view = state.settings.view || '2d';
+    // The two lower 2.5D views are gone: screens that had one get the steep view
+    const view = ['iso', 'game'].includes(state.settings.view) ? 'steep' : state.settings.view || '2d';
+    state.settings.view = view;
     state.view = view;
-    state.lastView3d = view === '2d' ? (has3d() ? '3d' : 'iso') : view;
+    state.lastView3d = view === '2d' ? (has3d() ? '3d' : 'steep') : view;
     state.turn = Number(state.settings.turn || 0);
     Homey.ready({ height: `${Number(state.settings.aspect) || 75}%` });
 
     setupGestures($('plan'));
+    // Taps on the drawn house (screens without 3D)
+    $('plan').addEventListener('click', (ev) => {
+      const el = inHouse() && ev.target.closest && ev.target.closest('[data-house]');
+      if (el) houseTap(el.dataset.house, el.dataset.id || null);
+    });
     if (Homey.isWeb) setupZoom($('plan'));
     window.addEventListener('fp3d-ready', () => {
       // house3d.js may load after the plan: start on the house once it is there
@@ -846,14 +1190,19 @@
       scheduleRender();
     });
     if ($('house3d')) {
-      loadEnergy();
-      setInterval(() => { if (!document.hidden) loadEnergy(); }, 10000);
+      // On a Homey dashboard only while the house is in view: a widget on a floor plan asks for nothing
+      const wanted = () => !document.hidden && (Homey.isWeb || inHouse());
+      if (wanted()) loadEnergy();
+      setInterval(() => { if (wanted()) loadEnergy(); }, 10000);
+      // the weather on the house, also without the side panel
+      if (wanted() && !state.weather) loadWeather();
+      setInterval(() => { if (wanted()) loadWeather(); }, 15 * 60 * 1000);
     }
     setupSide();
     $('btn-view').addEventListener('click', () => {
       // 2D <-> 3D on the web page (when the browser can), 2D <-> 2.5D elsewhere.
-      if (state.lastView3d === '3d' && !has3d()) state.lastView3d = 'iso';
-      if (state.view === '2d' && has3d() && state.settings.view !== 'iso' && state.settings.view !== 'game' && state.settings.view !== 'steep') state.lastView3d = '3d';
+      if (state.lastView3d === '3d' && !has3d()) state.lastView3d = 'steep';
+      if (state.view === '2d' && has3d() && state.settings.view !== 'steep') state.lastView3d = '3d';
       state.view = state.view === '2d' ? state.lastView3d : '2d';
       scheduleRender();
     });
@@ -870,6 +1219,8 @@
     $('sheet').addEventListener('click', (ev) => { if (ev.target === $('sheet')) closeSheet(); });
     $('sheet-close').addEventListener('click', closeSheet);
     $('sheet-body').addEventListener('click', onSheetClick);
+    $('sheet-body').addEventListener('pointermove', onChartMove);
+    $('sheet-body').addEventListener('pointerdown', onChartMove);
     $('sheet-body').addEventListener('change', onSheetChange);
     document.addEventListener('keydown', (ev) => { if (ev.key === 'Escape') { closeSheet(); closeQuick(); } });
     // A tap elsewhere (not on the controls, not on another device) closes the quick controls.
@@ -879,6 +1230,7 @@
       closeQuick();
     }, true);
     if (window.matchMedia) window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', scheduleRender);
+    window.addEventListener('fp-theme', scheduleRender);
 
     Homey.on('caps', applyCaps);
     Homey.on('plan', (msg) => { if (!state.plan || !msg || msg.id === state.plan.id) load().catch(() => {}); });

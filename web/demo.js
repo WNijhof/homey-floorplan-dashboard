@@ -26,6 +26,7 @@
   function persist() { try { localStorage.setItem(KEY, JSON.stringify({ plans: plans, calendars: calendars })); } catch (e) { /* private mode */ } }
 
   var listeners = {};
+  var lists = { shopping: [{ id: '1', text: lang === 'nl' ? 'Melk' : 'Milk', done: false }], tasks: [], meals: {} };
   function emit(event, payload) { (listeners[event] || []).forEach(function (fn) { fn(clone(payload)); }); }
 
   function at(days, h, m) { var x = new Date(); x.setDate(x.getDate() + days); x.setHours(h, m, 0, 0); return x.getTime(); }
@@ -49,6 +50,25 @@
     };
   }
 
+  // A part of the demo day, moved to today and up to now (the forecast keeps the whole of today and tomorrow)
+  function detailToday(d) {
+    var midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+    var shift = midnight.getTime() - d.from;
+    var now = Date.now();
+    var move = function (list, cut) { return (list || []).map(function (x) { return { t: x.t + shift, w: x.w }; }).filter(function (x) { return !cut || x.t <= now; }); };
+    var out = clone(d);
+    out.from = midnight.getTime(); out.now = now;
+    out.curve = move(d.curve, true);
+    if (d.soc) out.soc = move(d.soc, true);
+    if (d.forecast) {
+      var days = {};
+      var key = function (t) { var x = new Date(t); return x.getFullYear() + '-' + ('0' + (x.getMonth() + 1)).slice(-2) + '-' + ('0' + x.getDate()).slice(-2); };
+      Object.keys(d.forecast.days).sort().forEach(function (k, i) { days[key(midnight.getTime() + i * 86400000)] = d.forecast.days[k]; });
+      out.forecast = { source: d.forecast.source, days: days, watts: move(d.forecast.watts, false) };
+    }
+    return out;
+  }
+
   function fail(status, message) { var e = new Error(message); e.status = status; throw e; }
 
   function route(method, path, body) {
@@ -61,10 +81,28 @@
       return { plan: plan, devices: devices, links: { dashboard: './', editor: 'editor' } };
     }
     if (method === 'GET' && p === '/data') return { devices: devices, zones: data.zones };
-    if (method === 'GET' && p === '/energy') return Object.assign({}, data.energy[new Date().getHours()], { updated: new Date().toISOString() });
+    if (method === 'GET' && p === '/energy') { var hour = new Date().getHours(); var sun = window.HouseCore ? window.HouseCore.sunPosition(52.1, 5.1, new Date()) : { height: hour > 7 && hour < 18 ? 30 : -20, azimuth: 180 }; return Object.assign({}, data.energy[hour], { gasToday: 3.4, updated: new Date().toISOString(), sun: sun, night: sun.height < -4 }); }
+    var part = p === '/energy-detail' && url.searchParams.get('kind');
+    if (method === 'GET' && part && data.details[part]) return detailToday(data.details[part]);
     if (method === 'GET' && p === '/weather') return weather();
     if (method === 'GET' && p === '/agenda') return agenda();
-    if (method === 'GET' && p === '/siblings') return [];
+    if (method === 'GET' && p === '/siblings') return [{ key: 'energy', icon: '⚡', name: { en: 'Energy', nl: 'Energie' }, path: 'energy/' }];
+    if (p === '/backup') {
+      if (method === 'POST') { plans = clone(body.plans); persist(); return { plans: plans.length }; }
+      return { kind: 'homedeck-backup', version: 'demo', made: new Date().toISOString(), plans: plans, calendars: calendars };
+    }
+    if (p === '/backups') return [];
+    if (p === '/advice') return { items: [{ id: 'cheapAt', at: at(0, 23, 0) }] };
+    if (p === '/people') return [{ initial: 'S', name: 'Sam', home: true, asleep: false }, { initial: 'L', name: 'Lou', home: false, asleep: false }];
+    if (p === '/variables') return [];
+    if (p === '/variables/choices') return [];
+    if (p === '/lists') {
+      if (method === 'PUT') { lists = clone(body); return lists; }
+      return lists;
+    }
+    if (p.indexOf('/screens/') === 0) return method === 'PUT' ? body : null;
+    if (p === '/actions/choices') return [{ kind: 'mood', id: 'm1', name: lang === 'nl' ? 'Filmavond' : 'Movie night' }, { kind: 'flow', id: 'f1', name: lang === 'nl' ? 'Welterusten' : 'Good night' }];
+    if (p === '/actions/run') return true;
     if (method === 'GET' && p === '/edit') return { pinRequired: false, unlocked: true };
     if (method === 'GET' && p === '/diagnosis-report') return { email: null, report: { demo: true, note: TEXT.note } };
     if (p === '/calendars') {

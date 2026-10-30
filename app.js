@@ -4,18 +4,26 @@ const http = require('http');
 const Homey = require('homey');
 const DeviceHub = require('./lib/DeviceHub');
 const { EnergyHub } = require('./lib/EnergyHub');
+const { EnergyDetails } = require('./lib/EnergyDetails');
+const { EnergyEngine } = require('./lib/EnergyEngine');
+const house = require('./lib/shared/house-core');
+const { HouseExtras } = require('./lib/HouseExtras');
+const { Backup } = require('./lib/Backup');
+const { ErrorReporter } = require('./lib/ErrorReporter');
 const PlanStore = require('./lib/PlanStore');
 const Calendar = require('./lib/Calendar');
 const { WebServer } = require('./lib/WebServer');
 const Diagnosis = require('./lib/Diagnosis');
 
 const DEFAULT_PORT = 8687; // Energy Dashboard uses 8686
+const ENERGY_APP = 'com.drpeppers.energydashboard';
+const ENERGY_CHECK = 10 * 60 * 1000;
 // Sister apps with a dashboard web page of their own; the pages show a switch to each one that is installed.
 const SIBLINGS = [
   // ports and manifestName: how to find an older version without /dashboard-link: its web page on one of
   // these ports, recognised by the name in its web manifest (owners do change the default 8686).
   {
-    appId: 'com.drpeppers.energydashboard', key: 'energy', icon: '⚡', name: { en: 'Energy', nl: 'Energie' },
+    appId: ENERGY_APP, key: 'energy', icon: '⚡', name: { en: 'Energy', nl: 'Energie' },
     ports: [8686, 8080, 8000, 8081, 8888, 9000, 3000], manifestName: /^Energ(y|ie) Dashboard$/,
   },
 ];
@@ -26,6 +34,10 @@ class FloorplanApp extends Homey.App {
   error(...args) {
     this.recentErrors = (this.recentErrors || []).concat(`${new Date().toISOString().slice(0, 16)} ${args.map((a) => (a && a.message) || String(a)).join(' ')}`).slice(-20);
     super.error(...args);
+    if (this.reporter) {
+      const found = args.find((a) => a instanceof Error);
+      this.reporter.capture({ message: args.map((a) => (a && a.message) || String(a)).join(' '), stack: found && found.stack });
+    }
   }
 
   // The anonymous report for "Report a problem" (dashboard and app settings).
@@ -34,10 +46,16 @@ class FloorplanApp extends Homey.App {
   }
 
   async onInit() {
+    // Apps run in UTC; "today" and the hours of the charts follow the Homey
+    process.env.TZ = this.homey.clock.getTimezone();
+    // Only when the owner turned it on (off by default), see lib/ErrorReporter.js
+    this.reporter = new ErrorReporter(this);
+    process.on('uncaughtExceptionMonitor', (err) => this.reporter.capture(err));
     const emit = (event, data) => this.emit(event, data);
     this.plans = new PlanStore(this.homey, emit);
     this.hub = new DeviceHub(this.homey, emit);
-    this.energy = new EnergyHub(this.hub);
+    this.energy = new EnergyHub(this.hub, () => this.energyConfig());
+    this.energyDetails = new EnergyDetails(this);
     this.hubReady = this.hub.init().catch((err) => {
       this.error('Could not connect to the Homey Web API', err);
       throw err;
@@ -47,6 +65,13 @@ class FloorplanApp extends Homey.App {
     this.homey.settings.on('set', (key) => {
       if (key === 'config') this.webServer.start(this.getConfig().port).catch((err) => this.error(err));
     });
+    this.extras = new HouseExtras(this);
+    this.extras.registerFlows();
+    this.backup = new Backup(this);
+    this.backup.keepBeforeUpdate();
+    this.guardEnergyCards();
+    this.startEnergy().catch((err) => this.error('Energy page', err));
+    this.homey.setInterval(() => this.startEnergy().catch((err) => this.error('Energy page', err)), ENERGY_CHECK);
 
     const widget = this.homey.dashboards.getWidget('floorplan');
     widget.registerSettingAutocompleteListener('plan', async (query) => {
@@ -150,6 +175,7 @@ class FloorplanApp extends Homey.App {
       port: Number.isInteger(port) && port >= 1024 && port <= 65535 ? port : DEFAULT_PORT,
       accessCode: typeof saved.accessCode === 'string' ? saved.accessCode : '',
       editPin: typeof saved.editPin === 'string' ? saved.editPin : '',
+      reportErrors: saved.reportErrors === true,
     };
   }
 
@@ -163,6 +189,7 @@ class FloorplanApp extends Homey.App {
     }
     if (body && typeof body.accessCode === 'string') next.accessCode = body.accessCode.trim().slice(0, 64);
     if (body && typeof body.editPin === 'string') next.editPin = body.editPin.trim().slice(0, 32);
+    if (body && typeof body.reportErrors === 'boolean') next.reportErrors = body.reportErrors;
     this.homey.settings.set('config', next);
     return this.getSettingsInfo();
   }
@@ -185,6 +212,7 @@ class FloorplanApp extends Homey.App {
     const cfg = this.getConfig();
     return {
       config: cfg,
+      canReport: !!this.reporter.endpoint,
       status: this.webServer ? this.webServer.status : null,
       links: await this.getLinks(),
       siblings: await this.getSiblings(),
@@ -233,6 +261,7 @@ class FloorplanApp extends Homey.App {
         note(s.key, `error: ${err.message || err}`);
       }
     }));
+    if (this.energyEngine && !list.length) list.push({ key: 'energy', icon: '⚡', name: SIBLINGS[0].name, path: 'energy/' });
     this.siblingCache = { at: Date.now(), list };
     return list;
   }
@@ -293,10 +322,101 @@ class FloorplanApp extends Homey.App {
     return data;
   }
 
+  // The Energy page: Energy Dashboard's own logic runs here, unless that app is installed. Then it stays the place
+  // for energy, with its settings and history, and nothing is done twice.
+  async startEnergy() {
+    await this.hubReady;
+    const installed = await this.energyAppInstalled();
+    if (this.energyEngine) {
+      if (!installed) return;
+      const engine = this.energyEngine;
+      this.energyEngine = null;
+      this.siblingCache = null;
+      await engine.stop();
+      this.guardEnergyCards();
+      return;
+    }
+    if (installed) return;
+    const engine = new EnergyEngine(this);
+    try {
+      await engine.onInit();
+    } catch (err) {
+      await engine.stop().catch(() => {});
+      throw err;
+    }
+    this.energyEngine = engine;
+    this.siblingCache = null;
+  }
+
+  // What can be a button on the dashboard: moods, and Flows that can be started by hand.
+  async getActionChoices() {
+    await this.hubReady;
+    const { flow, moods } = this.hub.api;
+    const read = (promise) => promise.then((o) => Object.values(o || {})).catch(() => []);
+    const [plain, advanced, all] = await Promise.all([read(flow.getFlows()), read(flow.getAdvancedFlows()), read(moods.getMoods())]);
+    const names = (list, kind) => list.map((x) => ({ kind, id: x.id, name: x.name }));
+    return [...names(all, 'mood'), ...names(plain.filter((f) => f.triggerable && f.enabled !== false), 'flow'), ...names(advanced.filter((f) => f.triggerable && f.enabled !== false), 'advanced')]
+      .sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  // Only what is on the plan can be started from the web page.
+  async runAction({ plan, kind, id } = {}) {
+    const buttons = (p) => (p.actions || []).concat(p.levels.flatMap((l) => (l.rooms || []).map((r) => r.vacuum).filter(Boolean)));
+    const known = this.plans.list().some((p) => (!plan || p.id === plan) && buttons(p).some((a) => a.kind === kind && a.id === id));
+    if (!known) throw Object.assign(new Error('Not a button of this plan'), { status: 403 });
+    await this.hubReady;
+    const { flow, moods } = this.hub.api;
+    if (kind === 'mood') await moods.setMood({ id });
+    else if (kind === 'advanced') await flow.triggerAdvancedFlow({ id });
+    else await flow.triggerFlow({ id });
+    return true;
+  }
+
+  // The Flow cards of the Energy page work while it runs here (it then takes these cards over).
+  guardEnergyCards() {
+    const message = this.homey.i18n.getLanguage() === 'nl'
+      ? 'Energie Dashboard is geïnstalleerd: gebruik de kaart van die app.'
+      : 'Energy Dashboard is installed: use the card of that app.';
+    for (const id of ['shower-start', 'shower-stop', 'tapwater-source']) {
+      this.homey.flow.getActionCard(id).registerRunListener(async () => { throw new Error(message); });
+    }
+  }
+
+  async energyAppInstalled() {
+    if (await this.homey.api.getApiApp(ENERGY_APP).getInstalled().catch(() => false)) return true;
+    const info = await this.hub.api.apps.getApp({ id: ENERGY_APP }).catch(() => null);
+    return !!info;
+  }
+
+  // Which energy devices were chosen; the sister app keeps its own choice.
+  energyConfig() {
+    return this.energyEngine ? this.energyEngine.getConfig() : {};
+  }
+
+  // What /energy/ shows: the server of the page here, or the port of the sister app.
+  async getEnergyPage() {
+    if (this.energyEngine) return { server: this.energyEngine.webServer };
+    const sister = (await this.getSiblings()).find((s) => s.key === 'energy' && s.port);
+    return sister ? { port: sister.port } : {};
+  }
+
   // Power of the sun, grid, battery, car and house for the house view, with Energy Dashboard's own calculation.
   async getEnergy() {
     await this.hubReady;
-    return this.energy.getLive();
+    const live = await this.energy.getLive();
+    if (typeof live.gasM3 === 'number') live.gasToday = await this.energyDetails.gasToday().catch(() => null);
+    const lat = this.homey.geolocation.getLatitude();
+    const lon = this.homey.geolocation.getLongitude();
+    if (typeof lat !== 'number' || typeof lon !== 'number') return live;
+    const sun = house.sunPosition(lat, lon, new Date());
+    return { ...live, sun, night: sun.height < -4 };
+  }
+
+  // Today's power of one part of the house (solar, battery, grid, car, heatpump, airco), with the solar forecast.
+  async getEnergyDetail(kind, planId) {
+    await this.hubReady;
+    const plan = (planId && this.plans.get(planId)) || this.plans.list()[0] || null;
+    return this.energyDetails.get(kind, plan);
   }
 
   getCalendars() {

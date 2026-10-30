@@ -8,8 +8,16 @@ const Diagnosis = require('../lib/Diagnosis');
 const { WebServer } = require('../lib/WebServer');
 const { samplePlan, sampleDevices } = require('../test/sample');
 const demo = require('../test/demo-house');
-const { demoEnergyDevices } = require('../test/demo-energy');
+const { demoEnergyDevices, demoDetail } = require('../test/demo-energy');
 const { summarize } = require('../lib/EnergyHub');
+const { createEnergyDemo } = require('../test/energy-demo');
+const { HouseExtras } = require('../lib/HouseExtras');
+const { Backup } = require('../lib/Backup');
+const { ErrorReporter } = require('../lib/ErrorReporter');
+const house = require('../lib/shared/house-core');
+
+// The sun over the demo house, in the middle of the Netherlands.
+const demoSun = (at) => house.sunPosition(52.1, 5.1, at);
 
 const arg = (name, fallback) => {
   const hit = process.argv.find((a) => a.startsWith(`--${name}=`));
@@ -23,6 +31,7 @@ function createDevApp({ port, code = '', pin = '', siblingPort = null, demoLang 
   const zones = demoLang ? demo.demoZones(demoLang) : [{ id: 'root', name: 'Home', parent: null }, ...['z_hall', 'z_living', 'z_kitchen', 'z_toilet', 'z_util', 'z_bed'].map((id) => ({ id, name: id.slice(2), parent: 'root' }))];
   let calendars = [];
   const app = {
+    demoHour,
     homey,
     log: (...a) => console.log('[app]', ...a),
     error: (...a) => console.error('[app]', ...a),
@@ -38,8 +47,14 @@ function createDevApp({ port, code = '', pin = '', siblingPort = null, demoLang 
     async getEnergy() {
       // --hour=13 shows the energy of that hour of the day
       const at = new Date();
-      if (demoHour !== null) at.setHours(demoHour, 0, 0, 0);
-      return summarize(demoEnergyDevices(demoLang || 'nl', at));
+      if (app.demoHour !== null) at.setHours(app.demoHour, 0, 0, 0);
+      const sun = demoSun(at);
+      return { ...summarize(demoEnergyDevices(demoLang || 'nl', at)), gasToday: 3.4, sun, night: sun.height < -4 };
+    },
+    async getEnergyDetail(kind) {
+      const at = new Date();
+      if (app.demoHour !== null) at.setHours(app.demoHour, 0, 0, 0);
+      return demoDetail(kind, at);
     },
     async getWeather() {
       const t = Math.round(Date.now() / 1000);
@@ -63,7 +78,20 @@ function createDevApp({ port, code = '', pin = '', siblingPort = null, demoLang 
       };
     },
     async getSiblings() {
-      return siblingPort ? [{ key: 'energy', icon: '⚡', name: { en: 'Energy', nl: 'Energie' }, port: siblingPort }] : [];
+      return [{ key: 'energy', icon: '⚡', name: { en: 'Energy', nl: 'Energie' }, ...(siblingPort ? { port: siblingPort } : { path: 'energy/' }) }];
+    },
+    // Energy Dashboard's page with its demo data; with --sibling-port the sister app takes its place.
+    async getEnergyPage() {
+      if (siblingPort) return { port: siblingPort };
+      if (!app.energyDemo) app.energyDemo = createEnergyDemo({ port, pin, lang: demoLang || 'nl' });
+      return { server: app.energyDemo.webServer };
+    },
+    async getActionChoices() {
+      return [{ kind: 'mood', id: 'm1', name: demoLang === 'en' ? 'Movie night' : 'Filmavond' }, { kind: 'flow', id: 'f1', name: demoLang === 'en' ? 'Good night' : 'Welterusten' }];
+    },
+    async runAction({ kind, id }) {
+      app.ranAction = { kind, id };
+      return true;
     },
     async setCapability({ deviceId, capabilityId, value }) {
       const d = devices.find((x) => x.id === deviceId);
@@ -88,6 +116,19 @@ function createDevApp({ port, code = '', pin = '', siblingPort = null, demoLang 
     getCalendars: () => calendars,
     setCalendars: (list) => { calendars = list; return calendars; },
   };
+  // The real logic of lists, screens, variables and advice, on stand-ins for Homey's managers
+  app.energyDetails = {
+    pricesNow: async () => ({ price: 0.27, avg: 0.24, cheapest: { start: new Date(Date.now() + 3 * 3600000).toISOString(), hours: 3, avg: 0.19 } }),
+    dayForecast: async () => ({ today: 12, tomorrow: 21 }),
+  };
+  const logic = { v_holiday: { id: 'v_holiday', name: demoLang === 'en' ? 'Holiday' : 'Vakantie', type: 'boolean', value: false }, v_guests: { id: 'v_guests', name: demoLang === 'en' ? 'Guests' : 'Gasten', type: 'number', value: 2 } };
+  Object.assign(app.hub.api, {
+    users: { getUsers: async () => ({ a: { name: 'Sam', present: true }, b: { name: 'Lou', present: false }, c: { name: 'Noor', present: true, asleep: true } }) },
+    logic: { getVariables: async () => logic, updateVariable: async ({ id, variable }) => { logic[id].value = variable.value; } },
+  });
+  app.extras = new HouseExtras(app);
+  app.backup = new Backup(app, require('os').tmpdir());
+  app.reporter = new ErrorReporter(app);
   app.plans = new PlanStore(homey, app.emit);
   const plan = demoLang ? demo.demoPlan(demoLang) : samplePlan();
   app.plans.save(plan.id, plan);

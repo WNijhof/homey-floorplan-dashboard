@@ -267,6 +267,76 @@
       && after.rooms.some((r) => r.zoneId === 'z_hall' && r.name === 'hall');
   }
 
+  // A room gets another shape: a plus on an edge makes a corner, the button an L-shape
+  {
+    const shaped = lv().rooms.find((r) => r.points.length === 4 && !r.locked);
+    window.__editorState().sel = { kind: 'room', id: shaped.id };
+    document.querySelector('[data-tool=select]').click();
+    window.__editorState().sel = { kind: 'room', id: shaped.id };
+    window.dispatchEvent(new Event('resize'));
+    await wait(100);
+    const plus = document.querySelector('[data-handle="m:0"]');
+    report.cornerPlus = !!plus;
+    const box = plus.getBoundingClientRect();
+    const o = { bubbles: true, clientX: box.x + box.width / 2, clientY: box.y + box.height / 2, pointerId: 1, button: 0 };
+    plus.dispatchEvent(new PointerEvent('pointerdown', o));
+    svg.dispatchEvent(new PointerEvent('pointermove', { ...o, clientY: o.clientY + 30 }));
+    svg.dispatchEvent(new PointerEvent('pointerup', { ...o, clientY: o.clientY + 30 }));
+    await wait(50);
+    report.cornerAdded = shaped.points.length === 5 || lv().rooms.find((r) => r.id === shaped.id).points.length === 5;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'z', ctrlKey: true, bubbles: true }));
+    await wait(50);
+    window.__editorState().sel = { kind: 'room', id: shaped.id };
+    const again = lv().rooms.find((r) => r.id === shaped.id);
+    if (again.points.length === 4) {
+      document.querySelector('[data-tool=select]').click();
+      window.__editorState().sel = { kind: 'room', id: shaped.id };
+      window.dispatchEvent(new Event('resize'));
+    }
+    report.lShapeReady = again.points.length === 4;
+  }
+
+  // An own photo of the house: chosen as a file, a click area drawn on it, and undone
+  {
+    const plan = () => window.__editorState().plan;
+    document.querySelector('[data-tool=house]').click();
+    await wait(200);
+    const c = document.createElement('canvas');
+    c.width = 3200; c.height = 1600;
+    c.getContext('2d').fillRect(0, 0, 3200, 1600);
+    const blob = await new Promise((r) => c.toBlob(r, 'image/png'));
+    const files = new DataTransfer();
+    files.items.add(new File([blob], 'house.png', { type: 'image/png' }));
+    const input = document.getElementById('house-photo');
+    input.files = files.files;
+    input.dispatchEvent(new Event('change', { bubbles: true }));
+    for (let i = 0; i < 50 && document.getElementById('ed-photo').hidden; i++) await wait(100);
+    const photo = plan().house && plan().house.photo;
+    report.photoLoaded = !!photo && /^data:image\/jpeg/.test(photo.src) && Math.abs(photo.ratio - 0.5) < 0.01 && !document.getElementById('ed-photo').hidden;
+    document.querySelector('[data-action=photo-area][data-kind=solar]').click();
+    const area = document.getElementById('ed-photo-svg');
+    const at = (fx, fy) => {
+      const m = area.getScreenCTM();
+      const box = area.viewBox.baseVal;
+      area.dispatchEvent(new MouseEvent('click', { bubbles: true, clientX: m.a * fx * box.width + m.e, clientY: m.d * fy * box.height + m.f }));
+    };
+    at(0.2, 0.2); at(0.6, 0.2); at(0.6, 0.5); at(0.2, 0.5);
+    report.photoDraft = area.querySelectorAll('circle').length === 4;
+    at(0.2, 0.2); // the first corner again closes it
+    await wait(100);
+    const drawn = plan().house.photo.areas;
+    report.photoArea = drawn.length === 1 && drawn[0].kind === 'solar' && drawn[0].pts.length === 4 && Math.abs(drawn[0].pts[1][0] - 0.6) < 0.01 && Math.abs(drawn[0].pts[2][1] - 0.5) < 0.01;
+    report.photoCard = !!area.querySelector('.fp-harea[data-house="solar"]');
+    // Redrawing replaces it; Esc stops without a change
+    document.querySelector('[data-action=photo-area][data-kind=solar]').click();
+    at(0.1, 0.1);
+    window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    report.photoEscape = plan().house.photo.areas.length === 1 && !window.__editorState().photoDraft && window.__editorState().tool === 'house';
+    document.querySelector('[data-action=photo-remove]').click();
+    await wait(100);
+    report.photoRemoved = !plan().house.photo && document.getElementById('ed-photo').hidden;
+  }
+
   } catch (err) {
     report.threw = String(err && err.stack || err);
   }

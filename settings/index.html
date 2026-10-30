@@ -54,6 +54,10 @@
     <p class="muted note" data-t="pinHelp"></p>
     <label for="port" data-t="port"></label>
     <input id="port" type="number" min="1024" max="65535">
+    <div id="report-box" hidden>
+      <label class="check"><input id="report-errors" type="checkbox"><span data-t="reportErrors"></span></label>
+      <p class="muted note" data-t="reportErrorsHelp"></p>
+    </div>
     <button id="save" class="btn" type="button" data-t="save"></button>
     <p id="saved" class="muted note"></p>
   </div>
@@ -76,8 +80,9 @@
         intro: 'Draw and furnish your home on a computer or tablet: the editor is a web page in your home network. The dashboard is a web page too, for a tablet on the wall, and there is a Floor plan widget for Homey dashboards.',
         editor: 'Open the editor', dashboard: 'Open the dashboard',
         running: 'Running on port {port}', stopped: 'Not running', portInUse: 'Port {port} is already in use by something else; choose another one.',
-        switchTitle: 'Switch to other dashboards', energyFound: 'Energy Dashboard found: both web pages show a switch at the top.',
-        energyMissing: 'With Energy Dashboard installed (version with switch support), both web pages show a switch at the top to go back and forth.',
+        switchTitle: 'Energy page', energyFound: 'Energy Dashboard found: the Energy button on the web page opens that app, with its own settings and history.',
+        energyMissing: 'The Energy page is built in: open it with the Energy button at the top of the web page, its gear has the energy settings. With the app Energy Dashboard installed, that app takes its place.',
+        reportErrors: 'Send errors to the maker automatically', reportErrorsHelp: 'Off by default. Only the error text without names, addresses or ids, where in the code it happened, the versions, and how many devices of each kind you have. Nothing that says who you are or where you live.',
         webTitle: 'Web page', access: 'Access code (optional)', accessHelp: 'Without a code, anyone in your home network can open the dashboard and switch devices. With a code, each browser asks for it once. Opening the link once with ?code=… in the address works too (handy for a wall tablet).',
         pin: 'Edit PIN (optional)', pinHelp: 'Asked before changing the floor plan or calendars on the web page.',
         port: 'Port', save: 'Save', saved: 'Saved', noAddress: 'The address of your Homey is not known yet.',
@@ -91,8 +96,9 @@
         intro: 'Teken en richt je huis in op een computer of tablet: de editor is een webpagina in je thuisnetwerk. Het dashboard is ook een webpagina, voor een tablet aan de muur, en er is een Plattegrond-widget voor Homey-dashboards.',
         editor: 'Editor openen', dashboard: 'Dashboard openen',
         running: 'Draait op poort {port}', stopped: 'Draait niet', portInUse: 'Poort {port} is al in gebruik door iets anders; kies een andere.',
-        switchTitle: 'Wisselen met andere dashboards', energyFound: 'Energie Dashboard gevonden: beide webpagina’s tonen bovenaan een wisselknop.',
-        energyMissing: 'Met Energie Dashboard geïnstalleerd (versie met wisselknop) tonen beide webpagina’s bovenaan een knop om heen en weer te gaan.',
+        switchTitle: 'Energiepagina', energyFound: 'Energie Dashboard gevonden: de knop Energie op de webpagina opent die app, met zijn eigen instellingen en geschiedenis.',
+        energyMissing: 'De Energiepagina is ingebouwd: je opent hem met de knop Energie bovenaan de webpagina, onder het tandwiel staan de energie-instellingen. Met de app Energie Dashboard geïnstalleerd neemt die app de plek over.',
+        reportErrors: 'Fouten automatisch naar de maker sturen', reportErrorsHelp: 'Standaard uit. Alleen de fouttekst zonder namen, adressen of id\'s, waar in de code het gebeurde, de versies, en hoeveel apparaten je van elke soort hebt. Niets wat zegt wie je bent of waar je woont.',
         webTitle: 'Webpagina', access: 'Toegangscode (optioneel)', accessHelp: 'Zonder code kan iedereen in je thuisnetwerk het dashboard openen en apparaten schakelen. Met een code vraagt elke browser er één keer om. De link één keer openen met ?code=… achter het adres werkt ook (handig voor een wandtablet).',
         pin: 'Bewerk-pincode (optioneel)', pinHelp: 'Wordt gevraagd voordat je op de webpagina de plattegrond of agenda’s wijzigt.',
         port: 'Poort', save: 'Opslaan', saved: 'Opgeslagen', noAddress: 'Het adres van je Homey is nog niet bekend.',
@@ -125,8 +131,10 @@
         var st = info.status || {};
         $('status-dot').className = 'dot ' + (st.running ? 'ok' : 'error');
         $('status-text').textContent = (st.running ? T.running : st.reason === 'portInUse' ? T.portInUse : T.stopped).replace('{port}', st.port || info.config.port);
-        $('siblings').textContent = (info.siblings || []).some(function (s) { return s.key === 'energy'; }) ? T.energyFound : T.energyMissing;
+        $('siblings').textContent = (info.siblings || []).some(function (s) { return s.key === 'energy' && s.port; }) ? T.energyFound : T.energyMissing;
+        $('report-box').hidden = !info.canReport;
         if (document.activeElement.tagName !== 'INPUT') {
+          $('report-errors').checked = info.config.reportErrors === true;
           $('access').value = info.config.accessCode;
           $('pin').value = info.config.editPin;
           $('port').value = info.config.port;
@@ -135,7 +143,7 @@
 
       $('save').addEventListener('click', function () {
         $('saved').textContent = '';
-        api('PUT', '/config', { accessCode: $('access').value, editPin: $('pin').value, port: Number($('port').value) })
+        api('PUT', '/config', { accessCode: $('access').value, editPin: $('pin').value, port: Number($('port').value), reportErrors: $('report-errors').checked })
           .then(function (info) {
             $('saved').textContent = T.saved;
             // The server restarts on the new port; ask again shortly for its status.

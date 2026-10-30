@@ -1,0 +1,287 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="settings.css">
+  <script type="text/javascript" src="/homey.js" data-origin="settings"></script>
+</head>
+<body>
+  <!-- Texts come from /locales, by their data-i18n key -->
+  <section class="card">
+    <h2 data-i18n="settings.dashboard"></h2>
+    <p class="muted" data-i18n="settings.openLink"></p>
+    <p><a id="dashboard-url" class="url" href="#" target="_blank" rel="noopener">…</a></p>
+    <p id="server-status" class="muted"></p>
+    <p><a class="url" href="https://github.com/WNijhof/homey-energy-dashboard/blob/main/homey-app/README.md" target="_blank" rel="noopener" data-i18n="settings.manual"></a></p>
+  </section>
+
+  <form id="settings-form" class="card">
+    <h2 data-i18n="settings.settings"></h2>
+
+    <h3 data-i18n="settings.webPage"></h3>
+    <!-- Port, access code and PIN: in Homey only, not on the web page (see settings-web.js) -->
+    <div id="homey-only">
+      <label><span data-i18n="settings.port"></span> <input name="port" type="number" min="1024" max="65535" step="1"></label>
+
+      <label><span data-i18n="settings.accessCode"></span> <input name="accessCode" type="password" autocomplete="new-password"></label>
+      <p class="muted" data-i18n="settings.accessCodeHelp"></p>
+
+      <label><span data-i18n="settings.editPin"></span> <input name="editPin" type="password" inputmode="numeric" autocomplete="off"></label>
+      <p class="muted" data-i18n="settings.editPinHelp"></p>
+    </div>
+    <p class="muted" id="homey-only-note" data-i18n="settings.homeyOnly" hidden></p>
+
+    <h3 data-i18n="settings.layout"></h3>
+    <p class="muted" data-i18n="settings.layoutHelp"></p>
+    <ol id="layout-list" class="layout-list"></ol>
+    <p class="muted" id="layout-mode"></p>
+    <button type="button" class="secondary" id="layout-reset" data-i18n="settings.layoutReset"></button>
+
+    <h3 data-i18n="settings.devices"></h3>
+    <p class="muted" data-i18n="settings.devicesHelp"></p>
+    <label><span data-i18n="settings.p1"></span> <select name="p1"></select></label>
+    <label><span data-i18n="settings.boiler"></span> <select name="boiler"></select></label>
+    <label><span data-i18n="settings.thermostat"></span> <select name="thermostat"></select></label>
+    <label><span data-i18n="settings.waterMeter"></span> <select name="water"></select></label>
+    <fieldset>
+      <legend data-i18n="settings.solar"></legend>
+      <div id="solar-list" class="checks"></div>
+    </fieldset>
+    <fieldset>
+      <legend data-i18n="settings.heating"></legend>
+      <div id="heating-list" class="checks"></div>
+    </fieldset>
+    <fieldset>
+      <legend data-i18n="settings.ev"></legend>
+      <div id="ev-list" class="checks"></div>
+    </fieldset>
+    <fieldset>
+      <legend data-i18n="settings.battery"></legend>
+      <div id="battery-list" class="checks"></div>
+      <label class="check-row"><span><span data-i18n="settings.invertPower"></span><br><small class="muted" data-i18n="settings.invertPowerHelp"></small></span> <input name="invertPower" type="checkbox"></label>
+    </fieldset>
+    <fieldset>
+      <legend data-i18n="settings.consumers"></legend>
+      <p class="muted" data-i18n="settings.consumersHelp"></p>
+      <p data-i18n="settings.countInclude"></p>
+      <div id="count-include" class="checks"></div>
+      <details>
+        <summary data-i18n="settings.countExclude"></summary>
+        <div id="count-exclude" class="checks"></div>
+      </details>
+    </fieldset>
+    <h3 data-i18n="settings.forecast"></h3>
+    <label class="check-row"><span><span data-i18n="settings.forecastOn"></span><br><small class="muted" data-i18n="settings.forecastHelp"></small></span> <input name="forecastOn" type="checkbox"></label>
+    <div data-forecast>
+      <!-- Two roof planes to start with; more can be added (settings.js) -->
+      <div id="planes"></div>
+      <button type="button" class="secondary" id="plane-add" data-i18n="settings.addPlane"></button>
+      <p class="muted" data-i18n="settings.planesHelp"></p>
+    </div>
+
+    <h3 data-i18n="settings.boilerSection"></h3>
+    <label><span data-i18n="settings.boilerTop"></span> <select name="topSensor"></select></label>
+    <label><span data-i18n="settings.boilerBottom"></span> <select name="bottomSensor"></select></label>
+    <label><span data-i18n="settings.liters"></span> <input name="liters" type="number" min="30" max="500" step="1" list="boiler-sizes"></label>
+    <datalist id="boiler-sizes"><option value="80"><option value="110"></datalist>
+    <label><span data-i18n="settings.coldWaterTemp"></span> <input name="coldWaterTemp" type="number" min="1" max="25" step="1" placeholder="auto"></label>
+    <label><span data-i18n="settings.showerTemp"></span> <input name="showerTemp" type="number" min="30" max="45" step="1"></label>
+    <label><span data-i18n="settings.showerFlow"></span> <input name="showerFlow" type="number" min="3" max="20" step="0.5"></label>
+    <label><span data-i18n="settings.warmFrom"></span> <input name="warmFrom" type="number" min="35" max="75" step="1"></label>
+    <label class="check-row"><span><span data-i18n="settings.calibrate"></span><br><small class="muted" data-i18n="settings.calibrateHelp"></small></span> <input name="calibrate" type="checkbox"></label>
+    <div id="shower-log" hidden></div>
+    <!-- Functions for a few setups only, folded away -->
+    <details class="extras">
+      <summary data-i18n="settings.boilerExtras"></summary>
+      <label class="check-row"><span><span data-i18n="settings.valve"></span><br><small class="muted" data-i18n="settings.valveHelp"></small></span> <input name="valve" type="checkbox"></label>
+      <label class="check-row"><span><span data-i18n="settings.tapCheck"></span><br><small class="muted" data-i18n="settings.tapCheckHelp"></small></span> <input name="tapCheck" type="checkbox"></label>
+      <label data-tapcheck><span data-i18n="settings.tapCheckPower"></span> <select name="tapCheckPower"></select></label>
+      <p class="muted" data-tapcheck data-i18n="settings.tapCheckPowerHelp"></p>
+      <label data-tapcheck><span data-i18n="settings.tapCheckSince"></span> <input name="tapCheckSince" type="datetime-local"></label>
+      <p class="muted" data-tapcheck data-i18n="settings.tapCheckSinceHelp"></p>
+    </details>
+
+    <h3 data-i18n="settings.alerts"></h3>
+    <label><span data-i18n="settings.alertHours"></span> <input name="alertHours" type="number" min="1" max="48" step="1"></label>
+    <label class="check-row"><span><span data-i18n="settings.alertNotify"></span><br><small class="muted" data-i18n="settings.alertNotifyHelp"></small></span> <input name="alertNotify" type="checkbox"></label>
+
+    <h3 data-i18n="settings.connection"></h3>
+    <label><span data-i18n="settings.fuseAmps"></span> <input name="fuseAmps" type="number" min="6" max="80" step="1"></label>
+    <label><span data-i18n="settings.capacityTariff"></span> <input name="capacityTariff" type="text" inputmode="decimal" data-amount data-min="0" data-example="50"></label>
+    <label><span data-i18n="settings.capacityMin"></span> <input name="capacityMin" type="number" min="0" max="20" step="0.1"></label>
+    <p class="muted" data-i18n="settings.capacityHelp"></p>
+
+    <!-- Groups in the fuse box, for the Groups block (settings.js) -->
+    <h3 data-i18n="settings.groups"></h3>
+    <p class="muted" data-i18n="settings.groupsHelp"></p>
+    <div id="groups"></div>
+    <button type="button" class="secondary" id="group-add" data-i18n="settings.addGroup"></button>
+    <p data-i18n="settings.groupExtras"></p>
+    <p class="muted" data-i18n="settings.groupExtrasHelp"></p>
+    <div id="group-extras"></div>
+    <button type="button" class="secondary" id="group-extra-add" data-i18n="settings.addExtra"></button>
+    <div id="group-devices" class="group-devices"></div>
+    <label><span data-i18n="settings.groupsSolar"></span> <select name="groupsSolarPhases"></select></label>
+    <p class="muted" data-i18n="settings.groupsSolarHelp"></p>
+    <div id="group-battery" hidden>
+      <label><span data-i18n="settings.groupsBattery"></span> <select name="groupsBatteryPhases"></select></label>
+      <p class="muted" data-i18n="settings.groupsBatteryHelp"></p>
+    </div>
+
+    <!-- Where market prices come from: Homey Energy or EnergyZero -->
+    <h3 data-i18n="settings.prices"></h3>
+    <label><span data-i18n="settings.priceSource"></span>
+      <select name="priceSource">
+        <option value="auto" data-i18n="settings.sourceAuto"></option>
+        <option value="homey" data-i18n="settings.sourceHomey"></option>
+        <option value="energyzero" data-i18n="settings.sourceEnergyZero"></option>
+        <option value="powerhour" data-i18n="settings.sourcePowerhour"></option>
+        <option value="off" data-i18n="settings.sourceOff"></option>
+      </select>
+    </label>
+    <p class="muted" id="price-source-note"></p>
+    <label><span data-i18n="settings.currency"></span>
+      <select name="currency">
+        <option value="auto"></option>
+        <option value="EUR">EUR (€)</option>
+        <option value="SEK">SEK (kr)</option>
+        <option value="NOK">NOK (kr)</option>
+        <option value="DKK">DKK (kr)</option>
+        <option value="GBP">GBP (£)</option>
+        <option value="CHF">CHF</option>
+        <option value="PLN">PLN (zł)</option>
+        <option value="USD">USD ($)</option>
+      </select>
+    </label>
+    <p class="muted" data-i18n="settings.currencyHelp"></p>
+
+    <!-- Contract: all amounts include VAT; empty fields leave that cost out -->
+    <h3 data-i18n="settings.electricityContract"></h3>
+    <p class="warning" data-i18n="settings.checkPrices"></p>
+    <p class="muted" data-i18n="settings.contractHelp"></p>
+    <label><span data-i18n="settings.contractType"></span>
+      <select name="elecType">
+        <option value="fixed" data-i18n="settings.fixed"></option>
+        <option value="dynamic" data-i18n="settings.dynamic"></option>
+      </select>
+    </label>
+    <div data-contract="elec-fixed">
+      <label><span data-i18n="settings.normalRate"></span> <input name="elecNormal" type="text" inputmode="decimal" data-amount data-min="0" data-example="0.25"></label>
+      <label><span data-i18n="settings.lowRate"></span> <input name="elecLow" type="text" inputmode="decimal" data-amount data-min="0" data-example="0.23"></label>
+      <label><span data-i18n="settings.lowHours"></span> <span class="inline"><input name="lowFrom" type="number" min="0" max="23" step="1"> – <input name="lowTo" type="number" min="0" max="23" step="1"></span></label>
+      <label class="check-row"><span data-i18n="settings.lowWeekend"></span> <input name="lowWeekend" type="checkbox"></label>
+      <label class="check-row"><span><span data-i18n="settings.lowHolidays"></span><br><small class="muted" data-i18n="settings.lowHolidaysHelp"></small></span> <input name="lowHolidays" type="checkbox"></label>
+      <label><span data-i18n="settings.exportRate"></span> <input name="elecExport" type="text" inputmode="decimal" data-amount data-example="0.25"></label>
+      <p class="muted" data-i18n="settings.exportRateHelp"></p>
+      <label><span data-i18n="settings.exportAfter"></span> <input name="exportAfter" type="text" inputmode="decimal" data-amount data-example="0.05"></label>
+      <p class="muted" data-i18n="settings.exportAfterHelp"></p>
+    </div>
+    <div data-contract="elec-dynamic">
+      <label><span data-i18n="settings.supplier"></span> <select name="supplier"></select></label>
+      <p class="warning" id="supplier-note"></p>
+      <label><span data-i18n="settings.markup"></span> <input name="elecMarkup" type="text" inputmode="decimal" data-amount data-example="0.02"></label>
+      <label><span data-i18n="settings.energyTax"></span> <input name="elecTax" type="text" inputmode="decimal" data-amount data-min="0" data-example="0.11"></label>
+      <p class="muted" data-i18n="settings.supplierHelp"></p>
+    </div>
+    <!-- For both kinds of contract -->
+    <label class="check-row"><span><span data-i18n="settings.netting"></span><br><small class="muted" data-i18n="settings.nettingHelp"></small></span> <input name="netting" type="checkbox"></label>
+    <div data-contract="elec-fixed">
+      <label><span data-i18n="settings.nettingOrder"></span>
+        <select name="nettingOrder">
+          <option value="normal" data-i18n="settings.nettingOrderNormal"></option>
+          <option value="counter" data-i18n="settings.nettingOrderCounter"></option>
+        </select>
+      </label>
+      <p class="muted" data-i18n="settings.nettingOrderHelp"></p>
+    </div>
+    <label><span data-i18n="settings.exportFee"></span> <input name="exportFee" type="text" inputmode="decimal" data-amount data-example="0.10"></label>
+    <p class="warning" id="export-fee-note"></p>
+
+    <h3 data-i18n="settings.gasContract"></h3>
+    <label><span data-i18n="settings.contractType"></span>
+      <select name="gasType">
+        <option value="fixed" data-i18n="settings.fixed"></option>
+        <option value="dynamic" data-i18n="settings.dynamic"></option>
+        <option value="none" data-i18n="settings.noGas"></option>
+      </select>
+    </label>
+    <div data-contract="gas-fixed">
+      <label><span data-i18n="settings.gasPrice"></span> <input name="gasPrice" type="text" inputmode="decimal" data-amount data-min="0" data-example="1.25"></label>
+    </div>
+    <div data-contract="gas-dynamic">
+      <label><span data-i18n="settings.gasMarkup"></span> <input name="gasMarkup" type="text" inputmode="decimal" data-amount data-example="0.05"></label>
+      <label><span data-i18n="settings.gasTax"></span> <input name="gasTax" type="text" inputmode="decimal" data-amount data-min="0" data-example="0.70"></label>
+    </div>
+
+    <h3 data-i18n="settings.otherCosts"></h3>
+    <label><span data-i18n="settings.monthly"></span> <input name="monthly" type="text" inputmode="decimal" data-amount data-min="0" data-example="45.00"></label>
+    <label><span data-i18n="settings.taxReduction"></span> <input name="taxReduction" type="text" inputmode="decimal" data-amount data-min="0" data-example="600"></label>
+    <p class="warning" id="tax-reduction-note"></p>
+    <p class="muted" data-i18n="settings.monthlyHelp"></p>
+    <label><span data-i18n="settings.water"></span> <input name="waterPrice" type="text" inputmode="decimal" data-amount data-min="0" data-example="1.10"></label>
+
+    <h3 data-i18n="settings.bill"></h3>
+    <label><span data-i18n="settings.advance"></span> <input name="advance" type="text" inputmode="decimal" data-amount data-min="0" data-example="150"></label>
+    <label><span data-i18n="settings.bonus"></span> <input name="bonus" type="text" inputmode="decimal" data-amount data-min="0" data-example="200"></label>
+    <label><span data-i18n="settings.billStart"></span> <input name="billStart" type="date"></label>
+    <label><span data-i18n="settings.contractEnd"></span> <input name="contractEnd" type="date"></label>
+    <p class="muted" data-i18n="settings.billHelp"></p>
+    <label><span data-i18n="settings.prevImport"></span> <input name="prevImport" type="text" inputmode="decimal" data-amount data-min="0" data-example="3000"></label>
+    <label><span data-i18n="settings.prevExport"></span> <input name="prevExport" type="text" inputmode="decimal" data-amount data-min="0" data-example="1500"></label>
+    <label><span data-i18n="settings.prevGas"></span> <input name="prevGas" type="text" inputmode="decimal" data-amount data-min="0" data-example="1000"></label>
+    <p class="muted" data-i18n="settings.previousHelp"></p>
+    <label><span data-i18n="settings.startImport"></span> <input name="startImport" type="text" inputmode="decimal" data-amount data-min="0" data-example="12345"></label>
+    <label><span data-i18n="settings.startExport"></span> <input name="startExport" type="text" inputmode="decimal" data-amount data-min="0" data-example="6789"></label>
+    <label><span data-i18n="settings.startGas"></span> <input name="startGas" type="text" inputmode="decimal" data-amount data-min="0" data-example="4321"></label>
+    <p class="muted" data-i18n="settings.startReadingsHelp"></p>
+
+
+    <div class="form-actions">
+      <button type="submit" data-i18n="settings.save"></button>
+      <span class="muted" id="save-status"></span>
+    </div>
+  </form>
+
+  <!-- A meter export (HomeWizard, per 15 minutes) for the battery size block -->
+  <section class="card">
+    <h2 data-i18n="settings.importTitle"></h2>
+    <p class="muted" data-i18n="settings.importHelp"></p>
+    <p class="muted" id="import-current"></p>
+    <div class="form-actions">
+      <input type="file" id="import-file" accept=".csv,text/csv,text/plain">
+      <button type="button" class="secondary" id="import-clear" data-i18n="settings.importClear" hidden></button>
+    </div>
+    <p class="muted" id="import-status"></p>
+  </section>
+
+  <!-- The app's own history, and a backup of all its logs to bring back (on this or another Homey) -->
+  <section class="card">
+    <h2 data-i18n="settings.backupTitle"></h2>
+    <p class="muted" data-i18n="settings.backupHelp"></p>
+    <p class="muted" id="history-current"></p>
+    <div class="form-actions">
+      <input type="file" id="backup-file" accept=".json,application/json">
+    </div>
+    <p class="muted" id="backup-status"></p>
+  </section>
+
+  <!-- Share a diagnosis by e-mail or on GitHub; optionally with a snapshot of the dashboard -->
+  <section class="card">
+    <h2 data-i18n="settings.shareTitle"></h2>
+    <p class="muted" data-i18n="settings.shareHelp"></p>
+    <label class="check-row"><span><span data-i18n="settings.shareSnapshot"></span><br><small class="muted" data-i18n="settings.shareSnapshotHelp"></small></span> <input id="share-snapshot" type="checkbox"></label>
+    <div class="form-actions">
+      <button type="button" id="share-mail" data-i18n="settings.shareMail"></button>
+      <button type="button" class="secondary" id="share-github" data-i18n="settings.shareGithub"></button>
+    </div>
+    <textarea id="share-report" class="report" readonly hidden></textarea>
+    <p class="muted" id="share-status"></p>
+  </section>
+
+  <!-- A small way to support the app -->
+  <p class="support"><a href="https://ko-fi.com/wnijhof" id="support-link"><img src="kofi.png" alt="Ko-fi" width="116" height="29"></a></p>
+
+  <script src="settings.js"></script>
+</body>
+</html>

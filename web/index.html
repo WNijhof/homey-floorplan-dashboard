@@ -11,6 +11,7 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
   <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <script src="theme.js"></script>
   <link rel="stylesheet" href="widget.css">
   <link rel="stylesheet" href="dashboard.css">
   <link rel="stylesheet" href="view3d.css">
@@ -32,6 +33,8 @@
         <span id="toolbar" class="toolbar"></span>
       </div>
     </header>
+    <div id="strip" class="fp-strip" hidden><div id="attention"></div><div id="actions"></div></div>
+    <div id="media" class="fp-media" hidden></div>
     <main class="layout">
       <section class="card plan-card">
         <div class="fp-stage">
@@ -39,6 +42,7 @@
           <div id="view3d" class="fp3" hidden></div>
           <div id="house3d" class="fp3 h3" hidden></div>
           <div id="empty" class="fp-empty" hidden></div>
+          <div id="people" class="fp-people" hidden></div>
         </div>
       </section>
       <aside id="side" class="fp-side" hidden>
@@ -54,12 +58,19 @@
       </div>
     </div>
   </div>
+  <div id="siren" class="fp-ring fp-siren" hidden><div><b>🚨 <span id="siren-name"></span></b><button type="button" id="siren-off" class="fp-btn primary">Uit / Off</button></div></div>
+  <div id="camview" class="fp-ring" hidden><div><img id="camview-img" alt=""><b id="camview-name"></b></div></div>
+  <div id="energy-view" class="fp-ring fp-energy-view" hidden></div>
+  <div id="saver" class="fp-saver" hidden><div><b id="saver-time"></b><span id="saver-date"></span></div></div>
+  <div id="ring" class="fp-ring" hidden><div><img id="ring-img" alt="" hidden><b id="ring-text"></b><span id="ring-name"></span></div></div>
   <script src="models.js"></script>
   <script src="floorplan-core.js"></script>
   <script src="house-core.js"></script>
   <script src="widget.js"></script>
   <script src="homey-web.js"></script>
   <script src="dashboard.js"></script>
+  <script src="dashboard-panels.js"></script>
+  <script src="dashboard-extras.js"></script>
   <script type="module" src="view3d.js"></script>
   <script type="module" src="house3d.js"></script>
 </body>

@@ -1,6 +1,6 @@
 {
   "id": "com.drpeppers.floorplandashboard",
-  "version": "0.1.7",
+  "version": "0.2.0",
   "compatibility": ">=12.3.0",
   "sdk": 3,
   "platforms": ["local"],
@@ -9,8 +9,8 @@
     "nl": "HomeDeck"
   },
   "description": {
-    "en": "Your home as a live floor plan, for any screen in your home",
-    "nl": "Je huis als live plattegrond, voor elk scherm in huis"
+    "en": "Your whole home in 3D with live energy, on any screen in your home",
+    "nl": "Je hele huis in 3D met live energie, op elk scherm in huis"
   },
   "category": ["tools"],
   "brandColor": "#2E5BFF",
@@ -20,6 +20,8 @@
   "homeyCommunityTopicId": 161491,
   "permissions": [
     "homey:manager:api",
+    "homey:manager:geolocation",
+    "homey:app:com.gruijter.powerhour",
     "homey:app:com.drpeppers.energydashboard"
   ],
   "images": {

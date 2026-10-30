@@ -23,7 +23,11 @@ test('the diagnosis has the kinds of devices and the plan, but no names', async 
 
 test('with the plan, every name is replaced and the devices still match', async () => {
   const app = createDevApp({ port: 0 });
+  // An own photo of the house never leaves the Homey
+  const own = app.plans.list()[0];
+  app.plans.save(own.id, { ...own, actions: [{ kind: 'mood', id: 'moodid', name: 'SECRETMOOD' }], house: { outdoor: { door: 'SECRETLAMP' }, photo: { src: 'data:image/jpeg;base64,SECRETPHOTO', ratio: 0.5, areas: [] } } });
   const { report } = await app.getDiagnosisReport({ plan: true });
+  assert.ok(!/SECRET|moodid/.test(JSON.stringify(report)));
   const { plan, devices } = report.snapshot;
   const json = JSON.stringify(report.snapshot);
   for (const r of samplePlan().levels[0].rooms) assert.ok(!json.includes(`"${r.name}"`), r.name);

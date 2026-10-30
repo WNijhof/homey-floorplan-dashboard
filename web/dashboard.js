@@ -8,10 +8,12 @@
 
   var STRINGS = {
     en: {
-      home: 'Home', settings: 'This screen', edit: 'Edit floor plan', plan: 'Floor plan', view: 'View', turn: 'Turn',
+      split: 'Energy beside it', landing: 'Back to the start after', minutes: ' min', never: 'Never', peopleOn: 'Show who is home', guestView: 'Guest view (no editing or unlocking)', screenName: 'Name of this screen', screenNote: 'With a name the choices are kept on Homey, so another tablet takes them over with ?screen=name after the address. A Flow can also address this screen.', cameraPick: 'Camera',
+      theme: 'Light or dark', themeAuto: 'As this device', themeLight: 'Light', themeDark: 'Dark', themeSun: 'With the sun', simple: 'Simple view (for slower screens)', saver: 'Clock after 5 minutes', saverOff: 'Off', saverNight: 'At night', saverAlways: 'Always',
+      home: 'Home', settings: 'This screen', start: 'Start screen', startHouse: 'The house', startLevel: 'A storey', edit: 'Edit floor plan', plan: 'Floor plan', view: 'View', turn: 'Turn',
       glow: 'Light glow', tint: 'Tint rooms by', furniture: 'Furniture', values: 'Values beside devices', side: 'Side panel',
       weather: 'Weather', agenda: 'Calendar', none: 'Nothing', right: 'Right', bottom: 'Below', soft: 'Soft', bright: 'Bright', off: 'Off',
-      temperature: 'Temperature', humidity: 'Humidity', iso: '2.5D isometric', game: '2.5D game-style', steep: '2.5D steep', d3: '3D', close: 'Done',
+      temperature: 'Temperature', humidity: 'Humidity', steep: '2.5D', d3: '3D', close: 'Done',
       fullscreen: 'Full screen', note: 'These choices are kept on this screen only.', live: 'Live', connecting: 'Connecting…', offline: 'No connection',
       tap: 'Tapping a device', controls: 'Shows its controls', toggle: 'Switches it at once', names: 'Names on the plan', devices: 'Devices', all: 'Devices and furniture',
       report: 'Report a problem', reportNote: 'Is a device missing, or does something look wrong? Send the maker a report: which kinds of devices the app finds and how your plan is built, without names, rooms or address.',
@@ -20,10 +22,12 @@
       reportAsk: 'What does not work well? (for example: my thermostat shows no temperature)', reportPaste: '(Paste the report here; it is on your clipboard.)',
     },
     nl: {
-      home: 'Huis', settings: 'Dit scherm', edit: 'Plattegrond bewerken', plan: 'Plattegrond', view: 'Weergave', turn: 'Draaien',
+      split: 'Energie ernaast', landing: 'Terug naar het begin na', minutes: ' min', never: 'Nooit', peopleOn: 'Toon wie er thuis is', guestView: 'Gastweergave (niet bewerken of ontgrendelen)', screenName: 'Naam van dit scherm', screenNote: 'Met een naam staan de keuzes op Homey, zodat een andere tablet ze overneemt met ?screen=naam achter het adres. Een Flow kan dit scherm ook aanspreken.', cameraPick: 'Camera',
+      theme: 'Licht of donker', themeAuto: 'Zoals dit apparaat', themeLight: 'Licht', themeDark: 'Donker', themeSun: 'Met de zon mee', simple: 'Eenvoudige weergave (voor tragere schermen)', saver: 'Klok na 5 minuten', saverOff: 'Uit', saverNight: "'s Nachts", saverAlways: 'Altijd',
+      home: 'Huis', settings: 'Dit scherm', start: 'Startscherm', startHouse: 'Het huis', startLevel: 'Een verdieping', edit: 'Plattegrond bewerken', plan: 'Plattegrond', view: 'Weergave', turn: 'Draaien',
       glow: 'Lichtgloed', tint: 'Kamers kleuren op', furniture: 'Meubels', values: 'Waarden naast apparaten', side: 'Zijpaneel',
       weather: 'Weer', agenda: 'Agenda', none: 'Niets', right: 'Rechts', bottom: 'Onder', soft: 'Zacht', bright: 'Fel', off: 'Uit',
-      temperature: 'Temperatuur', humidity: 'Luchtvochtigheid', iso: '2.5D isometrisch', game: '2.5D game-stijl', steep: '2.5D steil', d3: '3D', close: 'Klaar',
+      temperature: 'Temperatuur', humidity: 'Luchtvochtigheid', steep: '2.5D', d3: '3D', close: 'Klaar',
       fullscreen: 'Volledig scherm', note: 'Deze keuzes gelden alleen voor dit scherm.', live: 'Live', connecting: 'Verbinden…', offline: 'Geen verbinding',
       tap: 'Tikken op een apparaat', controls: 'Toont de bediening', toggle: 'Schakelt direct', names: 'Namen op de plattegrond', devices: 'Apparaten', all: 'Apparaten en meubels',
       report: 'Probleem melden', reportNote: 'Ontbreekt er een apparaat of klopt er iets niet? Stuur de maker een rapport: welke soorten apparaten de app vindt en hoe je plattegrond is opgebouwd, zonder namen, kamers of adres.',
@@ -51,6 +55,8 @@
   function nameOf(n) { return typeof n === 'string' ? n : (n && (n[lang] || n.en)) || ''; }
   var svg = function (d) { return '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>'; };
   var ICONS = {
+    sun: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>',
+    moon: '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>',
     gear: svg('<circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/>'),
     pencil: svg('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'),
     expand: svg('<path d="M8 3H5a2 2 0 0 0-2 2v3M21 8V5a2 2 0 0 0-2-2h-3M3 16v3a2 2 0 0 0 2 2h3M16 21h3a2 2 0 0 0 2-2v-3"/>'),
@@ -76,9 +82,10 @@
     var nav = $('app-switch');
     nav.hidden = !siblings.length;
     if (!siblings.length) return;
-    var html = ['<button type="button" class="active">🏠 ' + esc(T.home) + '</button>'];
+    // The house itself is the first tab beside it
+    var html = [];
     siblings.forEach(function (s) {
-      var href = location.protocol + '//' + location.hostname + ':' + s.port + '/';
+      var href = s.path || location.protocol + '//' + location.hostname + ':' + s.port + '/';
       html.push('<a href="' + esc(href) + '" data-sibling="' + esc(s.key) + '">' + esc(s.icon || '') + ' ' + esc(nameOf(s.name)) + '</a>');
     });
     nav.innerHTML = html.join('');
@@ -87,6 +94,7 @@
   function renderTools() {
     var full = document.fullscreenEnabled ? '<button type="button" class="icon-button" data-tb="full" title="' + esc(T.fullscreen) + '">' + ICONS.expand + '</button>' : '';
     $('toolbar').innerHTML = full
+      + '<button type="button" class="icon-button" data-tb="theme" title="' + esc(T.theme) + '">' + (window.FpTheme.isDark() ? ICONS.sun : ICONS.moon) + '</button>'
       + '<button type="button" class="icon-button" data-tb="report" title="' + esc(T.report) + '">' + ICONS.alert + '</button>'
       + '<button type="button" class="icon-button" data-tb="settings" title="' + esc(T.settings) + '">' + ICONS.gear + '</button>'
       + '<a class="icon-button" href="editor" title="' + esc(T.edit) + '">' + ICONS.pencil + '</a>';
@@ -103,17 +111,29 @@
     return '<label class="fp-row"><span class="fp-name">' + esc(T[id] || id) + '</span><input type="checkbox" data-set="' + id + '"' + (value !== false ? ' checked' : '') + '></label>';
   }
 
+  // In the guest view the settings ask for the edit PIN first.
   function openSettings() {
+    if (!Homey.getSettings().guest) { showSettings(); return; }
+    HomeyWeb.request('GET', '/edit').then(function (e) {
+      if (e && e.pinRequired && !e.unlocked) return HomeyWeb.askPin().then(showSettings);
+      return showSettings();
+    }).catch(function () {});
+  }
+
+  function showSettings() {
     var s = Homey.getSettings();
     // View and turn as they are on screen now, so Done keeps what the 2D/3D and turn buttons chose
     var now = window.__widgetState && window.__widgetState();
     if (now) { s.view = now.view; s.turn = String(now.turn); }
     var can3d = !!(window.FloorplanView3D && window.FloorplanView3D.supported);
+    var canHouse = !!(window.FloorplanHouse3D && window.FloorplanHouse3D.supported);
     HomeyWeb.request('GET', '/plans').then(function (plans) {
       var planId = s.plan && s.plan.id;
-      var views = [['2d', '2D']].concat(can3d ? [['3d', T.d3]] : []).concat([['iso', T.iso], ['game', T.game], ['steep', T.steep]]);
+      var views = [['2d', '2D']].concat(can3d ? [['3d', T.d3]] : []).concat([['steep', T.steep]]);
       var body = [
+        select('theme', window.FpTheme.choice(), [['auto', T.themeAuto], ['light', T.themeLight], ['dark', T.themeDark], ['sun', T.themeSun]]),
         plans.length > 1 ? select('plan', planId || (plans[0] && plans[0].id), plans.map(function (p) { return [p.id, p.name]; })) : '',
+        canHouse ? select('start', s.start === 'level' ? 'level' : 'house', [['house', T.startHouse], ['level', T.startLevel]]) : '',
         select('view', s.view, views),
         select('turn', s.turn, [['0', '0°'], ['1', '90°'], ['2', '180°'], ['3', '270°']]),
         select('glow', s.glow, [['soft', T.soft], ['bright', T.bright], ['off', T.off]]),
@@ -121,8 +141,15 @@
         select('tap', s.tapAction, [['controls', T.controls], ['toggle', T.toggle]]),
         select('names', s.names, [['none', T.none], ['devices', T.devices], ['all', T.all]]),
         check('furniture', s.furniture), check('values', s.values),
-        select('side', s.sidebar, [['none', T.none], ['right', T.right], ['bottom', T.bottom]]),
+        select('side', s.sidebar, [['none', T.none], ['right', T.right], ['bottom', T.bottom], ['energy', T.split]]),
         check('weather', s.sideWeather), check('agenda', s.sideAgenda),
+        select('saver', s.saver || 'off', [['off', T.saverOff], ['night', T.saverNight], ['always', T.saverAlways]]),
+        select('landing', s.landing || '0', [['0', T.never], ['2', '2' + T.minutes], ['5', '5' + T.minutes], ['15', '15' + T.minutes]]),
+        '<label class="fp-row"><span class="fp-name">' + esc(T.peopleOn) + '</span><input type="checkbox" data-set="people"' + (s.people !== false ? ' checked' : '') + '></label>',
+        '<label class="fp-row"><span class="fp-name">' + esc(T.guestView) + '</span><input type="checkbox" data-set="guest"' + (s.guest ? ' checked' : '') + '></label>',
+        '<label class="fp-row"><span class="fp-name">' + esc(T.screenName) + '</span><input type="text" maxlength="40" data-set="screenName" value="' + esc(HomeyWeb.screenName()) + '"></label>',
+        '<p class="fp-sub" style="text-transform:none;letter-spacing:0">' + esc(T.screenNote) + '</p>',
+        '<label class="fp-row"><span class="fp-name">' + esc(T.simple) + '</span><input type="checkbox" data-set="simple"' + (s.simple ? ' checked' : '') + '></label>',
         '<p class="fp-sub" style="text-transform:none;letter-spacing:0">' + esc(T.note) + '</p>',
         '<button type="button" class="fp-btn primary" data-tb="apply">' + esc(T.close) + '</button>',
       ].join('');
@@ -140,10 +167,16 @@
       values[key] = el.type === 'checkbox' ? el.checked : el.value;
     });
     if (values.plan) values.plan = { id: values.plan };
+    window.FpTheme.set(values.theme);
+    delete values.theme;
+    var name = values.screenName;
+    delete values.screenName;
     Homey.setSettings(values);
+    HomeyWeb.screenName(name);
+    var saved = name ? HomeyWeb.request('PUT', '/screens/' + encodeURIComponent(name), Homey.getSettings()).catch(function () {}) : Promise.resolve();
     var now = window.__widgetState && window.__widgetState();
     try { if (now && now.levelId) sessionStorage.setItem(LEVEL_KEY, now.levelId); } catch (e) { /* private mode */ }
-    location.reload();
+    saved.then(function () { location.reload(); });
   }
 
   /* ------------------------------------------------- report a problem */
@@ -230,6 +263,7 @@
     if (b.dataset.tb === 'report-copy') sendReport('copy');
     if (b.dataset.tb === 'settings') openSettings();
     if (b.dataset.tb === 'apply') applySettings();
+    if (b.dataset.tb === 'theme') { window.FpTheme.set(window.FpTheme.isDark() ? 'light' : 'dark'); renderTools(); }
     if (b.dataset.tb === 'full') {
       if (document.fullscreenElement) document.exitFullscreen(); else document.documentElement.requestFullscreen().catch(function () {});
     }

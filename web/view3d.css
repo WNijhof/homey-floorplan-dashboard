@@ -61,3 +61,72 @@
 .h3-floor:hover { background: var(--accent); color: #fff; }
 .h3-anchor { pointer-events: none; }
 .h3-card { transition: opacity 0.2s, transform 0.25s; }
+
+/* On a phone the cards keep to their value, so the house stays in view */
+@media (max-width: 560px) {
+  .h3-card { gap: 5px; padding: 3px 8px 3px 3px; margin-bottom: 3px; border-radius: 11px; }
+  .h3-card i { width: 22px; height: 22px; }
+  .h3-card svg { width: 13px; height: 13px; }
+  .h3-card b { display: none; }
+  .h3-card em { font-size: 12px; }
+  .h3-floor { font-size: 11px; padding: 2px 8px; }
+}
+
+/* The sky behind the house and the storeys, by the time of day */
+.h3-day, .fp3-day { background: linear-gradient(#b7d6ee 0%, #dcebf3 38%, #eef0e8 55%, #e4e7d6 100%); }
+.h3-night, .fp3-night {
+  background:
+    radial-gradient(1px 1px at 12% 14%, rgba(255,255,255,0.75), transparent 100%),
+    radial-gradient(1px 1px at 27% 8%, rgba(255,255,255,0.55), transparent 100%),
+    radial-gradient(1.5px 1.5px at 41% 22%, rgba(255,255,255,0.7), transparent 100%),
+    radial-gradient(1px 1px at 58% 11%, rgba(255,255,255,0.5), transparent 100%),
+    radial-gradient(1px 1px at 69% 26%, rgba(255,255,255,0.6), transparent 100%),
+    radial-gradient(1.5px 1.5px at 83% 9%, rgba(255,255,255,0.75), transparent 100%),
+    radial-gradient(1px 1px at 92% 20%, rgba(255,255,255,0.5), transparent 100%),
+    linear-gradient(#0a1124 0%, #141e3a 34%, #1f2a48 54%, #1b2436 100%);
+}
+
+/* The weather in the sky */
+.h3-day.h3-cloudy, .h3-day.h3-rain, .h3-day.h3-snow { background: linear-gradient(#a9b4bf 0%, #c9d0d6 40%, #dde0df 55%, #d6d9d2 100%); }
+.h3-day.h3-partly { background: linear-gradient(#a9cbe6 0%, #d3e3ee 38%, #ecefe8 55%, #e2e5d6 100%); }
+.h3-night.h3-cloudy, .h3-night.h3-rain, .h3-night.h3-snow { background: linear-gradient(#10151f 0%, #1a2130 40%, #232a38 55%, #1c2230 100%); }
+/* Into a storey: the cards step aside, and the next view comes up softly */
+.h3-flying .fp3-labels { opacity: 0; transition: opacity 0.25s; pointer-events: none; }
+#view3d:not([hidden]), #house3d:not([hidden]) { animation: fp3-in 0.35s ease-out; }
+@keyframes fp3-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { #view3d, #house3d { animation: none !important; } }
+.h3-water { --h3: #2b8fd6; }
+.h3-gas { --h3: #d07a2d; }
+
+/* The calm house: plain text above and below it, thin lines to its parts, the page behind it */
+.h3-callouts { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; z-index: 1; }
+.h3-lines { position: absolute; top: 0; left: 0; width: 100%; height: 100%; }
+.h3-lines line { stroke: var(--muted); stroke-width: 0.75; opacity: 0.55; }
+.h3-lines circle { fill: var(--text); opacity: 0.7; }
+.h3-card { position: absolute; top: 0; left: 0; pointer-events: auto; display: block; padding: 2px 4px; margin: 0; border: 0; border-radius: 8px; background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; text-align: center; white-space: nowrap; transition: opacity 0.2s; }
+.h3-card em { font-size: 18px; font-weight: 600; letter-spacing: -0.01em; }
+.h3-card b { font-size: 12px; font-weight: 500; }
+.h3-card:hover b { color: var(--text); }
+.h3-card:active { transform: none; }
+.h3-card.idle { opacity: 0.55; }
+.h3-floor { background: none; box-shadow: none; -webkit-backdrop-filter: none; backdrop-filter: none; color: var(--muted); font-weight: 500; }
+.h3-studio.h3-day { background: none; }
+.h3-studio.h3-night, .h3-studio.h3-night.h3-cloudy, .h3-studio.h3-night.h3-rain, .h3-studio.h3-night.h3-snow { background: #0d0f14; --text: #f5f5f7; --muted: #98989f; }
+.h3-studio.h3-day.h3-cloudy, .h3-studio.h3-day.h3-rain, .h3-studio.h3-day.h3-snow, .h3-studio.h3-day.h3-partly { background: none; }
+@media (max-width: 560px) {
+  .h3-card { padding: 1px 2px; }
+  .h3-card em { font-size: 15px; }
+  .h3-card b { display: block; font-size: 11px; }
+}
+
+/* In the garden the labels stand on grass and sky: a small plate of their own */
+.h3-callouts .h3-card { --h3-plate: color-mix(in srgb, var(--card) 86%, transparent); }
+:not(.h3-studio) > .h3-callouts .h3-card { padding: 3px 10px; border-radius: 10px; background: var(--h3-plate); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+:not(.h3-studio) > .h3-callouts .h3-card em { font-size: 16px; }
+:not(.h3-studio) > .h3-callouts .h3-card b { font-size: 11px; }
+:not(.h3-studio) > .h3-callouts .h3-card.idle { opacity: 0.8; }
+.h3-day:not(.h3-studio) .h3-lines line { stroke: #1d1d1f; opacity: 0.6; }
+.h3-day:not(.h3-studio) .h3-lines circle { fill: #1d1d1f; opacity: 0.85; }
+.h3-night:not(.h3-studio) .h3-lines line { stroke: #fff; opacity: 0.6; }
+.h3-night:not(.h3-studio) .h3-lines circle { fill: #fff; opacity: 0.85; }
+:not(.h3-studio) .fp3-labels .h3-floor { background: color-mix(in srgb, var(--card) 86%, transparent); color: var(--text); }

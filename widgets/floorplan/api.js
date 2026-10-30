@@ -12,6 +12,15 @@ module.exports = {
     return homey.app.getWeather();
   },
 
+  async getEnergy({ homey }) {
+    return homey.app.getEnergy();
+  },
+
+  async getEnergyDetail({ homey, query }) {
+    if (!/^(solar|battery|grid|car|heatpump|airco)$/.test(query.kind || '')) throw new Error('Unknown part');
+    return homey.app.getEnergyDetail(query.kind, query.plan);
+  },
+
   async getAgenda({ homey }) {
     return homey.app.getAgenda();
   },

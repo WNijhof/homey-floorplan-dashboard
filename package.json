@@ -6,7 +6,8 @@
   "scripts": {
     "sync": "node scripts/sync-shared.js",
     "test": "node scripts/sync-shared.js && node --test test/*.test.js",
-    "test:ui": "node scripts/ui-check.js editor && node scripts/ui-check.js dashboard && node scripts/ui-check.js widget",
+    "test:deep": "node scripts/sync-shared.js && node scripts/deep-check.js",
+    "test:ui": "node scripts/ui-check.js editor && node scripts/ui-check.js dashboard && node scripts/ui-check.js widget && node scripts/ui-check.js energy",
     "dev": "node scripts/dev-server.js",
     "validate": "node scripts/sync-shared.js && homey app validate --level publish",
     "run": "node scripts/sync-shared.js && homey app run",

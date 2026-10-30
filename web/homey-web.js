@@ -53,7 +53,8 @@
       var style = document.createElement('style');
       style.textContent = '.hw-pin{position:fixed;top:0;right:0;bottom:0;left:0;background:rgba(0,0,0,.45);display:grid;place-items:center;z-index:1000;padding:16px;font:15px/1.4 system-ui,sans-serif}'
         + '.hw-pin-card{background:#fff;color:#1c1c1e;border-radius:18px;padding:22px;max-width:360px;width:100%;box-sizing:border-box}'
-        + '@media (prefers-color-scheme:dark){.hw-pin-card{background:#1c1c1e;color:#f5f5f7}}'
+        + 'html[data-theme=dark] .hw-pin-card{background:#1c1c1e;color:#f5f5f7}'
+        + '@media (prefers-color-scheme:dark){html:not([data-theme=light]) .hw-pin-card{background:#1c1c1e;color:#f5f5f7}}'
         + '.hw-pin h2{margin:0 0 6px;font-size:20px}.hw-pin p{margin:0 0 12px;opacity:.7}'
         + '.hw-pin input{width:100%;box-sizing:border-box;font:inherit;font-size:20px;letter-spacing:.2em;padding:10px;border-radius:10px;border:1px solid rgba(128,128,128,.4);background:transparent;color:inherit}'
         + '.hw-pin-error{color:#ff4d4f;margin-top:8px}.hw-pin-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}'
@@ -157,8 +158,32 @@
     __: function (key) { return key; },
   };
 
-  window.HomeyWeb = { Homey: Homey, request: request, askPin: askPin, onConnection: onConnection };
+  // The name of this screen: from ?screen=… once, then remembered here. Its choices are kept on Homey.
+  var SCREEN_KEY = 'fp.screen';
+  function screenName(value) {
+    if (value !== undefined) storageSet('localStorage', SCREEN_KEY, value || null);
+    return storageGet('localStorage', SCREEN_KEY) || '';
+  }
+  var asked = new URLSearchParams(location.search).get('screen');
+  if (asked) screenName(asked);
+
+  // A script error on this page goes to the app, which only passes it on when reporting is turned on.
+  function report(error, message) {
+    if (window.FP_DEMO) return;
+    var text = message || (error && error.message) || 'Error';
+    fetch('/api/client-error', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ message: String(text).slice(0, 300), stack: String((error && error.stack) || '').slice(0, 2000) }) }).catch(function () {});
+  }
+  var reported = 0;
+  window.addEventListener('error', function (e) { if (reported++ < 5) report(e.error, e.message); });
+  window.addEventListener('unhandledrejection', function (e) { if (reported++ < 5) report(e.reason); });
+
+  window.HomeyWeb = { Homey: Homey, request: request, askPin: askPin, onConnection: onConnection, screenName: screenName };
   window.addEventListener('load', function () {
-    if (typeof window.onHomeyReady === 'function') window.onHomeyReady(Homey);
+    var start = function () { if (typeof window.onHomeyReady === 'function') window.onHomeyReady(Homey); };
+    var name = screenName();
+    if (!name) { start(); return; }
+    request('GET', '/screens/' + encodeURIComponent(name)).then(function (saved) {
+      if (saved) { var own = {}; Object.keys(saved).forEach(function (k) { own[k] = saved[k]; }); setSettings(own); }
+    }).catch(function () {}).then(start);
   });
 }());

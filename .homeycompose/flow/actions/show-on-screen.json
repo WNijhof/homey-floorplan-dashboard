@@ -1,0 +1,102 @@
+{
+  "title": {
+    "en": "Show on the screens",
+    "nl": "Toon op de schermen"
+  },
+  "titleFormatted": {
+    "en": "Show [[what]] [[detail]] on screen [[screen]] for [[seconds]] seconds",
+    "nl": "Toon [[what]] [[detail]] op scherm [[screen]] gedurende [[seconds]] seconden"
+  },
+  "hint": {
+    "en": "Leave the screen empty for all screens. Detail: the name of a storey, or the text of a message. 0 seconds: until someone taps.",
+    "nl": "Laat het scherm leeg voor alle schermen. Detail: de naam van een verdieping, of de tekst van een bericht. 0 seconden: tot iemand tikt."
+  },
+  "args": [
+    {
+      "type": "dropdown",
+      "name": "what",
+      "title": {
+        "en": "What",
+        "nl": "Wat"
+      },
+      "values": [
+        {
+          "id": "camera",
+          "label": {
+            "en": "the camera",
+            "nl": "de camera"
+          }
+        },
+        {
+          "id": "message",
+          "label": {
+            "en": "a message",
+            "nl": "een bericht"
+          }
+        },
+        {
+          "id": "house",
+          "label": {
+            "en": "the house",
+            "nl": "het huis"
+          }
+        },
+        {
+          "id": "level",
+          "label": {
+            "en": "a storey",
+            "nl": "een verdieping"
+          }
+        },
+        {
+          "id": "energy",
+          "label": {
+            "en": "the Energy page",
+            "nl": "de Energiepagina"
+          }
+        }
+      ]
+    },
+    {
+      "type": "text",
+      "name": "detail",
+      "title": {
+        "en": "Detail",
+        "nl": "Detail"
+      },
+      "required": false,
+      "placeholder": {
+        "en": "Text or storey",
+        "nl": "Tekst of verdieping"
+      }
+    },
+    {
+      "type": "text",
+      "name": "screen",
+      "title": {
+        "en": "Screen",
+        "nl": "Scherm"
+      },
+      "required": false,
+      "placeholder": {
+        "en": "All",
+        "nl": "Alle"
+      }
+    },
+    {
+      "type": "number",
+      "name": "seconds",
+      "title": {
+        "en": "Seconds",
+        "nl": "Seconden"
+      },
+      "min": 0,
+      "max": 3600,
+      "step": 1,
+      "placeholder": {
+        "en": "30",
+        "nl": "30"
+      }
+    }
+  ]
+}

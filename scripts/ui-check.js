@@ -4,8 +4,9 @@
 //  - widget:    the Homey widget with a fake Homey object (scripts/harness.js)
 //  - editor:    the web editor, served by the real web server with a stand-in app (scripts/dev-server.js)
 //  - dashboard: the web dashboard, same server
+//  - energy:    Energy Dashboard's page at /energy/, same server, with its demo data
 // The browser is driven over the DevTools protocol; the test runs once the page has its data.
-// Usage: node scripts/ui-check.js [widget|editor|dashboard]
+// Usage: node scripts/ui-check.js [widget|editor|dashboard|energy]
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
@@ -13,14 +14,11 @@ const { execFileSync, spawn } = require('child_process');
 const { createDevApp } = require('./dev-server');
 
 const root = path.join(__dirname, '..');
-const target = ['widget', 'editor', 'dashboard'].includes(process.argv[2]) ? process.argv[2] : 'editor';
-const browser = [
-  'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe',
-  'C:/Program Files/Google/Chrome/Application/chrome.exe',
-  '/usr/bin/google-chrome', '/usr/bin/chromium',
-  '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome',
-].find((b) => fs.existsSync(b));
-if (!browser) { console.error('No Chrome or Edge found'); process.exit(2); }
+const target = ['widget', 'editor', 'dashboard', 'energy'].includes(process.argv[2]) ? process.argv[2] : 'editor';
+const { pickBrowser } = require('./browser');
+
+const browser = pickBrowser();
+if (!browser.path) { console.error('No Brave, Chrome or Edge found'); process.exit(2); }
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -42,15 +40,15 @@ ${testCode}`;
     url = `file:///${page.replace(/\\/g, '/')}`;
   } else {
     const port = 9800 + Math.floor(Math.random() * 100);
-    app = createDevApp({ port, siblingPort: 8686 });
+    app = createDevApp({ port, siblingPort: target === 'energy' ? null : 8686 });
     app.log = () => {};
     await app.webServer.start(port);
-    url = `http://localhost:${port}${target === 'editor' ? '/editor' : '/'}`;
+    url = `http://localhost:${port}${{ editor: '/editor', energy: '/energy/' }[target] || '/'}`;
   }
 
   const debugPort = 9300 + Math.floor(Math.random() * 500);
-  const proc = spawn(browser, [
-    '--headless=new', '--enable-unsafe-swiftshader', '--use-angle=swiftshader', '--allow-file-access-from-files', `--remote-debugging-port=${debugPort}`,
+  const proc = spawn(browser.path, [
+    ...browser.args, '--allow-file-access-from-files', `--remote-debugging-port=${debugPort}`,
     `--user-data-dir=${path.join(dir, 'profile')}`, '--window-size=1300,750', url,
   ], { stdio: 'ignore' });
 
@@ -81,7 +79,7 @@ ${testCode}`;
     });
 
     // Wait until the page has loaded its plan, then start the test.
-    const ready = target === 'editor'
+    const ready = target === 'energy' ? '!!document.querySelector("[data-block]")' : target === 'editor'
       ? '!!(window.__editorState && window.__editorState().plan)'
       // The web page starts on the house view; the widget on the plan
       : target === 'dashboard'

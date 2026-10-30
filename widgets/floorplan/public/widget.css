@@ -78,6 +78,33 @@ button { font: inherit; color: inherit; }
 .fp-sheet-title { font-weight: 600; font-size: 16px; }
 .fp-x { border: 0; background: transparent; font-size: 16px; cursor: pointer; padding: 4px 8px; color: var(--fp-dim); }
 .fp-sheet-body { display: flex; flex-direction: column; gap: 12px; }
+/* Pages of the house view: key figures and a chart of the day */
+.fp-sheet.wide .fp-sheet-card { width: min(680px, 100%); }
+.fp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
+.fp-stat { background: var(--fp-bg); border-radius: 12px; padding: 8px 12px; }
+.fp-stat span { display: block; font-size: 12px; color: var(--fp-dim); }
+.fp-stat b { display: block; font-size: 20px; font-variant-numeric: tabular-nums; }
+.fp-chart { position: relative; }
+.fp-chart svg { display: block; width: 100%; height: auto; overflow: visible; touch-action: pan-y; }
+.fp-ch-grid { stroke: var(--fp-line); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.fp-ch-grid.zero { stroke: var(--fp-dim); stroke-opacity: 0.5; }
+.fp-ch-tick { font-size: 11px; fill: var(--fp-dim); font-variant-numeric: tabular-nums; }
+.fp-ch-line { fill: none; stroke-width: 2; vector-effect: non-scaling-stroke; stroke-linejoin: round; }
+.fp-ch-line.dash { stroke-dasharray: 5 4; }
+.fp-ch-area { stroke: none; opacity: 0.22; }
+.fp-ch-cross { stroke: var(--fp-dim); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.s1 { --s: #c98600; } .s2 { --s: #3f6fc4; }
+.s3 { --s: #2c9a56; }
+.fp-dark .s1 { --s: #b07c00; } .fp-dark .s2 { --s: #5f86d4; } .fp-dark .s3 { --s: #3fae6e; }
+.fp-ch-line.s1, .fp-ch-line.s2 { stroke: var(--s); }
+.fp-ch-area.s1, .fp-ch-area.s2 { fill: var(--s); }
+.fp-ch-legend { display: flex; gap: 14px; font-size: 12px; color: var(--fp-dim); }
+.fp-ch-legend i, .fp-ch-tip i { display: inline-block; width: 14px; height: 0; border-top: 2px solid var(--s); vertical-align: middle; margin-right: 5px; }
+.fp-ch-legend i.dash, .fp-ch-tip i.dash { border-top-style: dashed; }
+.fp-ch-tip { position: absolute; top: 4px; transform: translateX(-50%); pointer-events: none; background: var(--fp-card); color: var(--fp-text); border-radius: 10px; padding: 6px 10px; font-size: 12px; box-shadow: 0 4px 14px rgba(0, 0, 0, 0.18); white-space: nowrap; }
+.fp-ch-tip span { color: var(--fp-dim); }
+.fp-ch-tip b { font-variant-numeric: tabular-nums; }
+.fp-detail-hours { margin-top: 2px; }
 
 .fp-row { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
 .fp-row .fp-name { font-size: 14px; }
@@ -110,3 +137,22 @@ button { font: inherit; color: inherit; }
 /* Web page: back to the whole level after zooming in */
 .fp-zoom-reset { position: absolute; left: 10px; bottom: 10px; z-index: 5; width: 40px; height: 40px; border: 0; border-radius: 12px; background: var(--fp-card); color: var(--fp-text); font-size: 20px; box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2); cursor: pointer; }
 .fp-zoom-reset[hidden] { display: none; }
+
+/* The drawn house (screens without 3D) */
+.fp-svg [data-house] { cursor: pointer; }
+
+.fp-link { display: block; margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: var(--fp-bg); color: inherit; font-weight: 600; text-decoration: none; text-align: center; }
+.fp-harea { cursor: pointer; transition: fill-opacity 0.15s; }
+.fp-harea:hover { fill-opacity: 0.16; }
+.fp-hflow { animation: fp-hflow 1.5s linear infinite; }
+@keyframes fp-hflow { to { stroke-dashoffset: -0.65; } }
+
+/* The light of a lamp fades (widget.js) */
+@keyframes fp-lamp-in { from { opacity: 0; } }
+@keyframes fp-lamp-out { to { opacity: 0; } }
+.fp-lamp-in { animation: fp-lamp-in 0.45s ease-out both; }
+.fp-lamp-out { animation: fp-lamp-out 0.45s ease-in both; }
+@media (prefers-reduced-motion: reduce) {
+  .fp-lamp-in { animation: none; }
+  .fp-lamp-out { display: none; }
+}

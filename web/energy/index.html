@@ -1,0 +1,500 @@
+<!doctype html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f2f2f7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <title>Energie</title>
+  <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <!-- Installable on a phone or tablet: "Add to home screen" opens it without the browser bar -->
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="apple-touch-icon.png">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Energie">
+  <link rel="stylesheet" href="dashboard.css">
+</head>
+<body>
+  <header class="top">
+    <div>
+      <h1>Energie</h1>
+      <p class="subtitle"><span id="today-label"></span><span id="status" class="status"><i></i><span>Verbinden…</span></span></p>
+    </div>
+    <div class="header-actions">
+      <nav class="segmented" id="periods" aria-label="Periode">
+        <button data-period="today" class="active">Vandaag</button>
+        <button data-period="yesterday">Gisteren</button>
+        <button data-period="week">Week</button>
+        <button data-period="month">Maand</button>
+        <button data-period="year">Jaar</button>
+      </nav>
+      <button class="icon-button" id="edit-toggle" type="button" title="Indeling bewerken" aria-label="Indeling bewerken">
+        <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/></svg>
+      </button>
+    </div>
+    <!-- Looking back: slide to an earlier moment of the chosen day; the blocks of "now" follow -->
+    <div class="timeline" id="timeline" hidden>
+      <div class="timeline-track">
+        <div class="timeline-spark" id="timeline-spark" aria-hidden="true"></div>
+        <input type="range" id="timeline-range" min="0" max="0" step="1" value="0" aria-label="Tijdstip om terug te kijken">
+      </div>
+      <span class="timeline-time" id="timeline-time" aria-live="polite">Nu</span>
+      <button type="button" class="timeline-now" id="timeline-now" title="Terug naar nu" hidden>Nu</button>
+    </div>
+  </header>
+
+  <div id="banner" class="banner" hidden></div>
+
+  <!-- Filled with the blocks below, in the order and sizes of the chosen layout -->
+  <main class="grid" id="blocks"></main>
+
+  <!-- A small way to support the app -->
+  <footer class="support"><a href="https://ko-fi.com/wnijhof" target="_blank" rel="noopener"><img src="kofi.png" alt="Ko-fi" width="116" height="29"></a></footer>
+
+  <div class="tooltip" id="tooltip" hidden></div>
+
+  <!-- Edit mode: drag blocks by their handle, drag the right edge to change the width -->
+  <div class="edit-bar" id="edit-bar" hidden>
+    <p class="edit-hint">Sleep <b>⠿</b> om een blok te verplaatsen. Sleep de rand rechts voor de breedte en de rand onder voor de hoogte. <a class="edit-help" href="https://github.com/WNijhof/homey-energy-dashboard/blob/main/homey-app/README.md" target="_blank" rel="noopener">Handleiding: wat elk blok toont ↗</a></p>
+    <div class="edit-hidden" id="edit-hidden"></div>
+    <div class="edit-actions">
+      <input id="edit-pin" type="password" inputmode="numeric" autocomplete="off" placeholder="Pincode" hidden>
+      <select id="edit-layout" aria-label="Indeling"></select>
+      <input id="edit-layout-name" type="text" maxlength="24" placeholder="Naam, bijv. keuken" hidden>
+      <button type="button" class="link" id="edit-layout-remove" hidden>Indeling verwijderen</button>
+      <button type="button" class="link" id="edit-default" title="Blokken weer automatisch laten kiezen">Automatische indeling</button>
+      <span class="edit-status" id="edit-status"></span>
+      <button type="button" class="secondary" id="edit-cancel">Annuleren</button>
+      <button type="button" class="primary" id="edit-save">Opslaan</button>
+    </div>
+  </div>
+
+  <template id="block-flow">
+    <section class="card">
+      <div class="card-head">
+        <h2>Nu</h2>
+        <span class="muted" id="live-updated"></span>
+      </div>
+      <div id="flow" class="fill"></div>
+    </section>
+  </template>
+
+  <template id="block-waterheater">
+    <section class="card boiler-card" id="boiler-card">
+      <div class="card-head">
+        <h2 id="boiler-name">Warm water</h2>
+        <span class="chip" id="boiler-mode" data-boiler></span>
+      </div>
+      <p class="block-empty" id="boiler-empty" hidden>Geen boiler gevonden. Kies er een bij de instellingen.</p>
+      <div class="boiler-body" data-boiler>
+        <div class="gauge" id="boiler-gauge"></div>
+        <div class="boiler-facts">
+          <div class="big-fact">
+            <span class="big-number" id="shower-minutes">–</span>
+            <span class="big-unit">doucheminuten</span>
+          </div>
+          <ul class="facts">
+            <li id="boiler-showers-row"><span>Douchebeurten</span><strong id="boiler-showers">–</strong></li>
+            <li id="boiler-bottom-row"><span>Onderin</span><strong id="boiler-bottom">–</strong></li>
+            <li><span>Ingesteld</span><strong id="boiler-target">–</strong></li>
+            <li id="boiler-heating-row"><span>Opwarmen</span><strong id="boiler-heating">–</strong></li>
+          </ul>
+        </div>
+      </div>
+      <div class="sparkline fill" id="boiler-history" data-boiler></div>
+      <p class="footnote" id="boiler-note" data-boiler></p>
+      <p class="footnote" id="boiler-calibration" data-boiler hidden></p>
+    </section>
+  </template>
+
+  <template id="block-heating">
+    <section class="card heating-card">
+      <div class="card-head">
+        <h2>Verwarming</h2>
+        <span class="chip" id="heating-mode"></span>
+      </div>
+      <p class="block-empty" id="heating-empty" hidden>Geen warmtepomp, cv-ketel of thermostaat gevonden. Kies ze bij de instellingen.</p>
+      <div class="heating-body" data-heating>
+        <div class="room-temp" id="room-temp"></div>
+        <ul class="facts" id="heating-facts"></ul>
+      </div>
+      <div class="chart fill" id="heating-chart" data-height="120" data-heating></div>
+    </section>
+  </template>
+
+  <template id="block-ev">
+    <section class="card ev-card">
+      <div class="card-head">
+        <h2 id="ev-name">Laadpaal</h2>
+        <span class="chip" id="ev-state"></span>
+      </div>
+      <p class="block-empty" id="ev-empty" hidden>Geen laadpaal gevonden. Kies er een bij de instellingen.</p>
+      <div class="ev-body" data-ev>
+        <div class="big-fact">
+          <span class="big-number" id="ev-power">–</span>
+          <span class="big-unit" id="ev-power-label">vermogen</span>
+        </div>
+        <ul class="facts" id="ev-facts"></ul>
+      </div>
+      <div class="chart fill" id="ev-chart" data-height="120" data-ev></div>
+    </section>
+  </template>
+
+  <template id="block-battery">
+    <section class="card battery-card">
+      <div class="card-head">
+        <h2 id="battery-name">Thuisbatterij</h2>
+        <span class="chip" id="battery-state"></span>
+      </div>
+      <p class="block-empty" id="battery-empty" hidden>Geen thuisbatterij gevonden. Kies er een bij de instellingen.</p>
+      <div class="battery-body" data-battery>
+        <div class="battery-level">
+          <div class="battery-gauge" id="battery-gauge"></div>
+          <div class="big-fact">
+            <span class="big-number" id="battery-soc">–</span>
+            <span class="big-unit" id="battery-power">laadniveau</span>
+          </div>
+        </div>
+        <ul class="facts" id="battery-facts"></ul>
+      </div>
+      <div class="chart fill" id="battery-chart" data-height="90" data-battery></div>
+    </section>
+  </template>
+
+  <template id="block-batteryhistory">
+    <section class="card">
+      <div class="card-head">
+        <h2>Batterijgebruik</h2>
+        <span class="muted" id="batteryhistory-period"></span>
+      </div>
+      <p class="block-empty" id="batteryhistory-empty" hidden>Geen thuisbatterij gevonden. Kies er een bij de instellingen.</p>
+      <ul class="facts" id="batteryhistory-facts" data-batteryhistory></ul>
+      <div class="legend" id="batteryhistory-legend" data-batteryhistory></div>
+      <div class="chart fill" id="batteryhistory-chart" data-height="140" data-batteryhistory></div>
+      <ul class="facts sessions scroll" id="batteryhistory-sessions" data-batteryhistory></ul>
+      <p class="footnote" id="batteryhistory-note" data-batteryhistory></p>
+    </section>
+  </template>
+
+  <template id="block-netting">
+    <section class="card">
+      <div class="card-head">
+        <h2>Einde salderen</h2>
+        <span class="muted" id="netting-basis"></span>
+      </div>
+      <p class="block-empty" id="netting-empty" hidden></p>
+      <div data-netting>
+        <div class="big-fact">
+          <span class="big-number" id="netting-extra">–</span>
+          <span class="big-unit">per jaar extra vanaf 2027</span>
+        </div>
+        <ul class="facts" id="netting-facts"></ul>
+        <p class="note" id="netting-note"></p>
+      </div>
+    </section>
+  </template>
+
+  <template id="block-alerts">
+    <section class="card">
+      <div class="card-head">
+        <h2>Meldingen</h2>
+      </div>
+      <ul class="alerts fill scroll" id="alerts"></ul>
+    </section>
+  </template>
+
+  <template id="block-tiles">
+    <section class="tiles-block">
+      <div class="tiles" id="tiles"></div>
+    </section>
+  </template>
+
+  <template id="block-electricity">
+    <section class="card">
+      <div class="card-head">
+        <h2>Elektriciteit</h2>
+        <div class="legend" id="electricity-legend"></div>
+      </div>
+      <div class="chart fill" id="electricity-chart"></div>
+    </section>
+  </template>
+
+  <template id="block-power">
+    <section class="card">
+      <div class="card-head">
+        <h2 id="power-title">Vermogen vandaag</h2>
+        <div class="legend" id="power-legend"></div>
+      </div>
+      <div class="power-summary" id="power-summary"></div>
+      <div class="chart fill" id="power-chart"></div>
+    </section>
+  </template>
+
+  <template id="block-consumers">
+    <section class="card">
+      <div class="card-head">
+        <h2>Apparaten nu</h2>
+      </div>
+      <ul class="consumers fill scroll" id="consumers"></ul>
+    </section>
+  </template>
+
+  <template id="block-sankey">
+    <section class="card">
+      <div class="card-head">
+        <h2>Energiestromen</h2>
+        <div class="sankey-head">
+          <nav class="segmented small" id="sankey-mode" aria-label="Weergave">
+            <button type="button" data-mode="live">Live</button>
+            <button type="button" data-mode="period">Periode</button>
+          </nav>
+          <span class="muted" id="sankey-period"></span>
+        </div>
+      </div>
+      <div id="sankey" class="fill"></div>
+    </section>
+  </template>
+
+  <template id="block-solar">
+    <section class="card">
+      <div class="card-head">
+        <h2>Zonne-energie</h2>
+        <span class="muted" id="solar-total"></span>
+      </div>
+      <!-- Expected, performance, per kWp, best day and per inverter: only what applies -->
+      <ul class="facts" id="solar-facts"></ul>
+      <div class="chart fill" id="solar-chart" data-height="160"></div>
+    </section>
+  </template>
+
+  <template id="block-gas">
+    <section class="card">
+      <div class="card-head">
+        <h2>Gas</h2>
+        <span class="muted" id="gas-total"></span>
+      </div>
+      <div class="chart fill" id="gas-chart" data-height="160"></div>
+    </section>
+  </template>
+
+  <template id="block-prices">
+    <section class="card prices-card">
+      <div class="card-head">
+        <h2>Stroomprijs</h2>
+        <span class="muted" id="prices-source"></span>
+      </div>
+      <p class="block-empty" id="prices-empty" hidden>Geen prijzen beschikbaar.</p>
+      <div class="prices-body" data-prices>
+        <div class="big-fact">
+          <span class="big-number" id="price-now">–</span>
+          <span class="big-unit">per kWh nu</span>
+        </div>
+        <ul class="facts" id="price-facts"></ul>
+      </div>
+      <div class="chart fill" id="prices-chart" data-height="150" data-prices></div>
+    </section>
+  </template>
+
+  <template id="block-gauges">
+    <section class="card">
+      <div class="card-head">
+        <h2>Kengetallen</h2>
+        <span class="muted" id="gauges-period"></span>
+      </div>
+      <div class="gauges fill" id="gauges"></div>
+    </section>
+  </template>
+
+  <template id="block-devices">
+    <section class="card">
+      <div class="card-head">
+        <h2>Verbruik per apparaat</h2>
+        <span class="muted" id="devices-period"></span>
+      </div>
+      <ul class="consumers fill scroll" id="device-energy"></ul>
+    </section>
+  </template>
+
+  <template id="block-costs">
+    <section class="card">
+      <div class="card-head">
+        <h2>Kosten</h2>
+        <span class="muted" id="costs-period"></span>
+      </div>
+      <div class="fill scroll"><table class="costs" id="costs"></table></div>
+    </section>
+  </template>
+
+  <template id="block-water">
+    <section class="card">
+      <div class="card-head">
+        <h2>Water</h2>
+        <span class="muted" id="water-total"></span>
+      </div>
+      <p class="block-empty" id="water-empty" hidden>Geen watermeter gevonden. Kies er een bij de instellingen.</p>
+      <div class="chart fill" id="water-chart" data-height="160" data-water></div>
+    </section>
+  </template>
+
+  <template id="block-batterysize">
+    <section class="card">
+      <div class="card-head">
+        <h2>Batterij kiezen</h2>
+        <div class="sankey-head">
+          <nav class="segmented small" id="batterysize-view" aria-label="Nachten" hidden>
+            <button type="button" data-view="measured">Gemeten</button>
+            <button type="button" data-view="export">+ export</button>
+            <button type="button" data-view="model">+ model</button>
+          </nav>
+          <span class="muted" id="batterysize-basis"></span>
+        </div>
+      </div>
+      <p class="block-empty" id="batterysize-empty" hidden></p>
+      <div data-batterysize>
+        <div class="big-fact">
+          <span class="big-number" id="batterysize-dark">–</span>
+          <span class="big-unit">per avond en nacht, als de zon minder dan 200 W geeft</span>
+        </div>
+        <ul class="facts" id="batterysize-facts"></ul>
+        <div class="legend" id="batterysize-legend"></div>
+        <div class="chart" id="batterysize-chart" data-height="150"></div>
+        <table class="costs" id="batterysize-sizes"></table>
+        <table class="costs" id="batterysize-powers"></table>
+        <p class="note" id="batterysize-model" hidden>Lichtere balken zijn gemodelleerd uit de maandtotalen van Homey Energy, niet gemeten. Kies Gemeten of + export om ze weg te laten.</p>
+        <p class="note">Dekt: welk deel van je verbruik in het donker een batterij van die grootte zou leveren, als je hem alleen met je eigen zonne-overschot van die dag laadt.</p>
+      </div>
+    </section>
+  </template>
+
+  <template id="block-meters">
+    <section class="card">
+      <div class="card-head">
+        <h2>Meterstanden</h2>
+      </div>
+      <p class="block-empty" id="meters-empty" hidden>Geen meterstanden gevonden. Kies je meters bij de instellingen.</p>
+      <ul class="facts" id="meters" data-meters></ul>
+    </section>
+  </template>
+
+  <template id="block-baseload">
+    <section class="card">
+      <div class="card-head">
+        <h2>Sluipverbruik</h2>
+        <span class="muted">vannacht</span>
+      </div>
+      <p class="block-empty" id="baseload-empty" hidden>Nog niet bekend. Dit wordt berekend uit het verbruik van afgelopen nacht.</p>
+      <div class="center" data-baseload>
+        <div class="big-fact">
+          <span class="big-number" id="baseload-watts">–</span>
+          <span class="big-unit">altijd aan</span>
+        </div>
+        <ul class="facts" id="baseload-facts"></ul>
+      </div>
+    </section>
+  </template>
+
+  <template id="block-phases">
+    <section class="card">
+      <div class="card-head">
+        <h2>Fasebelasting</h2>
+        <span class="muted" id="phases-fuse"></span>
+      </div>
+      <p class="block-empty" id="phases-empty" hidden>Je slimme meter geeft geen waarden per fase door.</p>
+      <ul class="phases" id="phases" data-phases></ul>
+      <div class="chart fill" id="phases-chart" data-height="110" data-phases></div>
+    </section>
+  </template>
+
+  <template id="block-groups">
+    <section class="card">
+      <div class="card-head">
+        <h2>Groepen</h2>
+        <nav class="segmented small" id="groups-unit" aria-label="Weergave">
+          <button type="button" data-unit="A">A</button>
+          <button type="button" data-unit="W">W</button>
+        </nav>
+      </div>
+      <p class="block-empty" id="groups-empty" hidden>Stel je groepen in bij de instellingen van de app in Homey.</p>
+      <ul class="phases" id="groups" data-groups></ul>
+      <div class="chart" id="groups-chart" data-groups></div>
+    </section>
+  </template>
+
+  <template id="block-peak">
+    <section class="card">
+      <div class="card-head">
+        <h2>Maandpiek</h2>
+        <span class="muted" id="peak-source"></span>
+      </div>
+      <p class="block-empty" id="peak-empty" hidden></p>
+      <div data-peak>
+        <div class="big-fact">
+          <span class="big-number" id="peak-kw">–</span>
+          <span class="big-unit" id="peak-at">hoogste kwartier deze maand</span>
+        </div>
+        <ul class="facts" id="peak-facts"></ul>
+      </div>
+      <div class="chart fill" id="peak-chart" data-height="110" data-peak></div>
+    </section>
+  </template>
+
+  <template id="block-bill">
+    <section class="card">
+      <div class="card-head">
+        <h2>Jaarafrekening</h2>
+        <span class="muted" id="bill-period"></span>
+      </div>
+      <p class="block-empty" id="bill-empty" hidden></p>
+      <div data-bill>
+        <div class="big-fact">
+          <span class="big-number" id="bill-difference">–</span>
+          <span class="big-unit" id="bill-direction"></span>
+        </div>
+        <ul class="facts" id="bill-facts"></ul>
+        <p class="note" id="bill-note"></p>
+      </div>
+    </section>
+  </template>
+
+  <template id="block-co2">
+    <section class="card">
+      <div class="card-head">
+        <h2>CO2 van het net</h2>
+        <span class="muted" id="co2-state"></span>
+      </div>
+      <p class="block-empty" id="co2-empty" hidden></p>
+      <div data-co2>
+        <div class="big-fact">
+          <span class="big-number" id="co2-now">–</span>
+          <span class="big-unit">CO2 per kWh nu</span>
+        </div>
+        <ul class="facts" id="co2-facts"></ul>
+      </div>
+      <div class="chart fill" id="co2-chart" data-height="130" data-co2></div>
+    </section>
+  </template>
+
+  <template id="block-heatmap">
+    <section class="card">
+      <div class="card-head">
+        <h2>Verbruik per uur</h2>
+        <nav class="segmented small" id="heatmap-kind" aria-label="Weergave">
+          <button type="button" data-kind="use">Verbruik</button>
+          <button type="button" data-kind="solar">Opwek</button>
+          <button type="button" data-kind="grid">Net</button>
+        </nav>
+      </div>
+      <p class="block-empty" id="heatmap-empty" hidden></p>
+      <div class="chart fill" id="heatmap-chart" data-height="260" data-heatmap></div>
+      <p class="note" id="heatmap-note" data-heatmap></p>
+    </section>
+  </template>
+
+  <script src="i18n.js"></script>
+  <script src="screen.js"></script>
+  <script src="dashboard.js"></script>
+  <script src="site.js"></script>
+</body>
+</html>

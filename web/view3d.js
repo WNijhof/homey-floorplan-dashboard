@@ -7,20 +7,22 @@ import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import * as LOOK from './house-look.js';
 
 const core = window.FloorplanCore;
 const MODELS = window.FloorplanModels;
 const CM = 0.01;
 const LOW_WALL = 0.3;
+const LAMP_FADE = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 0 : 0.45; // seconds
 
 const THEMES = {
   light: {
     floor: '#ece6dc', wall: '#f3f1ec', wallTop: '#ffffff', ground: '#000000', groundOpacity: 0.12,
-    door: '#a07a55', glass: '#a9cfe8', blind: '#8b8780', hemiSky: '#ffffff', hemiGround: '#b8ad9c', hemi: 1.7, sun: 2.6, night: false,
+    door: '#a07a55', glass: '#a9cfe8', blind: '#8b8780', hemiSky: '#ffffff', hemiGround: '#b8ad9c', hemi: 1.3, sun: 2.3, night: false,
   },
   dark: {
-    floor: '#2c2b2a', wall: '#a7a6a3', wallTop: '#e8e8e6', ground: '#000000', groundOpacity: 0.35,
-    door: '#5e4630', glass: '#4f7392', blind: '#77736d', hemiSky: '#8fa3c0', hemiGround: '#1d1b19', hemi: 0.42, sun: 0.25, night: true,
+    floor: '#3a3836', wall: '#b9b7b2', wallTop: '#d9d8d4', ground: '#000000', groundOpacity: 0.35,
+    door: '#6e5339', glass: '#4f7392', blind: '#77736d', hemiSky: '#9aa2b4', hemiGround: '#2e2c30', hemi: 1.0, sun: 0.35, sunColor: '#c6d0e4', night: true,
   },
 };
 
@@ -61,17 +63,18 @@ function mat(color, opts) {
 function shapeGeometry(points, y) {
   const contour = points.map((p) => new THREE.Vector2(p[0] * CM, p[1] * CM));
   const tris = THREE.ShapeUtils.triangulateShape(contour, []);
-  const pos = []; const nor = [];
+  const pos = []; const nor = []; const uv = [];
   for (const t of tris) {
     // Wind each triangle so it faces up.
     const [a, b, c] = t.map((i) => contour[i]);
     const cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
     const order = cross > 0 ? [a, c, b] : [a, b, c];
-    for (const v of order) { pos.push(v.x, y, v.y); nor.push(0, 1, 0); }
+    for (const v of order) { pos.push(v.x, y, v.y); nor.push(0, 1, 0); uv.push(v.x, -v.y); }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.setAttribute('normal', new THREE.Float32BufferAttribute(nor, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
   return g;
 }
 
@@ -175,12 +178,12 @@ class View3D {
     this.el = container;
     this.hooks = hooks || {};
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
-    this.renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+    this.sharp = new LOOK.Sharpness(this.renderer, () => this.resize());
     this.renderer.outputColorSpace = THREE.SRGBColorSpace;
     this.renderer.toneMapping = THREE.ACESFilmicToneMapping;
     this.renderer.toneMappingExposure = 1.0;
     this.renderer.shadowMap.enabled = true;
-    this.renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    this.renderer.shadowMap.type = THREE.VSMShadowMap;
     this.renderer.domElement.className = 'fp3-canvas';
     container.appendChild(this.renderer.domElement);
 
@@ -201,8 +204,10 @@ class View3D {
     this.sun = new THREE.DirectionalLight('#fff4e0', 2);
     this.sun.castShadow = true;
     this.sun.shadow.mapSize.set(2048, 2048);
-    this.sun.shadow.bias = -0.0004;
-    this.sun.shadow.normalBias = 0.02;
+    this.sun.shadow.bias = -0.0006;
+    this.sun.shadow.normalBias = 0.03;
+    this.sun.shadow.radius = 5;
+    this.sun.shadow.blurSamples = 14;
     this.scene.add(this.hemi, this.sun, this.sun.target);
 
     this.root = new THREE.Group();
@@ -237,7 +242,9 @@ class View3D {
       this.raf = null;
       const orbiting = this.controls.update();
       const walls = this.walls ? this.stepWalls(0.16) : false;
-      const moving = orbiting || walls;
+      const lamps = this.stepLamps();
+      const moving = orbiting || walls || lamps;
+      if (moving) this.sharp.frame(performance.now());
       if (this.gizmo) this.gizmo.scale.setScalar(this.camera.position.distanceTo(this.gizmo.position) * 0.09);
       this.renderer.render(this.scene, this.camera);
       this.updateOcclusion();
@@ -271,9 +278,11 @@ class View3D {
   /* ------------------------------------------------------------ build */
 
   // Rebuilds the scene when the plan, the level or the theme changed; otherwise only updates live states.
-  sync({ plan, level, devices, dark, furniture, turn, values, names }) {
+  // night: the real time of day, from where the Homey is; else the theme of the page decides.
+  sync({ plan, level, devices, dark: pageDark, night, furniture, turn, values, names }) {
+    const dark = typeof night === 'boolean' ? night : pageDark;
     this.names = names || 'devices';
-    const key = [plan.id, level.id, plan.updatedAt || '', dark ? 'd' : 'l', furniture !== false, levelHash(level), names || 'devices'].join('|');
+    const key = [plan.id, level.id, plan.updatedAt || '', dark ? 'd' : 'l', furniture !== false, levelHash(level), names || 'devices', JSON.stringify((plan.house && [plan.house.facade, plan.house.roofColor]) || '')].join('|');
     this.devices = devices;
     this.values = values !== false;
     if (key !== this.key) {
@@ -306,7 +315,16 @@ class View3D {
     this.wallHeight = H;
     this.hemi.color.set(t.hemiSky); this.hemi.groundColor.set(t.hemiGround); this.hemi.intensity = t.hemi;
     this.sun.intensity = t.sun;
-    this.renderer.toneMappingExposure = t.night ? 1.25 : 1.0;
+    this.sun.color.set(t.sunColor || '#fff4e0');
+    this.el.classList.toggle('fp3-day', !t.night);
+    this.el.classList.toggle('fp3-night', t.night);
+    this.renderer.toneMappingExposure = t.night ? 1.2 : 1.0;
+    // Reflections of a soft sky (glass, metal, varnished floors)
+    this.envs = this.envs || {};
+    const envKey = t.night ? 'd' : 'l';
+    if (!this.envs[envKey]) this.envs[envKey] = LOOK.environment(this.renderer, t.night);
+    this.scene.environment = this.envs[envKey];
+    this.scene.environmentIntensity = t.night ? 0.2 : 0.45;
 
     const pts = [];
     for (const r of level.rooms) pts.push(...r.points);
@@ -320,6 +338,23 @@ class View3D {
     const ground = new THREE.Mesh(new THREE.PlaneGeometry(size * 4, size * 4), new THREE.ShadowMaterial({ opacity: t.groundOpacity, color: t.ground }));
     ground.rotation.x = -Math.PI / 2; ground.position.set(cx, -0.002, cz); ground.receiveShadow = true;
     this.root.add(ground);
+    // The ground floor stands in the garden, like on the house view
+    if (plan.levels[0] && plan.levels[0].id === level.id) {
+      const fade = document.createElement('canvas');
+      fade.width = 256; fade.height = 256;
+      const fg = fade.getContext('2d');
+      const grad = fg.createRadialGradient(128, 128, 30, 128, 128, 128);
+      grad.addColorStop(0, '#fff'); grad.addColorStop(0.5, '#fff'); grad.addColorStop(1, '#000');
+      fg.fillStyle = grad; fg.fillRect(0, 0, 256, 256);
+      const tx = LOOK.textures(this.renderer, 'brick', 'anthracite', t.night);
+      const grassMap = tx.grass.clone();
+      grassMap.needsUpdate = true;
+      grassMap.repeat.set(size * 1.2, size * 1.2);
+      const lawn = new THREE.Mesh(new THREE.CircleGeometry(size * 1.2, 64), new THREE.MeshStandardMaterial({ map: grassMap, alphaMap: new THREE.CanvasTexture(fade), transparent: true, depthWrite: false, roughness: 1 }));
+      lawn.rotation.x = -Math.PI / 2; lawn.position.set(cx, -0.004, cz); lawn.receiveShadow = true;
+      lawn.renderOrder = -1;
+      this.root.add(lawn);
+    }
     this.sun.position.set(cx + size * 0.6, size * 1.4, cz + size * 0.9);
     this.sun.target.position.set(cx, 0, cz);
     const sc = this.sun.shadow.camera;
@@ -327,20 +362,38 @@ class View3D {
     sc.updateProjectionMatrix();
 
     // Floors, one per room, tappable.
+    // Wood in living rooms and bedrooms, tiles in wet rooms and the hall (from the room name), tinted by its colour
     const floorMats = new Map();
     for (const room of level.rooms) {
       const color = room.color || t.floor;
-      if (!floorMats.has(color)) floorMats.set(color, mat(color, { roughness: 0.92 }));
-      const floor = new THREE.Mesh(shapeGeometry(room.points, 0), floorMats.get(color));
+      const kind = core.floorKind(room.name);
+      const key = `${color}|${kind}`;
+      if (!floorMats.has(key)) {
+        const tex = LOOK.floorTexture(kind, this.renderer);
+        const m = mat(color, { roughness: kind === 'wood' ? 0.55 : kind === 'tiles' ? 0.35 : 0.92 });
+        if (tex) {
+          m.map = tex.clone();
+          m.map.needsUpdate = true;
+          m.map.repeat.set(1 / tex.userData.size, 1 / tex.userData.size);
+          // the texture is light grey: lift the colour so the floor keeps its chosen tone
+          m.color.offsetHSL(0, 0, 0.08);
+        }
+        floorMats.set(key, m);
+      }
+      const floor = new THREE.Mesh(shapeGeometry(room.points, 0), floorMats.get(key));
       floor.receiveShadow = true;
       floor.userData.pick = { kind: 'room', id: room.id };
       this.root.add(floor);
     }
 
     // Walls in pieces around doors and windows; the top is a lighter cap.
-    const wallMat = mat(t.wall, { roughness: 0.95 });
+    const wallMat = mat(t.wall, { roughness: 0.95, map: LOOK.plasterTexture(this.renderer) });
+    const skirtMat = mat(t.night ? '#cfcfcc' : '#ffffff', { roughness: 0.6 });
     const capMat = mat(t.wallTop, { roughness: 0.9 });
     const mats = [wallMat, wallMat, capMat, wallMat, wallMat, wallMat];
+    // The outside of outer walls in the facade of the house view (brick or plaster)
+    const hs = window.HouseCore ? window.HouseCore.settings(plan) : { facade: 'brick', roofColor: 'anthracite' };
+    const facade = LOOK.textures(this.renderer, hs.facade, hs.roofColor, t.night);
     for (const wall of core.levelWalls(level)) {
       for (const piece of core.wallPieces(wall, level.openings, level, true)) {
         const u = core.geom.norm(core.geom.sub(piece.b, piece.a));
@@ -352,18 +405,41 @@ class View3D {
         if (len < 0.005 || hgt < 0.005) continue;
         // Own materials per piece, so each can fade on its own when the camera moves.
         const own = mats.map((m) => m.clone());
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, hgt, wall.t * CM), own);
+        // Which side is outside the house, for the facade and the cut-away of walls in front of the camera.
         const mid = core.geom.mul(core.geom.add(a, bb), 0.5);
-        mesh.position.set(mid[0] * CM, piece.z0 * CM + hgt / 2, mid[1] * CM);
-        mesh.rotation.y = -Math.atan2(u[1], u[0]);
-        mesh.castShadow = true; mesh.receiveShadow = true;
-        mesh.userData.wall = true;
-        this.root.add(mesh);
-        // Which side is outside the house, for the cut-away of walls in front of the camera.
         const n = [-u[1], u[0]];
         const probe = (s) => core.geom.add(mid, core.geom.mul(n, s * (wall.t / 2 + 25)));
         const inside = (p) => level.rooms.some((r) => core.geom.pointInPolygon(p, r.points));
         const outside = !inside(probe(1)) ? 1 : !inside(probe(-1)) ? -1 : 0;
+        if (outside) {
+          const brick = new THREE.MeshStandardMaterial({ map: facade.wall.clone(), roughness: 0.92, color: t.night ? '#8f8f8f' : '#ffffff' });
+          brick.map.needsUpdate = true;
+          brick.map.repeat.set(len / facade.wallSize[0], hgt / facade.wallSize[1]);
+          brick.map.offset.set(((a[0] + a[1]) * CM) / facade.wallSize[0] % 1, (piece.z0 * CM) / facade.wallSize[1] % 1);
+          own[outside > 0 ? 4 : 5] = brick;
+        }
+        const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, hgt, wall.t * CM), own);
+        mesh.position.set(mid[0] * CM, piece.z0 * CM + hgt / 2, mid[1] * CM);
+        mesh.rotation.y = -Math.atan2(u[1], u[0]);
+        mesh.castShadow = true; mesh.receiveShadow = true;
+        mesh.userData.wall = true;
+        // a soft dark edge on the floor beside the wall, and skirting boards on both sides at floor level;
+        // they stay when the wall is lowered for the view
+        if (piece.z0 <= 1 && len > 0.2) {
+          for (const side of [1, -1]) {
+            if (side === outside) continue;
+            const edge = LOOK.floorEdge(len, 0.34, t.night ? 0.3 : 0.16);
+            edge.position.set((mid[0] + n[0] * side * (wall.t / 2 + 17)) * CM, 0.006, (mid[1] + n[1] * side * (wall.t / 2 + 17)) * CM);
+            edge.rotation.z = Math.atan2(u[1], u[0]) + (side > 0 ? Math.PI : 0);
+            this.root.add(edge);
+          }
+          const skirt = new THREE.Mesh(new THREE.BoxGeometry(len - 0.02, 0.07, wall.t * CM + 0.024), skirtMat);
+          skirt.position.set(mid[0] * CM, 0.035, mid[1] * CM);
+          skirt.rotation.y = mesh.rotation.y;
+          skirt.receiveShadow = true;
+          this.root.add(skirt);
+        }
+        this.root.add(mesh);
         this.walls.push({ mesh, mats: own, z0: piece.z0 * CM, h: hgt, nx: n[0] * outside, nz: n[1] * outside, exterior: outside !== 0, cur: hgt, target: hgt, alpha: 1, alphaTarget: 1 });
       }
     }
@@ -405,14 +481,24 @@ class View3D {
     if (o.type === 'window') {
       const sill = (o.sill != null ? o.sill : core.DEFAULTS.windowSill) * CM;
       const top = (o.top || core.DEFAULTS.windowTop) * CM;
-      const glass = new THREE.Mesh(new THREE.BoxGeometry(w, top - sill, 0.01), new THREE.MeshStandardMaterial({ color: t.glass, transparent: true, opacity: 0.35, roughness: 0.1, metalness: 0.1 }));
+      const glass = new THREE.Mesh(new THREE.BoxGeometry(w - 0.08, top - sill - 0.08, 0.01), new THREE.MeshPhysicalMaterial({ color: t.glass, transparent: true, opacity: 0.3, roughness: 0.03, metalness: 0, envMapIntensity: 1.5 }));
       glass.position.y = sill + (top - sill) / 2;
       group.add(glass);
-      const frameMat = mat(t.wallTop);
-      for (const y of [sill, top]) {
-        const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.03, thick * 0.6), frameMat);
+      const frameMat = mat(t.night ? '#c9c9c6' : '#f7f7f5', { roughness: 0.5 });
+      for (const y of [sill + 0.03, top - 0.03]) {
+        const bar = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, thick * 0.5), frameMat);
         bar.position.y = y; group.add(bar);
       }
+      for (const x of [-w / 2 + 0.03, w / 2 - 0.03]) {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.06, top - sill, thick * 0.5), frameMat);
+        post.position.set(x, sill + (top - sill) / 2, 0); group.add(post);
+      }
+      if (w > 1.2) {
+        const mid = new THREE.Mesh(new THREE.BoxGeometry(0.05, top - sill, thick * 0.4), frameMat);
+        mid.position.y = sill + (top - sill) / 2; group.add(mid);
+      }
+      const ledge = new THREE.Mesh(new THREE.BoxGeometry(w + 0.08, 0.025, thick + 0.06), mat(t.night ? '#9a9a98' : '#e9e7e3', { roughness: 0.6 }));
+      ledge.position.y = sill - 0.012; ledge.castShadow = true; group.add(ledge);
       const blind = new THREE.Mesh(new THREE.BoxGeometry(w * 0.98, 1, 0.015), mat(o.blindColor || t.blind, { roughness: 0.8 }));
       blind.position.z = (o.blindSide || 1) * (thick / 2 + 0.03);
       blind.castShadow = true;
@@ -423,11 +509,34 @@ class View3D {
       const hingeX = (o.hinge || 1) > 0 ? -w / 2 : w / 2;
       const pivot = new THREE.Group();
       pivot.position.set(hingeX, 0, 0);
-      const leaf = new THREE.Mesh(new THREE.BoxGeometry(w - 0.02, dh - 0.01, 0.04), mat(o.color || t.door, { roughness: 0.7 }));
-      leaf.position.set(((o.hinge || 1) > 0 ? 1 : -1) * (w / 2), dh / 2, 0);
+      const side = (o.hinge || 1) > 0 ? 1 : -1;
+      const leafMat = mat(o.color || t.door, { roughness: 0.55 });
+      const leaf = new THREE.Mesh(new THREE.BoxGeometry(w - 0.04, dh - 0.02, 0.04), leafMat);
+      leaf.position.set(side * (w / 2), dh / 2, 0);
       leaf.castShadow = true;
+      // two raised panels on each face, and a handle on both sides
+      const panelMat = leafMat.clone();
+      panelMat.color.offsetHSL(0, 0, 0.04);
+      for (const f of [1, -1]) {
+        for (const [py, ph] of [[dh * 0.72, dh * 0.36], [dh * 0.27, dh * 0.4]]) {
+          const panel = new THREE.Mesh(new THREE.BoxGeometry(w * 0.62, ph, 0.012), panelMat);
+          panel.position.set(side * (w / 2), py, f * 0.024);
+          pivot.add(panel);
+        }
+        const handle = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.02), mat('#9ea3a9', { roughness: 0.3, metalness: 0.8 }));
+        handle.position.set(side * (w - 0.1), 1.02, f * 0.04);
+        pivot.add(handle);
+      }
       pivot.add(leaf);
       group.add(pivot);
+      // the frame around the opening
+      const frameMat = mat(t.night ? '#c9c9c6' : '#f7f7f5', { roughness: 0.5 });
+      for (const x of [-w / 2 - 0.02, w / 2 + 0.02]) {
+        const post = new THREE.Mesh(new THREE.BoxGeometry(0.05, dh, thick + 0.03), frameMat);
+        post.position.set(x, dh / 2, 0); group.add(post);
+      }
+      const lintel = new THREE.Mesh(new THREE.BoxGeometry(w + 0.09, 0.05, thick + 0.03), frameMat);
+      lintel.position.y = dh + 0.025; group.add(lintel);
       Object.assign(entry, { pivot });
     }
     this.openings.push(entry);
@@ -765,6 +874,7 @@ class View3D {
 
   updateLive() {
     for (const lamp of this.lamps) this.updateLamp(lamp);
+    this.setAmbient();
     for (const disp of this.displays) this.drawDisplay(disp);
     for (const o of this.openings) this.updateOpening(o);
     const pal = this.theme.night ? core.DARK_PALETTE : core.LIGHT_PALETTE;
@@ -802,9 +912,33 @@ class View3D {
 
   updateLamp(lamp) {
     const dev = this.devices.get(lamp.item.deviceId);
-    const intensity = core.lightIntensity ? core.lightIntensity(dev) : (core.isOn(dev) ? 1 : 0);
+    lamp.target = core.lightIntensity ? core.lightIntensity(dev) : (core.isOn(dev) ? 1 : 0);
+    if (lamp.target > 0) lamp.color = core.lightColor(dev); // going off it keeps its colour
+    if (lamp.shown == null || !LAMP_FADE) lamp.shown = lamp.target;
+    this.drawLamp(lamp);
+  }
+
+  // A step of every lamp towards what it should be; true while one is still changing.
+  stepLamps() {
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - (this.lampTime || now)) / 1000);
+    this.lampTime = now;
+    let busy = false;
+    for (const lamp of this.lamps) {
+      if (lamp.shown === lamp.target) continue;
+      const step = dt / LAMP_FADE;
+      lamp.shown = lamp.shown < lamp.target ? Math.min(lamp.target, lamp.shown + step) : Math.max(lamp.target, lamp.shown - step);
+      this.drawLamp(lamp);
+      busy = true;
+    }
+    if (!busy) this.lampTime = 0;
+    return busy;
+  }
+
+  drawLamp(lamp) {
+    const intensity = lamp.shown;
     const on = intensity > 0;
-    const color = on ? core.lightColor(dev) : '#fff7e8';
+    const color = on ? lamp.color : '#fff7e8';
     if (lamp.bulbMesh) {
       lamp.bulbMesh.material.emissive.set(on ? color : '#000000');
       lamp.bulbMesh.material.emissiveIntensity = on ? 2.5 * intensity + 0.5 : 0;
@@ -824,13 +958,31 @@ class View3D {
     if (lamp.light) {
       lamp.light.visible = on;
       lamp.light.color.set(color);
-      lamp.light.intensity = (this.theme.night ? 2.2 : 1.2) * intensity * (reach * reach);
+      lamp.light.intensity = (this.theme.night ? 2.6 : 1.2) * intensity * (reach * reach);
+    }
+    if (on && !lamp.shine) {
+      lamp.shine = LOOK.lightGlow(0.9, color, 0.5);
+      lamp.shine.position.copy(lamp.bulbLocal);
+      lamp.holder.add(lamp.shine);
+    }
+    if (lamp.shine) {
+      lamp.shine.visible = on;
+      lamp.shine.material.color.set(color);
+      lamp.shine.material.opacity = (this.theme.night ? 0.5 : 0.12) * intensity;
     }
     if (lamp.glow) {
       lamp.glow.visible = on;
       lamp.glow.material.color.set(color);
       lamp.glow.material.opacity = (this.theme.night ? 0.55 : 0.22) * intensity;
     }
+  }
+
+  // At night with no lamp on in this storey the moon alone would leave it black: enough soft light to see the rooms by.
+  setAmbient() {
+    const t = this.theme;
+    const dark = t.night && !this.lamps.some((l) => l.light && l.light.visible);
+    this.hemi.intensity = t.hemi * (dark ? 2.1 : 1);
+    this.sun.intensity = t.sun * (dark ? 2.4 : 1);
   }
 
   // The pool of light on the floor of the lamp's room (walls stop it).
@@ -875,7 +1027,8 @@ class View3D {
     const { cx, cz, size } = this.bounds;
     const az = THREE.MathUtils.degToRad(45 + 90 * (Number(turn) || 0));
     const el = THREE.MathUtils.degToRad(42);
-    const dist = size * 1.55;
+    const aspect = this.camera.aspect || 1.4;
+    const dist = size * 1.8 * Math.max(1, 1.45 / aspect);
     this.controls.target.set(cx, 0, cz);
     this.camera.position.set(cx + Math.sin(az) * Math.cos(el) * dist, Math.sin(el) * dist, cz + Math.cos(az) * Math.cos(el) * dist);
     this.controls.minDistance = 1.5;

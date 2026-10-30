@@ -72,7 +72,7 @@ test('device kinds', () => {
   const k = (cls, caps) => core.deviceKind({ cls, caps });
   assert.strictEqual(k('light', { onoff: true }), 'light');
   assert.strictEqual(k('other', { onoff: true, dim: 1 }), 'light');
-  assert.strictEqual(k('socket', { onoff: true, dim: 1 }), 'socket');
+  assert.strictEqual(k('socket', { onoff: true, dim: 1 }), 'light'); // a lamp that its app reports as a socket
   assert.strictEqual(k('sensor', { alarm_smoke: false }), 'smoke');
   assert.strictEqual(k('windowcoverings', { windowcoverings_set: 0.5 }), 'cover');
   assert.strictEqual(k('lock', { locked: true }), 'lock');

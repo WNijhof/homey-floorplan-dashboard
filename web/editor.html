@@ -5,6 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Plattegrond bewerken</title>
   <link rel="icon" href="icon.svg" type="image/svg+xml">
+  <script src="theme.js"></script>
     <link rel="stylesheet" href="editor.css">
   <link rel="stylesheet" href="view3d.css">
   <script type="importmap">{ "imports": { "three": "./vendor/three/three.module.min.js", "three/addons/": "./vendor/three/addons/" } }</script>
@@ -32,16 +33,17 @@
       <span id="save-state" class="ed-save"></span>
     </header>
     <nav id="tools" class="ed-tools">
-      <button type="button" data-tool="select" class="on" title="Select and move (V)">➤</button>
-      <button type="button" data-tool="room" title="Room (drag a rectangle) (Q)">▭</button>
-      <button type="button" data-tool="wall" title="Draw walls (W)">✎</button>
-      <button type="button" data-tool="door" title="Doors (D)">🚪</button>
-      <button type="button" data-tool="window" title="Windows (N)">⊞</button>
-      <button type="button" data-tool="furniture" title="Furniture (F)">🛋</button>
-      <button type="button" data-tool="device" title="Devices (E)">💡</button>
-      <button type="button" data-tool="measure" title="Measure (M)">📏</button>
-      <button type="button" data-tool="picture" title="Trace a picture">🖼</button>
-      <button type="button" data-tool="calendar" title="Calendars on the dashboard">📅</button>
+      <button type="button" data-tool="select" class="on" data-key="V" title="Select (V)"><span>➤</span><small data-i18n="toolSelect">Select</small></button>
+      <button type="button" data-tool="room" data-key="Q" title="Room (Q)"><span>▭</span><small data-i18n="toolRoom">Room</small></button>
+      <button type="button" data-tool="wall" data-key="W" title="Walls (W)"><span>✎</span><small data-i18n="toolWall">Walls</small></button>
+      <button type="button" data-tool="door" data-key="D" title="Doors (D)"><span>🚪</span><small data-i18n="toolDoor">Doors</small></button>
+      <button type="button" data-tool="window" data-key="N" title="Windows (N)"><span>⊞</span><small data-i18n="toolWindow">Windows</small></button>
+      <button type="button" data-tool="furniture" data-key="F" title="Furniture (F)"><span>🛋</span><small data-i18n="toolFurniture">Furniture</small></button>
+      <button type="button" data-tool="device" data-key="E" title="Devices (E)"><span>💡</span><small data-i18n="toolDevice">Devices</small></button>
+      <button type="button" data-tool="measure" data-key="M" title="Measure (M)"><span>📏</span><small data-i18n="toolMeasure">Measure</small></button>
+      <button type="button" data-tool="picture" title="Picture"><span>🖼</span><small data-i18n="toolPicture">Picture</small></button>
+      <button type="button" data-tool="calendar" title="Calendar"><span>📅</span><small data-i18n="toolCalendar">Calendar</small></button>
+      <button type="button" data-tool="house" title="House"><span>🏠</span><small data-i18n="toolHouse">House</small></button>
       <div class="ed-spacer"></div>
       <button type="button" id="zoom-in" title="Zoom in">＋</button>
       <button type="button" id="zoom-out" title="Zoom out">－</button>
@@ -50,15 +52,19 @@
     <main class="ed-canvas-wrap">
       <svg id="canvas" class="ed-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
       <div id="ed-3d" class="ed-3d fp3" hidden></div>
+      <div id="ed-house" class="ed-3d fp3 h3" hidden></div>
+      <div id="ed-photo" class="ed-3d ed-photo" hidden><svg id="ed-photo-svg" xmlns="http://www.w3.org/2000/svg"></svg></div>
       <div id="hint" class="ed-hint"></div>
     </main>
     <aside id="panel" class="ed-panel"></aside>
   </div>
   <script src="models.js"></script>
   <script src="floorplan-core.js"></script>
+  <script src="house-core.js"></script>
   <script src="plan-detect.js"></script>
   <script src="editor.js"></script>
   <script src="homey-web.js"></script>
   <script type="module" src="view3d.js"></script>
+  <script type="module" src="house3d.js"></script>
 </body>
 </html>
