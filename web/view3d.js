@@ -469,6 +469,7 @@ class View3D {
   }
 
   buildOpening(o, t) {
+    if (o.type === 'passage') return; // nothing stands there
     const u = [Math.cos(o.angle || 0), Math.sin(o.angle || 0)];
     const w = (o.width || 90) * CM;
     const thick = (this.level.wallThickness || 12) * CM;
@@ -1079,11 +1080,45 @@ class View3D {
     const hit = (a, r) => a.left < r.right && r.left < a.right && a.top < r.bottom && r.top < a.bottom;
     // What a name must keep clear of, with its owner: a name never collides with its own badge.
     const taken = [];
+    const dots = [];
     for (const b of this.badges) {
       if (b.behind) continue;
-      for (const el of b.el.querySelectorAll('.fp3-dot, .fp3-val')) taken.push({ r: el.getBoundingClientRect(), id: b.item.id });
+      for (const el of b.el.querySelectorAll('.fp3-dot')) dots.push({ r: el.getBoundingClientRect(), id: b.item.id });
     }
-    for (const l of this.roomLabels) taken.push({ r: l.el.getBoundingClientRect(), id: null });
+    taken.push(...dots);
+    // Room labels step aside for the lamps and sensors, which must stay tappable
+    for (const l of this.roomLabels) {
+      const box = l.el.getBoundingClientRect();
+      const was = l.shift || [0, 0];
+      const base = { left: box.left - was[0], right: box.right - was[0], top: box.top - was[1], bottom: box.bottom - was[1] };
+      const w = box.width + 6; const h = box.height + 6;
+      const spots = [was, [0, 0], [0, -h], [0, h], [-w, 0], [w, 0], [-w, -h], [w, -h], [-w, h], [w, h]];
+      const at = (s) => ({ left: base.left + s[0], right: base.right + s[0], top: base.top + s[1], bottom: base.bottom + s[1] });
+      const free = (s) => !dots.some((o) => hit(at(s), o.r)) && !taken.some((o) => o.id === null && hit(at(s), o.r));
+      const spot = spots.find(free) || [0, 0];
+      l.shift = spot;
+      l.el.style.translate = spot[0] || spot[1] ? `${Math.round(spot[0])}px ${Math.round(spot[1])}px` : '';
+      taken.push({ r: at(spot), id: null });
+    }
+    // A value beside a badge gives way as well: it comes back when you zoom in
+    const shownVals = this.shownVals || new Set();
+    const vals = [];
+    for (const b of this.badges) {
+      const val = b.el.querySelector('.fp3-val');
+      if (!val) continue;
+      val.style.visibility = '';
+      if (!b.behind) vals.push({ b, val, r: val.getBoundingClientRect() });
+    }
+    vals.sort((x, y) => (shownVals.has(y.b.item.id) ? 1 : 0) - (shownVals.has(x.b.item.id) ? 1 : 0));
+    const nextVals = new Set();
+    for (const v of vals) {
+      const m = shownVals.has(v.b.item.id) ? 3 : -3;
+      const r = { left: v.r.left + m, right: v.r.right - m, top: v.r.top + m, bottom: v.r.bottom - m };
+      if (taken.some((o) => o.id !== v.b.item.id && hit(r, o.r))) { v.val.style.visibility = 'hidden'; continue; }
+      taken.push({ r: v.r, id: v.b.item.id });
+      nextVals.add(v.b.item.id);
+    }
+    this.shownVals = nextVals;
     for (const t of tags) t.r = t.name.getBoundingClientRect();
     // Names that were showing go first and get a few pixels of slack, hidden ones need clear room:
     // a small turn of the camera or a value that changes width does not make names blink.

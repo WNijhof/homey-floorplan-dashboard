@@ -182,6 +182,15 @@
       $('report-github').addEventListener('click', function () { report('github'); });
       $('report-copy').addEventListener('click', function () { report('copy'); });
 
+      // A settings page in a browser may not open new tabs by itself on Safari: Homey's own call does.
+      ['open-editor', 'open-dashboard'].forEach(function (id) {
+        $(id).addEventListener('click', function (ev) {
+          if (!Homey.openURL) return; // the plain link
+          ev.preventDefault();
+          Homey.openURL(this.href);
+        });
+      });
+
       api('GET', '/settings-info').then(show).catch(function (err) { $('status-text').textContent = String(err.message || err); });
       Homey.ready();
     }

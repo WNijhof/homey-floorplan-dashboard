@@ -337,6 +337,73 @@
     report.photoRemoved = !plan().house.photo && document.getElementById('ed-photo').hidden;
   }
 
+  // Forum wishes: an open wall, a device in two places, a curved wall, the order of the levels
+  {
+    const S = window.__editorState();
+    const core = window.FloorplanCore;
+    const act = (a, extra) => document.querySelector(`[data-action=${a}]${extra || ''}`).click();
+    S.sel = null; tool('select');
+    await wait(50);
+    const level = S.plan.levels.find((l) => l.id === S.levelId);
+    level.rooms.push({ id: 'k1', name: 'K', points: core.geom.rect(3000, 0, 3400, 400) }, { id: 'k2', name: 'W', points: core.geom.rect(3400, -100, 3900, 600) });
+    level.openings = level.openings.filter((o) => o.x < 3000);
+    const before = level.openings.length;
+    S.cam = [2900, -200, 1100, 900];
+    tool('passage');
+    await wait(50);
+    report.passagePanel = /Open/.test(document.getElementById('panel').textContent);
+    click([3400, 100]);
+    await wait(100);
+    const open = S.plan.levels.find((l) => l.id === S.levelId).openings.slice(-1)[0];
+    report.passagePlaced = S.plan.levels.find((l) => l.id === S.levelId).openings.length === before + 1 && open.type === 'passage' && open.width === 200;
+    act('passage-whole');
+    await wait(100);
+    const whole = S.plan.levels.find((l) => l.id === S.levelId).openings.slice(-1)[0];
+    report.passageWhole = whole.width === 400 && Math.abs(whole.y - 200) < 0.2;
+    const walls = core.levelWalls(S.plan.levels.find((l) => l.id === S.levelId)).filter((w) => w.a[0] === 3400 && w.b[0] === 3400);
+    const left = walls.flatMap((w) => core.wallPieces(w, [whole], { wallHeight: 260 }, true));
+    report.passageGone = left.length > 0 && left.every((p) => Math.max(p.a[1], p.b[1]) <= 0.5 || Math.min(p.a[1], p.b[1]) >= 399.5);
+
+    // A device in a second place
+    const l0 = S.plan.levels.find((l) => l.id === S.levelId);
+    const dev = [...S.devices.values()][0];
+    l0.items.push({ id: 'twice', kind: 'device', deviceId: dev.id, x: 3200, y: 200 });
+    tool('select');
+    await wait(50);
+    click([3200, 200]);
+    const count = () => S.plan.levels.flatMap((l) => l.items).filter((i) => i.deviceId === dev.id).length;
+    const was = count();
+    await wait(100);
+    act('place-again');
+    await wait(100);
+    report.placedTwice = count() === was + 1;
+
+    // A curved wall
+    const cur = S.plan.levels.find((l) => l.id === S.levelId);
+    cur.walls.push({ id: 'bendme', a: [3000, 550], b: [3400, 550] });
+    tool('select');
+    await wait(50);
+    click([3200, 550]);
+    await wait(100);
+    act('wall-bend', '[data-side="1"]');
+    await wait(100);
+    const after = S.plan.levels.find((l) => l.id === S.levelId).walls.filter((w) => w.a[1] !== 0);
+    report.curved = !after.some((w) => w.id === 'bendme') && after.filter((w) => Math.max(w.a[1], w.b[1]) > 550).length >= 8;
+
+    // The order of the levels
+    S.sel = null; tool('select');
+    if (S.plan.levels.length < 2) { document.getElementById('level-add').click(); await wait(100); }
+    const first = S.plan.levels[0].id;
+    S.levelId = first; S.sel = null; document.querySelector('#level-tabs button').click();
+    await wait(100);
+    act('level-higher');
+    await wait(100);
+    report.levelMoved = S.plan.levels[1].id === first && document.querySelectorAll('#level-tabs button')[1].dataset.level === first;
+    act('level-lower');
+    await wait(100);
+    report.levelBack = S.plan.levels[0].id === first;
+  }
+
   } catch (err) {
     report.threw = String(err && err.stack || err);
   }

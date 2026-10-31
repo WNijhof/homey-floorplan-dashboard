@@ -93,6 +93,7 @@
     }
     if (p === '/backups') return [];
     if (p === '/advice') return { items: [{ id: 'cheapAt', at: at(0, 23, 0) }] };
+    if (p === '/waste') return null;
     if (p === '/people') return [{ initial: 'S', name: 'Sam', home: true, asleep: false }, { initial: 'L', name: 'Lou', home: false, asleep: false }];
     if (p === '/variables') return [];
     if (p === '/variables/choices') return [];

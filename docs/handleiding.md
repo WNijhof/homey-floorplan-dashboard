@@ -16,10 +16,14 @@ Eerst kijken kan zonder installeren: [de demo](https://wnijhof.github.io/homey-f
 
 ## De editor
 
-In de linkerbalk staan de gereedschappen: Selecteren, Kamer, Muren, Deuren, Ramen, Meubels, Apparaten, Meten, Afbeelding, Agenda en Huis.
+In de linkerbalk staan de gereedschappen: Selecteren, Kamer, Muren, Deuren, Ramen, Open muur, Meubels, Apparaten, Meten, Afbeelding, Agenda en Huis.
 
 - Kamers: sleep een rechthoek. Sleep de hoeken om de vorm aan te passen. Voor een L-vorm trek je aan een blauwe plus op de rand, of je kiest **Maak L-vorm**. Met Alt-klik op een hoek haal je die weg.
 - Deuren en ramen plaats je op een muur.
+- Open keuken of doorgang: kies **Open muur** en klik op de muur tussen twee kamers. Kies de breedte of **Hele muur open**. Beide kamers houden hun eigen naam en temperatuur.
+- Gebogen muur: selecteer een losse muur en kies een van de buigknoppen. Een kamerrand buig je door met de blauwe plussen hoeken toe te voegen.
+- Volgorde van verdiepingen: klik naast de plattegrond op een leeg stuk en kies **Verdieping lager** of **Verdieping hoger**.
+- Meerdere spots op één schakelaar: selecteer het apparaat en kies **Dit apparaat nog een keer plaatsen**, of kopieer en plak het.
 - Meubels komen uit een catalogus. Bij een muur draaien ze vanzelf met hun achterkant ernaartoe; met de draaiknoppen zet je ze goed.
 - Apparaten sleep je naar hun plek. Bij lampen kies je de soort: plafond-, hang-, wand-, staande of tafellamp.
 - Begin je met een afbeelding of pdf, zet dan de schaal door één bekende lengte te meten. De editor herkent muren, kamers, deuren en ramen. Dat gebeurt in je browser; er wordt niets verstuurd.
@@ -47,7 +51,7 @@ Onderdelen zoals panelen, accu, auto, warmtepomp en airco verschijnen vanzelf al
 - **Huis**: je huis met de waarden in rijen erboven en eronder. Tik op een waarde of onderdeel voor de pagina met grafiek, verwachting en kosten. Tik op een verdieping om naar binnen te gaan.
 - De lijnen tonen de stroom: geel is zon, grijsblauw het net, groen de accu en lichtblauw het verbruik.
 - **Verdiepingen**: met de knop rechts naast de tabbladen wissel je tussen 2D, 3D en 2.5D. Tik op een lamp om te schakelen of te dimmen.
-- De strook bovenaan toont alleen wat aandacht vraagt, zoals een open raam, de container of de goedkoopste uren.
+- De strook bovenaan toont alleen wat aandacht vraagt, zoals een open raam, de container of de goedkoopste uren. Heb je de app Afval Herinnering 2.0 (bijvoorbeeld voor Rova), dan komt de container daaruit. Anders zoekt HomeDeck in je agenda naar afspraken met woorden als container, afval, gft of pmd.
 - **Ik ga weg** laat zien wat open staat, wat niet op slot is en welke lampen aan zijn, met een knop om alle lampen uit te doen. Je tikt twee keer, zodat het niet per ongeluk gebeurt.
 - **Variabelen**: Logic-variabelen die je in de editor kiest, staan op het dashboard om te lezen. Veranderen doe je in Homey of met een Flow.
 

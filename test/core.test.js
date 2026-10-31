@@ -7,6 +7,25 @@ const { samplePlan, sampleDevices } = require('./sample');
 
 const { rect } = core.geom;
 
+test('an open wall leaves nothing standing, at any height', () => {
+  const level = core.newLevel('L');
+  const wall = { a: [0, 0], b: [400, 0], t: 12 };
+  const open = { type: 'passage', x: 200, y: 0, angle: 0, width: 400 };
+  assert.deepStrictEqual(core.wallPieces(wall, [open], level, true), []);
+  const part = core.wallPieces(wall, [{ ...open, width: 200 }], level, true);
+  assert.strictEqual(part.length, 2);
+  assert.ok(part.every((p) => p.z0 === 0 && p.z1 === level.wallHeight));
+});
+
+test('a curved wall starts and ends where the straight one did and bulges to the asked side', () => {
+  const pts = core.arcPoints([0, 0], [400, 0], 100);
+  assert.strictEqual(pts.length, 11);
+  assert.ok(core.geom.dist(pts[0], [0, 0]) < 0.01);
+  assert.ok(core.geom.dist(pts[10], [400, 0]) < 0.01);
+  assert.ok(Math.abs(pts[5][1] - 100) < 0.01 && Math.abs(pts[5][0] - 200) < 0.01);
+  assert.ok(core.arcPoints([0, 0], [400, 0], -100)[5][1] < 0);
+});
+
 test('shared room edges become one wall', () => {
   const level = core.newLevel('L');
   level.rooms = [

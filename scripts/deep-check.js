@@ -291,6 +291,11 @@ const PARTS = {
       check('vacuum sign', await t.until('/Stofzuiger is bezig/.test(document.getElementById("attention").textContent)'));
       await t.js('document.getElementById("sheet-close").click()');
 
+      // The waste app goes before the agenda
+      s.app.extras.wasteOn = async (when) => (when === 'tomorrow' ? 'De plastic container' : null);
+      s.app.extras.waste = null;
+      await t.open(url); await t.until(ready);
+      check('waste from the app at the top', await t.until('/Morgen: De plastic container/.test(document.getElementById("attention").textContent)', 12000));
       check('variables shown', await t.until('document.querySelectorAll("#var-card .fp-row").length === 3'));
       check('evil variable stays text', !(await t.js('document.querySelector("#var-card img")')));
       check('variables are only to read', await t.js('!document.querySelector("#var-card button, #var-card input")'));
@@ -581,6 +586,16 @@ const PARTS = {
       })()`);
       check('a lamp that goes off fades out', seen && seen.during > 0, seen);
       check('and then it is off', seen && seen.gone, seen);
+      // In 3D no room label lies on a lamp, also on a small screen
+      await t.js('(() => { __widgetState().view = "3d"; document.querySelectorAll("#levels [data-level]")[2].click(); document.querySelectorAll("#levels [data-level]")[1].click(); })()');
+      await t.until('document.querySelector(".fp3-dev")');
+      await sleep(2500);
+      const covered = await t.js(`(() => {
+        const hit = (a, r) => a.left + 2 < r.right && r.left + 2 < a.right && a.top + 2 < r.bottom && r.top + 2 < a.bottom;
+        const labels = [...document.querySelectorAll('.fp3-room')].filter((e) => e.offsetParent).map((e) => e.getBoundingClientRect());
+        return [...document.querySelectorAll('.fp3-dev .fp3-dot')].filter((e) => e.offsetParent).filter((e) => labels.some((l) => hit(l, e.getBoundingClientRect()))).length;
+      })()`);
+      check('no room label on a lamp in 3D', covered === 0, covered);
       await t.clean('lamps');
       await t.close();
     });

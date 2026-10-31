@@ -194,3 +194,16 @@ test('gas today: what the meter rose today, nothing without readings', async () 
   details.today = async () => [];
   assert.strictEqual(await details.gasToday(), null);
 });
+
+test('waste: from the app when it is there, nothing without it', async () => {
+  const asked = [];
+  const answers = { today: { isCollected: false, trashType: 'Niets' }, tomorrow: { isCollected: true, trashType: 'PMD', trashTypeLocalized: 'De plastic container' } };
+  const x = extras({ flow: { runFlowCardAction: async (a) => { asked.push(a); return { returnTokens: answers[a.args.when] }; } } });
+  assert.deepStrictEqual(await x.getWaste(), { today: null, tomorrow: 'De plastic container' });
+  assert.strictEqual(asked.length, 2);
+  assert.strictEqual(asked[0].uri, 'homey:app:com.trashchecker');
+  await x.getWaste();
+  assert.strictEqual(asked.length, 2, 'kept for a while');
+  const without = extras({ flow: { runFlowCardAction: async () => { throw new Error('Not Found'); } } });
+  assert.strictEqual(await without.getWaste(), null);
+});

@@ -368,7 +368,8 @@ test('prices reach the advice whatever blocks the Energy page shows', async () =
     app.energyEngine.homey.settings.set('config', { layout: [{ id: 'flow', size: 'half' }] });
     const money = await app.energyDetails.pricesNow();
     assert.strictEqual(money.price, 0.4);
-    assert.deepStrictEqual((await app.extras.getAdvice()).items.map((i) => i.id), ['dear']);
+    // whatever else the hour of the day brings, such as solar to spare
+    assert.ok((await app.extras.getAdvice()).items.some((i) => i.id === 'dear'));
   });
 });
 

@@ -203,7 +203,7 @@
     let cursor = 0; let startIsEnd = true;
     for (const g of gaps) {
       if (g.s0 > cursor + 0.5) pieces.push({ a: at(cursor), b: at(g.s0), z0: 0, z1: H, capA: startIsEnd, capB: false });
-      if (withHeights) {
+      if (withHeights && g.opening.type !== 'passage') { // a passage has no lintel: the wall is simply gone
         const isWindow = g.opening.type === 'window';
         const top = isWindow ? (g.opening.top || DEFAULTS.windowTop) : (g.opening.height || DEFAULTS.doorHeight);
         if (top < H) pieces.push({ a: at(g.s0), b: at(g.s1), z0: top, z1: H, capA: false, capB: false, part: 'lintel' });
@@ -216,6 +216,25 @@
     }
     if (L > cursor + 0.5) pieces.push({ a: at(cursor), b: at(L), z0: 0, z1: H, capA: startIsEnd, capB: true });
     return pieces;
+  }
+
+  /** Points of a curved wall from a to b; bulge is how far the middle lies from the straight line, in cm. */
+  function arcPoints(a, b, bulge, steps = 10) {
+    const L = dist(a, b);
+    if (L < 1 || !bulge) return [a, b];
+    const u = norm(sub(b, a));
+    const n = [-u[1], u[0]];
+    const h = Math.abs(bulge);
+    const r = (L * L / 4 + h * h) / (2 * h);
+    const half = 2 * Math.atan2(h, L / 2);
+    const out = [];
+    for (let i = 0; i <= steps; i++) {
+      const ang = -half + (2 * half * i) / steps;
+      const along = L / 2 + r * Math.sin(ang);
+      const off = r * Math.cos(ang) - (r - h);
+      out.push(add(add(a, mul(u, along)), mul(n, Math.sign(bulge) * off)));
+    }
+    return out;
   }
 
   /** Footprint quad of a wall piece, extended by half the thickness at real wall ends for clean corners. */
@@ -938,6 +957,12 @@
       const sel = selected.has(o.id) ? ' data-selected="1"' : '';
       const ow = t * 0.9;
 
+      // An open passage: no wall and no door, only something to select in 2D
+      if (o.type === 'passage') {
+        if (!view.is3d) floor.push(`<polygon class="fp-opening" data-kind="opening" data-id="${esc(o.id)}"${sel} points="${ptsAttr(wallQuad({ a: ends[0], b: ends[1] }, t + 1))}" fill="transparent"/>`);
+        continue;
+      }
+
       if (o.type === 'window') {
         const closed = cover ? coverClosed(cover) : 0;
         const isOpen = contact ? contact.caps.alarm_contact === true : false;
@@ -1247,7 +1272,7 @@
     DEFAULTS, CATALOGUE, GLYPHS, LIGHT_PALETTE, DARK_PALETTE,
     uid, newPlan, newLevel, newFurniture, newDeviceItem,
     geom: { sub, add, mul, dot, cross, len, norm, dist, signedArea, pointInPolygon, projectOnSegment, bbox, labelPoint, rotatePt, rect },
-    levelWalls, openingsOnWall, wallPieces, furnitureParts,
+    levelWalls, openingsOnWall, wallPieces, arcPoints, furnitureParts,
     deviceKind, deviceFixture, isLampItem, defaultMount, isOn, coverClosed, lightColor, lightIntensity, deviceValueText, roomReadings, roomLabel, tintColor, modelOf,
     makeView, render, levelsFromZones, autoPlace,
   };

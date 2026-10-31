@@ -22,8 +22,8 @@
       device: 'Device', shape: 'Shape', auto: 'Automatic', mount: 'Sits', ceiling: 'Ceiling', wall: 'Wall', floor: 'Floor',
       reach: 'Light reach (cm)', showValue: 'Show value beside it', label: 'Label',
       furniture: 'Furniture', width: 'Width', depth: 'Depth', height: 'Height', elevation: 'Above the floor', rotation: 'Rotation (°)', colour: 'Colour',
-      door: 'Door', window: 'Window', type: 'Type', flipSwing: 'Flip swing', flipHinge: 'Flip hinge', shows: 'Shows (linked devices)', noLinkable: 'No contact sensors, locks or covers found.',
-      freeWall: 'Wall', length: 'Length (cm)', thickness: 'Thickness (cm)',
+      door: 'Door', window: 'Window', passage: 'Open wall', passageNote: 'Click on a wall to open it up, such as between an open kitchen and the living room. Both rooms stay rooms of their own, with their own name and temperature. Choose the width in the panel or open the whole wall.', wholeWall: 'Open the whole wall', type: 'Type', flipSwing: 'Flip swing', flipHinge: 'Flip hinge', shows: 'Shows (linked devices)', noLinkable: 'No contact sensors, locks or covers found.',
+      freeWall: 'Wall', bendLeft: 'Curve one way', bendRight: 'Curve the other way', bendNote: 'A curved wall is made of short straight pieces. Undo takes it back.', placeAgain: 'Place this device again', placeAgainNote: 'Handy for several spots on one switch: every copy switches the same device.', levelLower: 'Move level down', levelHigher: 'Move level up', length: 'Length (cm)', thickness: 'Thickness (cm)',
       catalogue: 'Pieces near a wall turn to face it (Shift: place freely). R rotates 15°.',
       devices: 'Devices', search: 'Search devices', placeAll: 'Place all', unplaced: 'Not on the plan yet', elsewhere: 'Elsewhere',
       devicesNote: 'Click a device, then click on the plan. Lights go on the ceiling, plugs and sensors on walls.',
@@ -57,7 +57,7 @@
       calendars: 'Calendars', calendarsNote: 'Paste an iCal link (for Google Calendar: Settings → your calendar → "Secret address in iCal format"). The widget shows upcoming events in its side panel. Links stay on your Homey.',
       addCalendar: 'Add calendar', calendarUrl: 'iCal link', save: 'Save', calendarsSaved: 'Calendars saved', remove: 'Remove',
       backupTitle: 'Backup', backupNote: 'One file with your plans, calendars, lists and screens, to keep or to take to another Homey. Before every update the app also makes a copy itself. Removing the app deletes everything but your own file.', backupExport: 'Export', backupImport: 'Import', backupFrom: 'Before the update of', backupRestore: 'Put back', backupBad: 'This file cannot be read.',
-      toolSelect: 'Select', toolRoom: 'Room', toolWall: 'Walls', toolDoor: 'Doors', toolWindow: 'Windows', toolFurniture: 'Furniture', toolDevice: 'Devices', toolMeasure: 'Measure', toolPicture: 'Picture', toolCalendar: 'Calendar', toolHouse: 'House',
+      toolSelect: 'Select', toolRoom: 'Room', toolWall: 'Walls', toolDoor: 'Doors', toolWindow: 'Windows', toolPassage: 'Open wall', toolFurniture: 'Furniture', toolDevice: 'Devices', toolMeasure: 'Measure', toolPicture: 'Picture', toolCalendar: 'Calendar', toolHouse: 'House',
       scene: 'Around the house', sceneStudio: 'Nothing: calm', sceneGarden: 'Garden, path and driveway',
       forecastOn: 'Solar forecast from Forecast.Solar (this service then knows roughly where your house is)',
       variablesTitle: 'Variables on the dashboard', variablesNote: 'Logic variables to see and change there.', variablesNone: 'No Logic variables yet.', roomVacuum: 'Flow that vacuums this room',
@@ -90,8 +90,8 @@
       device: 'Apparaat', shape: 'Vorm', auto: 'Automatisch', mount: 'Zit', ceiling: 'Plafond', wall: 'Muur', floor: 'Vloer',
       reach: 'Bereik van het licht (cm)', showValue: 'Waarde ernaast tonen', label: 'Label',
       furniture: 'Meubels', width: 'Breedte', depth: 'Diepte', height: 'Hoogte', elevation: 'Boven de vloer', rotation: 'Draaiing (°)', colour: 'Kleur',
-      door: 'Deur', window: 'Raam', type: 'Soort', flipSwing: 'Draairichting omkeren', flipHinge: 'Scharnier omkeren', shows: 'Toont (gekoppelde apparaten)', noLinkable: 'Geen contactsensoren, sloten of zonwering gevonden.',
-      freeWall: 'Muur', length: 'Lengte (cm)', thickness: 'Dikte (cm)',
+      door: 'Deur', window: 'Raam', passage: 'Open muur', passageNote: 'Klik op een muur om hem open te maken, zoals tussen een open keuken en de woonkamer. Beide kamers blijven eigen kamers, met hun eigen naam en temperatuur. Kies de breedte in het paneel of maak de hele muur open.', wholeWall: 'Hele muur open', type: 'Soort', flipSwing: 'Draairichting omkeren', flipHinge: 'Scharnier omkeren', shows: 'Toont (gekoppelde apparaten)', noLinkable: 'Geen contactsensoren, sloten of zonwering gevonden.',
+      freeWall: 'Muur', bendLeft: 'Buig de ene kant op', bendRight: 'Buig de andere kant op', bendNote: 'Een gebogen muur bestaat uit korte rechte stukjes. Met Ongedaan maken draai je het terug.', placeAgain: 'Dit apparaat nog een keer plaatsen', placeAgainNote: 'Handig voor meerdere spots op één schakelaar: elke kopie schakelt hetzelfde apparaat.', levelLower: 'Verdieping lager', levelHigher: 'Verdieping hoger', length: 'Lengte (cm)', thickness: 'Dikte (cm)',
       catalogue: 'Bij een muur draait het er vanzelf naartoe (Shift: vrij plaatsen). R draait 15°.',
       devices: 'Apparaten', search: 'Apparaat zoeken', placeAll: 'Alles plaatsen', unplaced: 'Nog niet op de plattegrond', elsewhere: 'Elders',
       devicesNote: 'Klik op een apparaat en daarna op de plattegrond. Lampen komen op het plafond, stekkers en sensoren op muren.',
@@ -125,7 +125,7 @@
       calendars: "Agenda's", calendarsNote: 'Plak een iCal-link (Google Agenda: Instellingen → je agenda → "Geheim adres in iCal-indeling"). De widget toont de komende afspraken in het zijpaneel. Links blijven op je Homey.',
       addCalendar: 'Agenda toevoegen', calendarUrl: 'iCal-link', save: 'Opslaan', calendarsSaved: "Agenda's opgeslagen", remove: 'Verwijderen',
       backupTitle: 'Back-up', backupNote: 'Eén bestand met je plattegronden, agenda\'s, lijstjes en schermen, om te bewaren of mee te nemen naar een andere Homey. Vóór elke update maakt de app ook zelf een kopie. Verwijder je de app, dan is alles weg behalve je eigen bestand.', backupExport: 'Exporteren', backupImport: 'Importeren', backupFrom: 'Van vóór de update van', backupRestore: 'Terugzetten', backupBad: 'Dit bestand kan niet worden gelezen.',
-      toolSelect: 'Selecteren', toolRoom: 'Kamer', toolWall: 'Muren', toolDoor: 'Deuren', toolWindow: 'Ramen', toolFurniture: 'Meubels', toolDevice: 'Apparaten', toolMeasure: 'Meten', toolPicture: 'Afbeelding', toolCalendar: 'Agenda', toolHouse: 'Huis',
+      toolSelect: 'Selecteren', toolRoom: 'Kamer', toolWall: 'Muren', toolDoor: 'Deuren', toolWindow: 'Ramen', toolPassage: 'Open muur', toolFurniture: 'Meubels', toolDevice: 'Apparaten', toolMeasure: 'Meten', toolPicture: 'Afbeelding', toolCalendar: 'Agenda', toolHouse: 'Huis',
       scene: 'Rond het huis', sceneStudio: 'Niets: rustig', sceneGarden: 'Tuin, pad en oprit',
       forecastOn: 'Zonneverwachting van Forecast.Solar (die dienst weet dan ongeveer waar je huis staat)',
       variablesTitle: 'Variabelen op het dashboard', variablesNote: 'Logic-variabelen om daar te zien en te wijzigen.', variablesNone: 'Nog geen Logic-variabelen.', roomVacuum: 'Flow die deze kamer stofzuigt',
@@ -398,6 +398,20 @@
   }
 
   // Doors and windows sit on a wall: keep them on its line and inside its length.
+  const openingWidth = () => ({ door: 90, window: 120, passage: 200 }[S.tool]);
+
+  // The stretch of wall an opening sits on. Two rooms against each other can have walls of different lengths: then the part they share.
+  function wallStretch(o) {
+    const u = [Math.cos(o.angle || 0), Math.sin(o.angle || 0)];
+    const along = (p) => G.dot(p, u);
+    const under = core.levelWalls(level()).filter((w) => core.openingsOnWall(w, [o]).length);
+    if (!under.length) return null;
+    const from = Math.max(...under.map((w) => Math.min(along(w.a), along(w.b))));
+    const to = Math.min(...under.map((w) => Math.max(along(w.a), along(w.b))));
+    const shift = (from + to) / 2 - along([o.x, o.y]);
+    return { x: Math.round((o.x + u[0] * shift) * 10) / 10, y: Math.round((o.y + u[1] * shift) * 10) / 10, width: to - from };
+  }
+
   function openingOnWall(p, width) {
     const nw = nearestWall(p, 45 * Math.max(1, scale()));
     if (!nw) return null;
@@ -770,8 +784,8 @@
         draw();
         return;
       }
-      case 'door': case 'window': {
-        const g = openingOnWall(p, S.tool === 'door' ? 90 : 120);
+      case 'door': case 'window': case 'passage': {
+        const g = openingOnWall(p, openingWidth());
         if (!g) return;
         commit(() => {
           const o = { id: core.uid('open'), type: S.tool, ...g, swing: 1, hinge: 1, devices: [] };
@@ -863,7 +877,7 @@
     const lv = level();
     const d = S.drag;
     if (!d) {
-      if (S.tool === 'door' || S.tool === 'window') { S.ghost = openingOnWall(p, S.tool === 'door' ? 90 : 120); draw(); }
+      if (S.tool === 'door' || S.tool === 'window' || S.tool === 'passage') { S.ghost = openingOnWall(p, openingWidth()); draw(); }
       else if (S.wallDraft || S.pendingFurniture || S.pendingDevice) draw();
       return;
     }
@@ -1081,15 +1095,15 @@
       commit(() => moveSelection(step));
       return;
     }
-    const tools = { v: 'select', q: 'room', w: 'wall', d: 'door', n: 'window', f: 'furniture', e: 'device', m: 'measure' };
+    const tools = { v: 'select', q: 'room', w: 'wall', d: 'door', n: 'window', o: 'passage', f: 'furniture', e: 'device', m: 'measure' };
     if (!ev.ctrlKey && !ev.metaKey && !ev.altKey && tools[ev.key.toLowerCase()]) setTool(tools[ev.key.toLowerCase()]);
   }
 
-  // Copy and paste of furniture, rooms, walls, doors and windows (also onto another level). Devices are not
-  // copied: a device has one place in the house.
+  // Copy and paste of furniture, devices, rooms, walls, doors and windows (also onto another level).
+  // A copied device is the same device in one more place, such as several spots on one switch.
   function copySelection() {
     const obj = selectedObject();
-    if (!obj || (S.sel.kind === 'item' && obj.kind === 'device')) return false;
+    if (!obj) return false;
     S.clipboard = { kind: S.sel.kind, data: JSON.parse(JSON.stringify(obj)) };
     return true;
   }
@@ -1297,6 +1311,7 @@
     else if (S.tool === 'measure') html = measurePanel();
     else if (S.tool === 'calendar') html = calendarPanel();
     else if (S.tool === 'house') html = housePanel();
+    else if (S.tool === 'passage') html = `<h2>${T.passage}</h2><p class="ed-note">${T.passageNote}</p>`;
     else if (S.tool === 'door' || S.tool === 'window') html = `<h2>${S.tool === 'door' ? T.door : T.window}</h2><p class="ed-note">${S.tool === 'door' ? T.doorNote : T.windowNote}</p>`;
     else html = levelPanel(lv);
     if (!placing) key = obj ? `sel:${S.sel.kind}` : S.tool;
@@ -1382,6 +1397,7 @@
       ${free.length ? `<div class="ed-list">${free.map((z) => `<div class="ed-list-row"><span>${esc(z.name)}</span><button type="button" class="ed-btn small" data-action="place-zone" data-zone="${esc(z.id)}">${T.place}</button></div>`).join('')}</div>` : `<p class="ed-note">${T.allPlaced}</p>`}
       <h3>${T.plan}</h3>
       ${field(T.name, input('plan.name', S.plan.name))}
+      ${S.plan.levels.length > 1 ? `<div class="ed-row-btns"><button type="button" class="ed-btn" data-action="level-lower"${S.plan.levels[0] === lv ? ' disabled' : ''}>↓ ${T.levelLower}</button><button type="button" class="ed-btn" data-action="level-higher"${S.plan.levels[S.plan.levels.length - 1] === lv ? ' disabled' : ''}>↑ ${T.levelHigher}</button></div>` : ''}
       <div class="ed-row-btns">${S.plan.levels.length > 1 ? deleteBtn('level').replace(T.delete, T.deleteLevel) : ''}${deleteBtn('plan').replace(T.delete, T.deletePlan)}</div>
       <h3>${T.backupTitle}</h3><p class="ed-note">${T.backupNote}</p>
       <input type="file" id="backup-file" accept="application/json,.json" hidden>
@@ -1449,6 +1465,7 @@
       ${groupNote}${lampToggle}
       ${fixtures}${sizes}${other}
       <label class="ed-check"><input type="checkbox" data-path="sel.showValue" data-bool="1"${item.showValue !== false ? ' checked' : ''}>${T.showValue}</label>
+      <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="place-again">＋ ${T.placeAgain}</button></div><p class="ed-note">${T.placeAgainNote}</p>
       <div class="ed-row-btns">${deleteBtn('sel')}</div>`;
   }
 
@@ -1473,8 +1490,16 @@
     const list = linkable.length
       ? linkable.map((d) => `<label class="ed-check"><input type="checkbox" data-link="${esc(d.id)}"${(o.devices || []).includes(d.id) ? ' checked' : ''}>${esc(d.name)} <span class="ed-note" style="margin:0">${esc(zoneName(d.zone))}</span></label>`).join('')
       : `<p class="ed-note">${T.noLinkable}</p>`;
+    const kinds = [{ id: 'door', name: T.door }, { id: 'window', name: T.window }, { id: 'passage', name: T.passage }];
+    if (o.type === 'passage') {
+      return `<h2>${T.passage}</h2><p class="ed-note">${T.passageNote}</p>
+      ${field(T.type, `<select data-path="sel.type" data-rerender="1">${options(kinds, o.type)}</select>`)}
+      ${field(T.width, input('sel.width', Math.round(o.width), 'number'))}
+      <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="passage-whole">↔ ${T.wholeWall}</button></div>
+      <div class="ed-row-btns">${deleteBtn('sel')}</div>`;
+    }
     return `<h2>${o.type === 'door' ? T.door : T.window}</h2>
-      ${field(T.type, `<select data-path="sel.type" data-rerender="1">${options([{ id: 'door', name: T.door }, { id: 'window', name: T.window }], o.type)}</select>`)}
+      ${field(T.type, `<select data-path="sel.type" data-rerender="1">${options(kinds, o.type)}</select>`)}
       ${field(T.width, input('sel.width', Math.round(o.width), 'number'))}
       ${o.type === 'door' ? `<div class="ed-row-btns"><button type="button" class="ed-btn" data-action="flip-swing">${T.flipSwing}</button><button type="button" class="ed-btn" data-action="flip-hinge">${T.flipHinge}</button></div>` : `<div class="ed-row-btns"><button type="button" class="ed-btn" data-action="flip-blind">${T.flipSwing}</button></div>`}
       <h3>${T.shows}</h3>${list}
@@ -1490,6 +1515,7 @@
       ${field(T.thickness, input('sel.t', w.t || level().wallThickness, 'number'))}
       <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="wall-h">↔ ${T.horizontal}</button><button type="button" class="ed-btn" data-action="wall-v">↕ ${T.vertical}</button></div>
       <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="wall-align">⇹ ${T.align}</button></div>
+      <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="wall-bend" data-side="1">⌒ ${T.bendLeft}</button><button type="button" class="ed-btn" data-action="wall-bend" data-side="-1">⌣ ${T.bendRight}</button></div><p class="ed-note">${T.bendNote}</p>
       ${lockRow(w)}
       <div class="ed-row-btns">${deleteBtn('sel')}</div>`;
   }
@@ -1982,6 +2008,24 @@
         const b = [0, 1].map((i) => Math.round(cur[i] + (next[i] - cur[i]) * 0.4));
         const c = [0, 1].map((i) => Math.round(cur[i] + (prev[i] - cur[i]) * 0.4 + (next[i] - cur[i]) * 0.4));
         pts.splice(2, 1, a, c, b);
+      }); break;
+      case 'level-lower': case 'level-higher': {
+        const from = S.plan.levels.indexOf(lv);
+        const to = from + (action === 'level-higher' ? 1 : -1);
+        if (to < 0 || to >= S.plan.levels.length) break;
+        commit(() => { S.plan.levels.splice(to, 0, S.plan.levels.splice(from, 1)[0]); });
+        renderLevels();
+        break;
+      }
+      case 'passage-whole': commit(() => { const o = selectedObject(); const g = wallStretch(o); if (g) Object.assign(o, g); }); break;
+      case 'place-again': S.hover = null; if (copySelection()) paste(); break;
+      case 'wall-bend': commit(() => {
+        const w = selectedObject();
+        const pts = core.arcPoints(w.a, w.b, Number(el.dataset.side) * G.dist(w.a, w.b) * 0.25).map((p) => p.map(Math.round));
+        lv.walls = lv.walls.filter((x) => x !== w);
+        const parts = pts.slice(1).map((b, i) => ({ ...w, id: core.uid('wall'), a: pts[i], b }));
+        lv.walls.push(...parts);
+        S.sel = { kind: 'wall', id: parts[0].id };
       }); break;
       case 'room-align': commit(() => alignToWalls(selectedObject(), true)); break;
       case 'wall-align': commit(() => alignToWalls(selectedObject(), false)); break;

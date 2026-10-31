@@ -16,11 +16,15 @@ You can look around without installing anything: [the demo](https://wnijhof.gith
 
 ## The editor
 
-The left bar holds the tools: Select, Room, Walls, Doors, Windows, Furniture, Devices, Measure, Picture, Calendar and House.
+The left bar holds the tools: Select, Room, Walls, Doors, Windows, Open wall, Furniture, Devices, Measure, Picture, Calendar and House.
 
 - Rooms: drag a rectangle. Drag the corners to change the shape. For an L-shape, pull a blue plus on the edge, or choose **Make L-shaped**. Alt-click a corner to remove it.
 - Doors and windows go on a wall.
 - Furniture comes from a catalogue. Near a wall it turns its back to the wall by itself; use the turn buttons to adjust it.
+- Open kitchen or passage: choose **Open wall** and click the wall between two rooms. Choose the width or **Open the whole wall**. Both rooms keep their own name and temperature.
+- Curved wall: select a free wall and choose one of the curve buttons. To curve a room edge, add corners with the blue plusses.
+- Order of the levels: click an empty spot beside the plan and choose **Move level down** or **Move level up**.
+- Several spots on one switch: select the device and choose **Place this device again**, or copy and paste it.
 - Drag devices to their place. For lamps you choose the kind: ceiling, pendant, wall, floor or table lamp.
 - Starting from a picture or PDF: set the scale by measuring one known length. The editor recognises walls, rooms, doors and windows. This happens in your browser; nothing is sent anywhere.
 
@@ -47,7 +51,7 @@ Parts such as panels, battery, car, heat pump and air conditioning appear by the
 - **House**: your home with the values in rows above and below it. Tap a value or part for its page with chart, forecast and costs. Tap a storey to go inside.
 - The lines show the power: yellow is solar, grey-blue the grid, green the battery and light blue what is used.
 - **Storeys**: the button beside the tabs switches between 2D, 3D and 2.5D. Tap a lamp to switch or dim it.
-- The strip at the top only shows what needs attention, such as an open window, the bins or the cheapest hours.
+- The strip at the top only shows what needs attention, such as an open window, the bins or the cheapest hours. With the app Trashcan Reminder 2.0, the bins come from there. Otherwise HomeDeck looks in your calendar for events with words such as bin, trash or garbage.
 - **I'm leaving** shows what is open, what is not locked and which lamps are on, with a button to turn all lamps off. You tap twice, so it cannot happen by accident.
 - **Variables**: Logic variables you choose in the editor are on the dashboard to read. You change them in Homey or with a Flow.
 

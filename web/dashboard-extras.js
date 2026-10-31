@@ -26,6 +26,7 @@
   var BINS = /(container|afval|vuilnis|kliko|\bgft\b|\bpmd\b|oud papier|\bbins?\b|trash|garbage|recycl|rubbish)/i;
   var core = window.FloorplanCore;
   var agenda = [];
+  var waste = null; // from a waste app on the Homey, then the agenda is not asked
 
   function devices() {
     var list = [];
@@ -59,9 +60,11 @@
     if (low.length) out.push({ icon: '🪫', text: low.length + T.lowBattery });
     var now = new Date();
     var morning = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    if (waste && waste.today && now.getHours() < 12) out.push({ icon: '🗑', text: T.today + waste.today });
+    if (waste && waste.tomorrow) out.push({ icon: '🗑', text: T.tomorrow + waste.tomorrow });
     agenda.forEach(function (e) {
       var days = Math.floor((new Date(e.start) - morning) / 86400000);
-      if (BINS.test(e.title || '') && days >= 0 && days <= 1 && (days === 1 || now.getHours() < 12)) out.push({ icon: '🗑', text: (days ? T.tomorrow : T.today) + e.title });
+      if (!waste && BINS.test(e.title || '') && days >= 0 && days <= 1 && (days === 1 || now.getHours() < 12)) out.push({ icon: '🗑', text: (days ? T.tomorrow : T.today) + e.title });
     });
     return out.concat(window.FpPanels.chips()).slice(0, 6);
   }
@@ -196,6 +199,7 @@
 
   function loadSlow() {
     HomeyWeb.request('GET', '/agenda').then(function (a) { agenda = (a && a.events) || []; renderStrip(); }).catch(function () {});
+    HomeyWeb.request('GET', '/waste').then(function (w) { waste = w; renderStrip(); }).catch(function () {});
     if (window.__widgetState && st().plan) window.FpPanels.loadSlow();
   }
 
