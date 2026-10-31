@@ -57,7 +57,7 @@
       calendars: 'Calendars', calendarsNote: 'Paste an iCal link (for Google Calendar: Settings → your calendar → "Secret address in iCal format"). The widget shows upcoming events in its side panel. Links stay on your Homey.',
       addCalendar: 'Add calendar', calendarUrl: 'iCal link', save: 'Save', calendarsSaved: 'Calendars saved', remove: 'Remove',
       backupTitle: 'Backup', backupNote: 'One file with your plans, calendars, lists and screens, to keep or to take to another Homey. Before every update the app also makes a copy itself. Removing the app deletes everything but your own file.', backupExport: 'Export', backupImport: 'Import', backupFrom: 'Before the update of', backupRestore: 'Put back', backupBad: 'This file cannot be read.',
-      toolSelect: 'Select', toolRoom: 'Room', toolWall: 'Walls', toolDoor: 'Doors', toolWindow: 'Windows', toolPassage: 'Open wall', toolFurniture: 'Furniture', toolDevice: 'Devices', toolMeasure: 'Measure', toolPicture: 'Picture', toolCalendar: 'Calendar', toolHouse: 'House',
+      toolSelect: 'Select', toolRoom: 'Room', toolWall: 'Walls', toolDoor: 'Doors', toolWindow: 'Windows', toolPassage: 'Open wall', partBoiler: 'Hot water boiler', toolFurniture: 'Furniture', toolDevice: 'Devices', toolMeasure: 'Measure', toolPicture: 'Picture', toolCalendar: 'Calendar', toolHouse: 'House',
       scene: 'Around the house', sceneStudio: 'Nothing: calm', sceneGarden: 'Garden, path and driveway',
       forecastOn: 'Solar forecast from Forecast.Solar (this service then knows roughly where your house is)',
       variablesTitle: 'Variables on the dashboard', variablesNote: 'Logic variables to see and change there.', variablesNone: 'No Logic variables yet.', roomVacuum: 'Flow that vacuums this room',
@@ -69,7 +69,7 @@
       house: 'The house from outside', houseNote: 'The dashboard opens on the whole house. It is the same house for everyone, set up to look like yours: tap a storey to go inside. Parts such as solar panels or a car appear when Homey has such a device (Automatic).',
       houseType: 'House', detached: 'Detached', semi: 'Semi-detached', terraced: 'Terraced', neighbourSide: 'Neighbours on the', left: 'Left', right: 'Right',
       roof: 'Roof', gable: 'Gable roof', hip: 'Hip roof', flat: 'Flat roof', ridge: 'Ridge', ridgeWidth: 'Along the front', ridgeDepth: 'Front to back', pitch: 'Roof pitch (°)',
-      facing: 'The front faces', dormer: 'Dormer at the back', extension: 'Extension', back: 'At the back', side: 'At the side', carport: 'Carport',
+      houseForm: 'Shape of the house', formSimple: 'Simple block', formPlan: 'Follows the floor plan', formNote: 'The walls follow the rooms you drew, storey by storey, with extensions and all. The roof lies on the biggest rectangular part; the other parts get a flat roof. Windows are placed evenly and are not your real windows. Choose the front of the plan below.', facing: 'The front faces', dormer: 'Dormer at the back', extension: 'Extension', back: 'At the back', side: 'At the side', carport: 'Carport',
       houseParts: 'On and around the house', showAuto: 'Automatic', showOn: 'Always', showOff: 'Never', panels: 'Number of panels (0: as many as fit)',
       batteryPlace: 'Battery stands', underCarport: 'Under the carport', againstWall: 'Against the wall', noHouse3d: 'This browser cannot show the house in 3D.',
       facade: 'Facade', brick: 'Red brick', darkbrick: 'Dark brick', yellowbrick: 'Yellow brick', plaster: 'White plaster', darkplaster: 'Dark plaster',
@@ -125,7 +125,7 @@
       calendars: "Agenda's", calendarsNote: 'Plak een iCal-link (Google Agenda: Instellingen → je agenda → "Geheim adres in iCal-indeling"). De widget toont de komende afspraken in het zijpaneel. Links blijven op je Homey.',
       addCalendar: 'Agenda toevoegen', calendarUrl: 'iCal-link', save: 'Opslaan', calendarsSaved: "Agenda's opgeslagen", remove: 'Verwijderen',
       backupTitle: 'Back-up', backupNote: 'Eén bestand met je plattegronden, agenda\'s, lijstjes en schermen, om te bewaren of mee te nemen naar een andere Homey. Vóór elke update maakt de app ook zelf een kopie. Verwijder je de app, dan is alles weg behalve je eigen bestand.', backupExport: 'Exporteren', backupImport: 'Importeren', backupFrom: 'Van vóór de update van', backupRestore: 'Terugzetten', backupBad: 'Dit bestand kan niet worden gelezen.',
-      toolSelect: 'Selecteren', toolRoom: 'Kamer', toolWall: 'Muren', toolDoor: 'Deuren', toolWindow: 'Ramen', toolPassage: 'Open muur', toolFurniture: 'Meubels', toolDevice: 'Apparaten', toolMeasure: 'Meten', toolPicture: 'Afbeelding', toolCalendar: 'Agenda', toolHouse: 'Huis',
+      toolSelect: 'Selecteren', toolRoom: 'Kamer', toolWall: 'Muren', toolDoor: 'Deuren', toolWindow: 'Ramen', toolPassage: 'Open muur', partBoiler: 'Warmwaterboiler', toolFurniture: 'Meubels', toolDevice: 'Apparaten', toolMeasure: 'Meten', toolPicture: 'Afbeelding', toolCalendar: 'Agenda', toolHouse: 'Huis',
       scene: 'Rond het huis', sceneStudio: 'Niets: rustig', sceneGarden: 'Tuin, pad en oprit',
       forecastOn: 'Zonneverwachting van Forecast.Solar (die dienst weet dan ongeveer waar je huis staat)',
       variablesTitle: 'Variabelen op het dashboard', variablesNote: 'Logic-variabelen om daar te zien en te wijzigen.', variablesNone: 'Nog geen Logic-variabelen.', roomVacuum: 'Flow die deze kamer stofzuigt',
@@ -137,7 +137,7 @@
       house: 'Het huis van buiten', houseNote: "Het dashboard opent op het hele huis. Het is voor iedereen hetzelfde huis, zo ingesteld dat het op het jouwe lijkt: tik op een verdieping om naar binnen te gaan. Onderdelen zoals zonnepanelen of een auto verschijnen als Homey zo'n apparaat heeft (Automatisch).",
       houseType: 'Woning', detached: 'Vrijstaand', semi: 'Twee-onder-een-kap', terraced: 'Tussenwoning', neighbourSide: 'Buren aan de', left: 'Linkerkant', right: 'Rechterkant',
       roof: 'Dak', gable: 'Zadeldak', hip: 'Schilddak', flat: 'Plat dak', ridge: 'Nok', ridgeWidth: 'Langs de voorkant', ridgeDepth: 'Van voor naar achter', pitch: 'Dakhelling (°)',
-      facing: 'De voorkant ligt op het', dormer: 'Dakkapel aan de achterkant', extension: 'Aanbouw', back: 'Aan de achterkant', side: 'Aan de zijkant', carport: 'Carport',
+      houseForm: 'Vorm van het huis', formSimple: 'Eenvoudig blok', formPlan: 'Volgens de plattegrond', formNote: 'De muren volgen de kamers die je hebt getekend, per verdieping, met uitbouw en al. Het dak ligt op het grootste rechthoekige deel; de andere delen krijgen een plat dak. Ramen staan gelijkmatig verdeeld en zijn niet je echte ramen. Kies hieronder welke kant de voorkant is.', facing: 'De voorkant ligt op het', dormer: 'Dakkapel aan de achterkant', extension: 'Aanbouw', back: 'Aan de achterkant', side: 'Aan de zijkant', carport: 'Carport',
       houseParts: 'Op en rond het huis', showAuto: 'Automatisch', showOn: 'Altijd', showOff: 'Nooit', panels: 'Aantal panelen (0: zoveel als past)',
       batteryPlace: 'Accu staat', underCarport: 'Onder de carport', againstWall: 'Tegen de muur', noHouse3d: 'Deze browser kan het huis niet in 3D tonen.',
       facade: 'Gevel', brick: 'Rode baksteen', darkbrick: 'Donkere baksteen', yellowbrick: 'Gele baksteen', plaster: 'Wit stucwerk', darkplaster: 'Donker stucwerk',
@@ -1696,7 +1696,7 @@
   // Names on the cards of the house preview (the dashboard has its own, longer texts)
   const HOUSE_TEXTS = {
     solar: T.partSolar, grid: T.partGrid, gridIn: T.partGrid, gridOut: T.partGrid, battery: T.partBattery, car: T.partCar,
-    heatpump: T.partHeatpump, airco: T.partAirco, home: T.houseType, charging: '', discharging: '', idle: '', on: '', off: '',
+    heatpump: T.partHeatpump, airco: T.partAirco, boiler: T.partBoiler, home: T.houseType, charging: '', discharging: '', idle: '', on: '', off: '',
   };
 
   // A tap on a storey of the house preview: on to that storey in the editor.
@@ -1799,6 +1799,9 @@
       ${field(T.scene, sel('scene', h.scene, [['garden', T.sceneGarden], ['studio', T.sceneStudio]]))}
       ${field(T.houseType, sel('type', h.type, [['detached', T.detached], ['semi', T.semi], ['terraced', T.terraced]]))}
       ${h.type === 'semi' ? field(T.neighbourSide, sel('neighbour', h.neighbour, [['left', T.left], ['right', T.right]])) : ''}
+      ${field(T.houseForm, sel('form', h.form, [['simple', T.formSimple], ['plan', T.formPlan]]))}
+      ${h.form === 'plan' ? `<p class="ed-note">${T.formNote}</p>` : ''}
+      ${field(T.front, sel('front', h.front, [['bottom', T.frontBottom], ['top', T.frontTop], ['left', T.frontLeft], ['right', T.frontRight]]))}
       ${field(T.roof, sel('roof', h.roof, [['gable', T.gable], ['hip', T.hip], ['flat', T.flat]]))}
       ${h.roof !== 'flat' ? field(T.ridge, sel('ridge', h.ridge, [['width', T.ridgeWidth], ['depth', T.ridgeDepth]])) : ''}
       ${h.roof !== 'flat' ? field(T.pitch, `<input type="number" data-house="pitch" data-num="1" min="15" max="55" step="5" value="${h.pitch}">`) : ''}
@@ -1808,9 +1811,8 @@
       ${field(T.frames, sel('frames', h.frames, [['anthracite', T.anthracite], ['white', T.white]]))}
       ${field(T.doorColor, `<input type="color" data-house="door" value="${esc(h.door)}">`)}
       ${h.roof === 'gable' && h.ridge === 'width' ? `<label class="ed-check"><input type="checkbox" data-house="dormer" data-bool="1"${h.dormer ? ' checked' : ''}>${T.dormer}</label>` : ''}
-      ${field(T.extension, sel('extension', h.extension, [['none', T.none], ['back', T.back], ['side', T.side]]))}
+      ${h.form === 'plan' ? '' : field(T.extension, sel('extension', h.extension, [['none', T.none], ['back', T.back], ['side', T.side]]))}
       ${h.type !== 'terraced' ? field(T.carport, sel('carport', h.carport, [['none', T.none], ['left', T.left], ['right', T.right]])) : ''}
-      ${field(T.front, sel('front', h.front, [['bottom', T.frontBottom], ['top', T.frontTop], ['left', T.frontLeft], ['right', T.frontRight]]))}
       <h3>${T.houseParts}</h3>
       ${field(T.partSolar, show('solar'))}
       ${h.objects.solar.show !== 'off' ? field(T.panels, `<input type="number" data-house="objects.solar.panels" data-num="1" min="0" max="60" step="1" value="${h.objects.solar.panels}">`) : ''}
@@ -1823,6 +1825,7 @@
       ${field(T.partCar, show('car'))}
       ${field(T.partHeatpump, show('heatpump'))}
       ${field(T.partAirco, show('airco'))}
+      ${field(T.partBoiler, show('boiler'))}
       <h3>${T.outdoorLamps}</h3><p class="ed-note">${T.outdoorNote}</p>
       ${H.PLACES.map((p) => field(T[`place_${p}`], outdoorSelect(p, h.outdoor[p]))).join('')}
       ${actionSection()}

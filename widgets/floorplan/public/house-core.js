@@ -13,7 +13,7 @@
   const TYPES = ['detached', 'semi', 'terraced'];
   const ROOFS = ['gable', 'hip', 'flat'];
   const SIDES = ['left', 'right'];
-  const OBJECTS = ['solar', 'grid', 'battery', 'car', 'heatpump', 'airco'];
+  const OBJECTS = ['solar', 'grid', 'battery', 'car', 'heatpump', 'airco', 'boiler'];
   const SHOW = ['auto', 'on', 'off'];
   const BATTERY_PLACES = ['carport', 'wall'];
   const PHOTO_KINDS = ['home', 'level'].concat(OBJECTS);
@@ -54,6 +54,7 @@
       pitch: clamp(h.pitch, 15, 55, 40),
       facing: clamp(h.facing, 0, 359, 180), // compass direction the front looks at: 180 is south
       dormer: h.dormer === true,
+      form: pick(h.form, ['simple', 'plan'], 'simple'), // a neat block, or the real form of the floor plan
       extension: pick(h.extension, ['none', 'back', 'side'], 'none'),
       carport: pick(h.carport, ['none', 'left', 'right'], 'none'),
       facade: pick(h.facade, ['darkplaster', 'brick', 'darkbrick', 'yellowbrick', 'plaster'], 'darkplaster'),
@@ -85,6 +86,157 @@
     return x1 > x0 ? { w: (x1 - x0) / 100, d: (y1 - y0) / 100 } : null;
   }
 
+  function inPolygon(x, y, ps) {
+    let hit = false;
+    for (let i = 0, j = ps.length - 1; i < ps.length; j = i++) {
+      if ((ps[i][1] > y) !== (ps[j][1] > y) && x < ((ps[j][0] - ps[i][0]) * (y - ps[i][1])) / (ps[j][1] - ps[i][1]) + ps[i][0]) hit = !hit;
+    }
+    return hit;
+  }
+
+  // The lines of the grid under the house: values close together are one line, so rooms that nearly touch do touch.
+  function gridLines(values) {
+    const sorted = [...values].sort((a, b) => a - b);
+    for (let tol = 35; ; tol *= 1.5) {
+      const groups = [];
+      for (const v of sorted) {
+        const g = groups[groups.length - 1];
+        if (g && v - g[0] <= tol) g.push(v); else groups.push([v]);
+      }
+      if (groups.length <= 36) return groups.map((g) => g.reduce((s, v) => s + v, 0) / g.length);
+    }
+  }
+
+  // A small space enclosed by rooms (a hall nobody drew) is part of the house; a real courtyard stays open.
+  function fillHoles(mask, area) {
+    const R = mask.length; const C = mask[0].length;
+    const seen = mask.map((row) => row.map(() => false));
+    for (let r = 0; r < R; r++) {
+      for (let c = 0; c < C; c++) {
+        if (mask[r][c] || seen[r][c]) continue;
+        const list = []; const todo = [[r, c]]; seen[r][c] = true;
+        let open = false;
+        while (todo.length) {
+          const [a, b] = todo.pop();
+          list.push([a, b]);
+          for (const [p, q] of [[a + 1, b], [a - 1, b], [a, b + 1], [a, b - 1]]) {
+            if (p < 0 || q < 0 || p >= R || q >= C) { open = true; continue; }
+            if (!mask[p][q] && !seen[p][q]) { seen[p][q] = true; todo.push([p, q]); }
+          }
+        }
+        if (!open && list.reduce((s, [a, b]) => s + area(a, b), 0) <= 60000) for (const [a, b] of list) mask[a][b] = true;
+      }
+    }
+  }
+
+  function maskRects(mask) {
+    const used = mask.map((row) => row.map(() => false));
+    const list = [];
+    for (let r = 0; r < mask.length; r++) {
+      for (let c = 0; c < mask[0].length; c++) {
+        if (!mask[r][c] || used[r][c]) continue;
+        let c1 = c;
+        while (c1 + 1 < mask[0].length && mask[r][c1 + 1] && !used[r][c1 + 1]) c1++;
+        let r1 = r;
+        const free = (row) => { for (let k = c; k <= c1; k++) if (!mask[row][k] || used[row][k]) return false; return true; };
+        while (r1 + 1 < mask.length && free(r1 + 1)) r1++;
+        for (let a = r; a <= r1; a++) for (let b = c; b <= c1; b++) used[a][b] = true;
+        list.push({ r0: r, r1: r1 + 1, c0: c, c1: c1 + 1 });
+      }
+    }
+    return list;
+  }
+
+  // The outer walls of a mask, in stretches; going from a to b the outside lies to the left of the viewer: normal (-dz, dx).
+  function maskRuns(mask) {
+    const R = mask.length; const C = mask[0].length;
+    const at = (r, c) => r >= 0 && c >= 0 && r < R && c < C && mask[r][c];
+    const runs = [];
+    const collect = (lines, length, outside, make) => {
+      for (let l = 0; l <= lines; l++) {
+        for (let i = 0; i < length;) {
+          if (!outside(l, i)) { i++; continue; }
+          const from = i;
+          while (i < length && outside(l, i)) i++;
+          runs.push(make(l, from, i));
+        }
+      }
+    };
+    collect(R, C, (r, c) => at(r - 1, c) && !at(r, c), (r, a, b) => ({ a: [a, r], b: [b, r], n: [0, 1] }));
+    collect(R, C, (r, c) => at(r, c) && !at(r - 1, c), (r, a, b) => ({ a: [b, r], b: [a, r], n: [0, -1] }));
+    collect(C, R, (c, r) => at(r, c - 1) && !at(r, c), (c, a, b) => ({ a: [c, b], b: [c, a], n: [1, 0] }));
+    collect(C, R, (c, r) => at(r, c) && !at(r, c - 1), (c, a, b) => ({ a: [c, a], b: [c, b], n: [-1, 0] }));
+    return runs;
+  }
+
+  function biggestRect(mask, cols, rows) {
+    let best = null; let most = 0;
+    const R = mask.length; const C = mask[0].length;
+    const high = new Array(C).fill(0);
+    for (let r = 0; r < R; r++) {
+      for (let c = 0; c < C; c++) high[c] = mask[r][c] ? high[c] + 1 : 0;
+      for (let c = 0; c < C; c++) {
+        let h = high[c];
+        for (let e = c; e < C && high[e]; e++) {
+          h = Math.min(h, high[e]);
+          const area = (cols[e + 1] - cols[c]) * (rows[r + 1] - rows[r + 1 - h]);
+          if (area > most) { most = area; best = { r0: r + 1 - h, r1: r + 1, c0: c, c1: e + 1 }; }
+        }
+      }
+    }
+    return best;
+  }
+
+  /**
+   * The real form of the house from the rooms of each storey, in metres around the middle with the front at +z:
+   * for each storey its blocks (rects), outer walls (runs) and the parts with nothing above them (roofs), and the
+   * biggest rectangle of the top storey (main), which carries the roof. Null without rooms.
+   */
+  function planForm(floors, front) {
+    const turn = { bottom: (p) => [p[0], p[1]], top: (p) => [-p[0], -p[1]], left: (p) => [p[1], -p[0]], right: (p) => [-p[1], p[0]] }[front];
+    const polys = floors.map((l) => (l.rooms || []).filter((r) => (r.points || []).length >= 3).map((r) => r.points.map(turn)));
+    const all = polys.flat(2);
+    if (!all.length) return null;
+    const cols = gridLines(all.map((p) => p[0]));
+    const rows = gridLines(all.map((p) => p[1]));
+    if (cols.length < 2 || rows.length < 2) return null;
+    const area = (r, c) => (rows[r + 1] - rows[r]) * (cols[c + 1] - cols[c]);
+    const masks = polys.map((rooms) => {
+      if (!rooms.length) return null;
+      const mask = rows.slice(1).map((_, r) => cols.slice(1).map((__, c) => {
+        const x = (cols[c] + cols[c + 1]) / 2; const y = (rows[r] + rows[r + 1]) / 2;
+        return rooms.some((ps) => inPolygon(x, y, ps));
+      }));
+      fillHoles(mask, area);
+      return mask;
+    });
+    // A storey without rooms yet follows the one below it, or else the first one with rooms
+    masks.forEach((m, i) => { if (!m) masks[i] = masks[i - 1] || null; });
+    const first = masks.find(Boolean);
+    masks.forEach((m, i) => { if (!m) masks[i] = first; });
+    const cx = (cols[0] + cols[cols.length - 1]) / 2; const cz = (rows[0] + rows[rows.length - 1]) / 2;
+    const X = (c) => Math.round(cols[c] - cx) / 100;
+    const Z = (r) => Math.round(rows[r] - cz) / 100;
+    const box = (b) => ({ x: (X(b.c0) + X(b.c1)) / 2, z: (Z(b.r0) + Z(b.r1)) / 2, w: X(b.c1) - X(b.c0), d: Z(b.r1) - Z(b.r0) });
+    const top = masks[masks.length - 1];
+    const main = biggestRect(top, cols, rows);
+    if (!main) return null;
+    return {
+      w: X(cols.length - 1) - X(0),
+      d: Z(rows.length - 1) - Z(0),
+      main: box(main),
+      floors: masks.map((mask, i) => {
+        const above = masks[i + 1];
+        const open = mask.map((row, r) => row.map((on, c) => on && (above ? !above[r][c] : !(r >= main.r0 && r < main.r1 && c >= main.c0 && c < main.c1))));
+        return {
+          rects: maskRects(mask).map(box),
+          roofs: maskRects(open).map(box),
+          runs: maskRuns(mask).map((run) => ({ a: [X(run.a[0]), Z(run.a[1])], b: [X(run.b[0]), Z(run.b[1])], n: run.n })),
+        };
+      }),
+    };
+  }
+
   /**
    * The size of the house: width and depth from the largest storey (within sensible bounds), the storeys
    * from the levels of the plan. A level called attic (zolder) is the space under the roof.
@@ -109,6 +261,11 @@
       base += height;
       return f;
     });
+    const set = settings(plan);
+    const form = set.form === 'plan' && floors.length ? planForm(floors, set.front) : null;
+    if (form && form.w <= 40 && form.d <= 40) {
+      return { width: form.w, depth: form.d, floors: out, eaves: base, attic: attic ? { levelId: attic.id, name: attic.name } : null, form };
+    }
     return {
       width: clamp(w, 5, 18, 9),
       depth: clamp(d, 5, 14, 9),

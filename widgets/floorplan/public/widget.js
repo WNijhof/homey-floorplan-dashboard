@@ -22,7 +22,7 @@
       importedToday: 'From the grid today', exportedToday: 'To the grid today', chargedToday: 'Charged today', dischargedToday: 'Supplied today',
       socToday: 'Charge level today', gridNote: 'Above the line power comes from the grid, below it goes back.',
       solarToHome: 'Used in the house', solarToGrid: 'To the grid', solarToBattery: 'Into the battery',
-      costToday: 'Costs today', priceNow: 'Price now', allEnergy: 'All energy', cheapest: 'Cheapest 3 hours', gas: 'Gas', water: 'Water', gasToday: 'Gas today', waterToday: 'Water today', meter: 'Meter', fullAt: 'Full at', emptyAt: 'Empty at', vacuumRoom: 'Vacuum this room', thermostat_mode: 'Mode', fan_mode: 'Fan',
+      costToday: 'Costs today', priceNow: 'Price now', allEnergy: 'All energy', cheapest: 'Cheapest 3 hours', boiler: 'Hot water', hotWaterLeft: 'Hot water for', hotWaterMinutes: 'min', heatingUp: 'Heating', gas: 'Gas', water: 'Water', gasToday: 'Gas today', waterToday: 'Water today', meter: 'Meter', fullAt: 'Full at', emptyAt: 'Empty at', vacuumRoom: 'Vacuum this room', thermostat_mode: 'Mode', fan_mode: 'Fan',
     },
     nl: {
       noPlan: 'Nog geen plattegrond. Teken er een in de editor van HomeDeck.',
@@ -41,7 +41,7 @@
       importedToday: 'Van het net vandaag', exportedToday: 'Naar het net vandaag', chargedToday: 'Geladen vandaag', dischargedToday: 'Geleverd vandaag',
       socToday: 'Lading vandaag', gridNote: 'Boven de lijn komt stroom van het net, eronder gaat het terug.',
       solarToHome: 'In huis gebruikt', solarToGrid: 'Naar het net', solarToBattery: 'In de accu',
-      costToday: 'Kosten vandaag', priceNow: 'Prijs nu', allEnergy: 'Alle energie', cheapest: 'Goedkoopste 3 uur', gas: 'Gas', water: 'Water', gasToday: 'Gas vandaag', waterToday: 'Water vandaag', meter: 'Meterstand', fullAt: 'Vol om', emptyAt: 'Leeg om', vacuumRoom: 'Deze kamer stofzuigen', thermostat_mode: 'Stand', fan_mode: 'Ventilator',
+      costToday: 'Kosten vandaag', priceNow: 'Prijs nu', allEnergy: 'Alle energie', cheapest: 'Goedkoopste 3 uur', boiler: 'Warm water', hotWaterLeft: 'Warm water voor', hotWaterMinutes: 'min', heatingUp: 'Warmt op', gas: 'Gas', water: 'Water', gasToday: 'Gas vandaag', waterToday: 'Water vandaag', meter: 'Meterstand', fullAt: 'Vol om', emptyAt: 'Leeg om', vacuumRoom: 'Deze kamer stofzuigen', thermostat_mode: 'Stand', fan_mode: 'Ventilator',
     },
   };
   const lang = (navigator.language || 'en').slice(0, 2);
@@ -485,6 +485,13 @@
     } else if (kind === 'water' && e.water) {
       stats = [stat(T.now, typeof e.water.perMinute === 'number' ? `${e.water.perMinute.toLocaleString(lang)} L/min` : '–')];
       if (typeof e.water.total === 'number') stats.push(stat(T.meter, `${e.water.total.toLocaleString(lang)} m³`));
+    } else if (kind === 'boiler' && e.boiler) {
+      const b = e.boiler;
+      stats = [stat(T.temperature, typeof b.temperature === 'number' ? `${b.temperature.toLocaleString(lang)}°` : '–')];
+      if (typeof b.target === 'number') stats.push(stat(T.target, `${b.target.toLocaleString(lang)}°`));
+      if (typeof b.minutes === 'number') stats.push(stat(T.hotWaterLeft, `${Math.round(b.minutes)} ${T.hotWaterMinutes}`));
+      if (b.heating === true) stats.push(stat(T.now, T.heatingUp));
+      if (b.mode) stats.push(stat(T.mode || 'Mode', String(b.mode)));
     } else if (kind === 'gas') {
       stats = [stat(T.meter, typeof e.gasM3 === 'number' ? `${e.gasM3.toLocaleString(lang)} m³` : '–')];
     } else if (kind === 'grid') {

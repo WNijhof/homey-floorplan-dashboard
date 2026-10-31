@@ -38,6 +38,7 @@ const ICONS = {
   heatpump: '<rect x="3" y="5" width="18" height="14" rx="2"/><circle cx="10" cy="12" r="4"/><path d="M17 9v6"/>',
   airco: '<rect x="3" y="6" width="18" height="8" rx="2"/><path d="M7 18c1-1 1-2 0-3M12 19c1-1 1-3 0-4M17 18c1-1 1-2 0-3"/>',
   water: '<path d="M12 3s6 6.5 6 11a6 6 0 0 1-12 0c0-4.500 6-11 6-11z"/>',
+  boiler: '<rect x="7" y="3" width="10" height="18" rx="4"/><path d="M12 9c1 1.5 2 2.300 2 3.500a2 2 0 0 1-4 0c0-1.200 1-2 2-3.500z"/>',
   gas: '<path d="M12 3c1 3 5 5 5 10a5 5 0 0 1-10 0c0-2 1-3 2-4 0 2 1 3 2 3 1-3 0-6 1-9z"/>',
   home: '<path d="M3 11 12 4l9 7"/><path d="M5 10v10h14V10"/><path d="M10 20v-6h4v6"/>',
 };
@@ -398,14 +399,15 @@ class House3D {
     if (set.scene === 'garden') this.buildGardenLights(t, W, D, carport, cs);
     else this.lights = this.outdoor.door.length ? { door: { door: true } } : {};
     const anchors = this.buildHouse(t, set, shape, W, D);
+    const body = shape.form ? shape.form.main : { x: 0 };
     this.buildNeighbours(t, set, shape, W, D);
     if (carport !== 'none') this.buildCarport(t, W, D, cs);
 
     // Where the power of the house comes in: the meter cupboard at the front corner, on the side away from the carport.
-    const mx = -cs * (W / 2 - 0.9);
-    const meter = new THREE.Vector3(mx, 0.9, D / 2 + 0.04);
+    const { x: mx, z: mz } = this.frontSpot(shape, -cs * (W / 2 - 0.9), 0.4);
+    const meter = new THREE.Vector3(mx, 0.9, mz + 0.04);
     this.meterPoint = meter;
-    const meterBox = box(0.42, 0.55, 0.06, mat('#d7dbe0'), mx, 0.62, D / 2 + 0.02);
+    const meterBox = box(0.42, 0.55, 0.06, mat('#d7dbe0'), mx, 0.62, mz + 0.02);
     this.root.add(meterBox);
 
     if (shows.solar) this.buildSolar(t, set, shape, W, D, anchors, meter);
@@ -414,9 +416,14 @@ class House3D {
     if (shows.car) this.buildCar(t, W, D, cs, carport, meter);
     if (shows.heatpump) this.buildHeatpump(t, W, D, cs, meter);
     if (shows.airco) this.buildAirco(t, W, D, cs, shape, meter);
-    this.cards.home = this.card('home', null, new THREE.Vector3(0, anchors.top + 1.2, 0));
-    if (shows.gas) this.cards.gas = this.card('gas', null, new THREE.Vector3(mx, 1.5, D / 2 + 0.04));
-    if (shows.water) this.cards.water = this.card('water', null, new THREE.Vector3(mx, 1.3, D / 2 + 0.04));
+    this.cards.home = this.card('home', null, new THREE.Vector3(body.x, anchors.top + 1.2, 0));
+    if (shows.gas) this.cards.gas = this.card('gas', null, new THREE.Vector3(mx, 1.5, mz + 0.04));
+    if (shows.water) this.cards.water = this.card('water', null, new THREE.Vector3(mx, 1.3, mz + 0.04));
+    // The boiler stands inside: a card on the front wall, on the free side, without a model
+    if (shows.boiler) {
+      const spot = this.frontSpot(shape, cs * (W / 2 - 1.4), 0.4);
+      this.cards.boiler = this.card('boiler', null, new THREE.Vector3(spot.x, 2.1, spot.z + 0.04));
+    }
     // Everything stands still: its soft shadows are drawn once, not with every frame
     this.renderer.shadowMap.autoUpdate = false;
     this.renderer.shadowMap.needsUpdate = true;
@@ -565,6 +572,17 @@ class House3D {
     if (this.outdoor.door.length) this.lights.door = { door: true, pick: { kind: 'lamp', id: 'door' } };
   }
 
+  // A spot on the front wall nearest to x, a margin from its ends: with the real form that wall need not lie at D / 2.
+  frontSpot(shape, x, margin) {
+    if (!shape.form) return { x, z: shape.depth / 2 };
+    const fronts = shape.form.floors[0].runs.filter((r) => r.n[1] === 1).map((r) => {
+      const m = Math.min(margin, (r.b[0] - r.a[0]) / 2);
+      const at = Math.max(r.a[0] + m, Math.min(r.b[0] - m, x));
+      return { x: at, z: r.a[1], off: Math.abs(at - x) };
+    });
+    return fronts.sort((p, q) => p.off - q.off || q.z - p.z)[0];
+  }
+
   // The storeys: brick walls with a darker plinth, windows with frames and sills, the front door, the roof.
   buildHouse(t, set, shape, W, D) {
     const M = this.M;
@@ -574,20 +592,26 @@ class House3D {
     this.floorGroups = [];
     this.liftWith = [];
     const size = M.tx.wallSize;
+    const form = shape.form;
+    const entry = this.frontSpot(shape, 0, 0.8);
     shape.floors.forEach((f, i) => {
       const fg = new THREE.Group();
       fg.userData.pick = { kind: 'level', id: f.levelId };
       const y0 = f.base; const y1 = f.base + f.height;
-      const walls = [
+      const shell = form ? form.floors[i] : null;
+      const walls = shell ? shell.runs.map((r) => LOOK.poly([[r.a[0], y0, r.a[1]], [r.b[0], y0, r.b[1]], [r.b[0], y1, r.b[1]], [r.a[0], y1, r.a[1]]], M.wall, size)) : [
         LOOK.poly([[-W / 2, y0, D / 2], [W / 2, y0, D / 2], [W / 2, y1, D / 2], [-W / 2, y1, D / 2]], M.wall, size),
         LOOK.poly([[W / 2, y0, -D / 2], [-W / 2, y0, -D / 2], [-W / 2, y1, -D / 2], [W / 2, y1, -D / 2]], M.wall, size),
         LOOK.poly([[W / 2, y0, D / 2], [W / 2, y0, -D / 2], [W / 2, y1, -D / 2], [W / 2, y1, D / 2]], M.wall, size),
         LOOK.poly([[-W / 2, y0, -D / 2], [-W / 2, y0, D / 2], [-W / 2, y1, D / 2], [-W / 2, y1, -D / 2]], M.wall, size),
       ];
       for (const w of walls) { w.userData.base = M.wall; fg.add(w); }
-      if (i === 0) fg.add(LOOK.box(W + 0.04, 0.35, D + 0.04, M.plinth, 0, 0, 0));
-      // floor slab line between storeys
-      if (i > 0) fg.add(LOOK.box(W + 0.03, 0.06, D + 0.03, M.sill, 0, y0 - 0.03, 0));
+      const blocks = shell ? shell.rects : [{ x: 0, z: 0, w: W, d: D }];
+      for (const b of blocks) {
+        if (i === 0) fg.add(LOOK.box(b.w + 0.04, 0.35, b.d + 0.04, M.plinth, b.x, 0, b.z));
+        // floor slab line between storeys
+        else fg.add(LOOK.box(b.w + 0.03, 0.06, b.d + 0.03, M.sill, b.x, y0 - 0.03, b.z));
+      }
       const level = (this.plan.levels || []).find((l) => l.id === f.levelId);
       // Each window belongs to the room behind it, and at night its light falls out: a glow on the wall, a pool below
       const windowOf = (x, z) => {
@@ -617,36 +641,59 @@ class House3D {
           this.root.add(pool);
         }
       };
-      const cols = Math.max(2, Math.round(W / 2.6));
+      // Along the real walls: windows evenly over each stretch, none on a stub or where the door is
+      for (const r of shell ? shell.runs : []) {
+        const len = Math.abs(r.b[0] - r.a[0]) + Math.abs(r.b[1] - r.a[1]);
+        const wide = r.n[0] === 0;
+        if (len < 1.6) continue;
+        const count = Math.max(1, Math.round(len / (wide ? 2.6 : 3.4)));
+        for (let c = 0; c < count; c++) {
+          const k = (c + 0.5) / count;
+          const x = r.a[0] + (r.b[0] - r.a[0]) * k; const z = r.a[1] + (r.b[1] - r.a[1]) * k;
+          if (i === 0 && r.n[1] === 1 && z === entry.z && Math.abs(x - entry.x) < 1) continue;
+          add(wide ? 1.25 : 0.9, x + r.n[0] * 0.005, z + r.n[1] * 0.005, Math.atan2(r.n[0], r.n[1]));
+        }
+      }
+      if (shell) {
+        // What has no storey above it gets a flat roof, which lifts away with the rest
+        if (shell.roofs.length) {
+          const low = new THREE.Group();
+          low.userData.pick = { kind: 'level', id: f.levelId };
+          for (const b of shell.roofs) low.add(LOOK.box(b.w + 0.25, 0.25, b.d + 0.25, M.trim, b.x, y1, b.z));
+          g.add(low);
+          this.liftWith.push(low);
+        }
+      }
+      const cols = shell ? 0 : Math.max(2, Math.round(W / 2.6));
       for (let c = 0; c < cols; c++) {
         const x = -W / 2 + (W / cols) * (c + 0.5);
         if (!(i === 0 && Math.abs(x) < 1.0)) add(1.25, x, D / 2 + 0.005, 0);
         add(1.25, x, -D / 2 - 0.005, Math.PI);
       }
-      const sideCols = Math.max(1, Math.round(D / 3.4));
+      const sideCols = shell ? 0 : Math.max(1, Math.round(D / 3.4));
       for (let c = 0; c < sideCols; c++) {
         const z = -D / 2 + (D / sideCols) * (c + 0.5);
         add(0.9, -W / 2 - 0.005, z, -Math.PI / 2);
         add(0.9, W / 2 + 0.005, z, Math.PI / 2);
       }
       if (i === 0) {
-        const door = LOOK.doorPart({ frame: M.frame, glass: windowOf(0, D / 2).glass, metal: M.metal }, set.door || '#2f4a3a');
-        door.position.set(0, 0.02, D / 2 + 0.005);
+        const door = LOOK.doorPart({ frame: M.frame, glass: windowOf(entry.x, entry.z).glass, metal: M.metal }, set.door || '#2f4a3a');
+        door.position.set(entry.x, 0.02, entry.z + 0.005);
         fg.add(door);
         // a lamp above the door, on at night
         const lampMat = new THREE.MeshStandardMaterial({ color: '#2b2b2b', emissive: '#ffd690', emissiveIntensity: 0 });
         const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.1), lampMat);
-        lamp.position.set(0, 2.5, D / 2 + 0.06); // above the door: windows stand beside it
+        lamp.position.set(entry.x, 2.5, entry.z + 0.06); // above the door: windows stand beside it
         lamp.userData.pick = { kind: 'lamp', id: 'door' };
         fg.add(lamp);
         this.doorLamp = { mat: lampMat };
         if (this.theme.night) {
           const light = new THREE.PointLight('#ffcf80', 5, 7, 2);
-          light.position.set(0, 2.45, D / 2 + 0.4);
+          light.position.set(entry.x, 2.45, entry.z + 0.4);
           light.visible = false;
           fg.add(light);
           const shine = LOOK.lightGlow(1.1, '#ffc477', 0.55);
-          shine.position.set(0, 2.5, D / 2 + 0.14);
+          shine.position.set(entry.x, 2.5, entry.z + 0.14);
           shine.visible = false;
           fg.add(shine);
           this.doorLamp.light = light; this.doorLamp.shine = shine;
@@ -669,7 +716,7 @@ class House3D {
     });
     this.windows = lamps;
     const eaves = shape.eaves;
-    if (set.extension !== 'none') {
+    if (!form && set.extension !== 'none') {
       const back = set.extension === 'back';
       const ew = back ? W * 0.6 : 3.2; const ed = back ? 3.2 : D * 0.7;
       const ex = back ? -W * 0.15 : (this.carportSide === 'left' ? 1 : -1) * (W / 2 + 1.6);
@@ -689,7 +736,12 @@ class House3D {
       ext.add(win.group);
       g.add(ext);
     }
-    return this.buildRoof(t, set, shape, W, D, g, eaves);
+    if (!form) return this.buildRoof(t, set, shape, W, D, g, eaves);
+    const main = form.main;
+    const roof = this.buildRoof(t, set, shape, main.w, main.d, g, eaves);
+    this.roofGroup.position.x = main.x;
+    this.roofGroup.position.z = main.z;
+    return roof;
   }
 
   // The roof in its own frame: length L along x, span S along z; turned when the ridge runs front to back.
@@ -872,8 +924,9 @@ class House3D {
     // On a flat roof with both directions: rows that lean in turn to the east and the west
     const tent = side === 'top' && this.set.objects.solar.layout === 'both';
     if (side === 'top') {
-      const across = tent ? Math.min(shape.width, shape.depth) : shape.width;
-      const deep = tent ? across : shape.depth;
+      const roofW = shape.form ? shape.form.main.w : shape.width; const roofD = shape.form ? shape.form.main.d : shape.depth;
+      const across = tent ? Math.min(roofW, roofD) : roofW;
+      const deep = tent ? across : roofD;
       along = Math.max(1, Math.floor((across - 1) / (panelW + gap)));
       up = Math.max(1, Math.floor((deep - 1.5) / (panelH * Math.cos(0.26) + (tent ? 0.1 : 0.6))));
     } else {
@@ -933,6 +986,7 @@ class House3D {
       }
       group.add(panels);
       group.position.y = this.roofFrame.y;
+      if (shape.form) group.position.set(shape.form.main.x, this.roofFrame.y, shape.form.main.z);
       this.root.add(group);
     } else {
       // Slope frame: origin on the eave edge, local -z up the slope, local y out of the roof
@@ -1281,6 +1335,11 @@ class House3D {
     } else this.setCard('airco', T.airco, '–', { idle: true });
     this.setCard('home', T.home, fmtW(e.homeW, lang));
     // What was used today; the meter itself only while that is not known
+    if (this.cards.boiler) {
+      const b = e.boiler;
+      const value = b && typeof b.temperature === 'number' ? `${Math.round(b.temperature).toLocaleString(lang)}°` : b && b.on === true ? T.on : '–';
+      this.setCard('boiler', T.boiler || 'Hot water', value, { idle: !(b && b.heating === true) });
+    }
     const gasToday = typeof e.gasToday === 'number';
     const gasShown = gasToday ? e.gasToday : e.gasM3;
     if (this.cards.gas) this.setCard('gas', gasToday ? T.gasToday || 'Gas today' : T.gas || 'Gas', typeof gasShown === 'number' ? `${gasShown.toLocaleString(lang, { maximumFractionDigits: gasToday ? 2 : 1 })} m³` : '–', { idle: !(gasToday && e.gasToday > 0) });

@@ -156,6 +156,51 @@ test('house shape follows the storeys of the plan', () => {
   assert.strictEqual(s2.attic.levelId, 'a');
 });
 
+test('real form: an extension on the ground floor only, with the choice off by default', () => {
+  const room = (x0, y0, x1, y1) => ({ id: `r${x0}${y0}`, name: 'r', points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] });
+  const levels = [
+    { id: 'g', name: 'Begane grond', rooms: [room(0, 0, 500, 800), room(500, 0, 1000, 800), room(300, 800, 700, 1100)] },
+    { id: 'u', name: 'Verdieping', rooms: [room(0, 0, 1000, 800)] },
+  ];
+  assert.strictEqual(house.shape({ levels }).form, undefined);
+  assert.strictEqual(house.settings({}).form, 'simple');
+  const s = house.shape({ levels, house: { form: 'plan' } });
+  assert.strictEqual(s.width, 10);
+  assert.strictEqual(s.depth, 11);
+  assert.deepStrictEqual([s.form.main.w, s.form.main.d], [10, 8]);
+  const [ground, upper] = s.form.floors;
+  assert.strictEqual(ground.runs.length, 8, 'a block with a bump has eight walls');
+  assert.strictEqual(upper.runs.length, 4);
+  assert.strictEqual(ground.roofs.length, 1, 'only the extension has a roof of its own');
+  assert.deepStrictEqual([ground.roofs[0].w, ground.roofs[0].d], [4, 3]);
+  assert.strictEqual(upper.roofs.length, 0);
+  // The front is +z: with the extension at the bottom of the plan it sticks out to the front
+  assert.ok(ground.roofs[0].z > s.form.main.z);
+  const back = house.shape({ levels, house: { form: 'plan', front: 'top' } });
+  assert.ok(back.form.floors[0].roofs[0].z < back.form.main.z);
+  // Every wall has the outside on its normal
+  for (const r of ground.runs) {
+    const d = [r.b[0] - r.a[0], r.b[1] - r.a[1]];
+    assert.ok(-d[1] * r.n[0] + d[0] * r.n[1] > 0);
+  }
+});
+
+test('real form: rooms that nearly touch are one house, a small gap is filled, an L stays an L', () => {
+  const room = (id, x0, y0, x1, y1) => ({ id, name: id, points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] });
+  const near = house.shape({ levels: [{ id: 'g', name: 'g', rooms: [room('a', 0, 0, 500, 500), room('b', 512, 0, 1000, 500)] }], house: { form: 'plan' } });
+  assert.strictEqual(near.form.floors[0].runs.length, 4);
+  const hall = house.shape({ levels: [{ id: 'g', name: 'g', rooms: [room('n', 0, 0, 900, 300), room('s', 0, 500, 900, 800), room('w', 0, 300, 300, 500), room('e', 500, 300, 900, 500)] }], house: { form: 'plan' } });
+  assert.strictEqual(hall.form.floors[0].runs.length, 4, 'a hall nobody drew');
+  const l = house.shape({ levels: [{ id: 'g', name: 'g', rooms: [room('a', 0, 0, 1000, 500), room('b', 0, 500, 500, 900)] }], house: { form: 'plan' } });
+  assert.strictEqual(l.form.floors[0].runs.length, 6);
+  assert.strictEqual(l.form.floors[0].roofs.length, 1);
+  // Nothing drawn yet: the plain block
+  assert.strictEqual(house.shape({ levels: [{ id: 'g', name: 'g', rooms: [] }], house: { form: 'plan' } }).form, undefined);
+  // An upper storey without rooms follows the one below
+  const up = house.shape({ levels: [{ id: 'g', name: 'g', rooms: [room('a', 0, 0, 800, 800)] }, { id: 'u', name: 'u', rooms: [] }], house: { form: 'plan' } });
+  assert.strictEqual(up.form.floors[1].runs.length, 4);
+});
+
 test('panels go on the roof side that looks south', () => {
   assert.strictEqual(house.sunnySide(house.settings({ house: { facing: 180 } })), 'front');
   assert.strictEqual(house.sunnySide(house.settings({ house: { facing: 0 } })), 'back');
@@ -175,7 +220,7 @@ test('energy summary of the demo house uses Energy Dashboard\'s calculation', ()
   const noon = new Date(); noon.setHours(13, 0, 0, 0);
   const e = summarize(demoEnergyDevices('en', noon));
   assert.ok(e.solarW > 2000);
-  assert.deepStrictEqual(Object.keys(e.present).filter((k) => e.present[k]).sort(), ['airco', 'battery', 'car', 'ev', 'gas', 'grid', 'heatpump', 'solar']);
+  assert.deepStrictEqual(Object.keys(e.present).filter((k) => e.present[k]).sort(), ['airco', 'battery', 'boiler', 'car', 'ev', 'gas', 'grid', 'heatpump', 'solar']);
   assert.strictEqual(e.ev.charging, true);
   assert.ok(e.battery.soc >= 10 && e.battery.soc <= 100);
   // The house uses what comes from the grid, the sun and the battery

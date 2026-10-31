@@ -97,6 +97,7 @@
 @media (prefers-reduced-motion: reduce) { #view3d, #house3d { animation: none !important; } }
 .h3-water { --h3: #2b8fd6; }
 .h3-gas { --h3: #d07a2d; }
+.h3-boiler { --h3: #d9534f; }
 
 /* The calm house: plain text above and below it, thin lines to its parts, the page behind it */
 .h3-callouts { position: absolute; top: 0; left: 0; right: 0; bottom: 0; pointer-events: none; overflow: hidden; z-index: 1; }

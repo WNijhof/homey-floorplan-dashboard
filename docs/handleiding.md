@@ -24,6 +24,7 @@ In de linkerbalk staan de gereedschappen: Selecteren, Kamer, Muren, Deuren, Rame
 - Gebogen muur: selecteer een losse muur en kies een van de buigknoppen. Een kamerrand buig je door met de blauwe plussen hoeken toe te voegen.
 - Volgorde van verdiepingen: klik naast de plattegrond op een leeg stuk en kies **Verdieping lager** of **Verdieping hoger**.
 - Meerdere spots op één schakelaar: selecteer het apparaat en kies **Dit apparaat nog een keer plaatsen**, of kopieer en plak het.
+- Vorm van het 3D-huis: kies onder **Huis** bij **Vorm van het huis** tussen **Eenvoudig blok** en **Volgens de plattegrond**. Bij de werkelijke vorm volgen de muren je kamers, met uitbouw en al. Kies daarbij welke kant de voorkant is. Het dak ligt op het grootste rechthoekige deel, de andere delen krijgen een plat dak, en de ramen zijn gelijkmatig verdeeld.
 - Meubels komen uit een catalogus. Bij een muur draaien ze vanzelf met hun achterkant ernaartoe; met de draaiknoppen zet je ze goed.
 - Apparaten sleep je naar hun plek. Bij lampen kies je de soort: plafond-, hang-, wand-, staande of tafellamp.
 - Begin je met een afbeelding of pdf, zet dan de schaal door één bekende lengte te meten. De editor herkent muren, kamers, deuren en ramen. Dat gebeurt in je browser; er wordt niets verstuurd.
@@ -54,6 +55,7 @@ Onderdelen zoals panelen, accu, auto, warmtepomp en airco verschijnen vanzelf al
 - De strook bovenaan toont alleen wat aandacht vraagt, zoals een open raam, de container of de goedkoopste uren. Heb je de app Afval Herinnering 2.0 (bijvoorbeeld voor Rova), dan komt de container daaruit. Anders zoekt HomeDeck in je agenda naar afspraken met woorden als container, afval, gft of pmd.
 - **Ik ga weg** laat zien wat open staat, wat niet op slot is en welke lampen aan zijn, met een knop om alle lampen uit te doen. Je tikt twee keer, zodat het niet per ongeluk gebeurt.
 - **Variabelen**: Logic-variabelen die je in de editor kiest, staan op het dashboard om te lezen. Veranderen doe je in Homey of met een Flow.
+- **Warmwaterboiler**: een boiler die Homey kent staat als kaart op de gevel, met de temperatuur. Tik erop voor het doel en de warm water die nog over is. Aan of uit zet je onder **Huis** in de editor.
 
 Dimbare apparaten tellen als lamp, ook als hun app ze als stopcontact meldt. Bij Ik ga weg tellen ook apparaten met lamp, licht of verlichting in de naam mee. Andere stekkers, zoals een koelkast, blijven aan.
 

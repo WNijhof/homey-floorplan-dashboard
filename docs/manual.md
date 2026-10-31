@@ -25,6 +25,7 @@ The left bar holds the tools: Select, Room, Walls, Doors, Windows, Open wall, Fu
 - Curved wall: select a free wall and choose one of the curve buttons. To curve a room edge, add corners with the blue plusses.
 - Order of the levels: click an empty spot beside the plan and choose **Move level down** or **Move level up**.
 - Several spots on one switch: select the device and choose **Place this device again**, or copy and paste it.
+- Shape of the 3D house: under **House**, choose **Simple block** or **Follows the floor plan** at **Shape of the house**. With the real shape the walls follow your rooms, extensions included. Choose which side is the front as well. The roof lies on the biggest rectangular part, the other parts get a flat roof, and the windows are spread evenly.
 - Drag devices to their place. For lamps you choose the kind: ceiling, pendant, wall, floor or table lamp.
 - Starting from a picture or PDF: set the scale by measuring one known length. The editor recognises walls, rooms, doors and windows. This happens in your browser; nothing is sent anywhere.
 
@@ -54,6 +55,7 @@ Parts such as panels, battery, car, heat pump and air conditioning appear by the
 - The strip at the top only shows what needs attention, such as an open window, the bins or the cheapest hours. With the app Trashcan Reminder 2.0, the bins come from there. Otherwise HomeDeck looks in your calendar for events with words such as bin, trash or garbage.
 - **I'm leaving** shows what is open, what is not locked and which lamps are on, with a button to turn all lamps off. You tap twice, so it cannot happen by accident.
 - **Variables**: Logic variables you choose in the editor are on the dashboard to read. You change them in Homey or with a Flow.
+- **Hot water boiler**: a boiler known to Homey is a card on the facade, with its temperature. Tap it for the target and the hot water left. Turn it on or off under **House** in the editor.
 
 Dimmable devices count as lamps, even when their app reports them as a socket. For I'm leaving, devices with lamp, light or a similar word in their name count as well. Other plugs, such as a fridge, stay on.
 
