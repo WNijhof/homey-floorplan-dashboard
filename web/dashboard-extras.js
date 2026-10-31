@@ -80,7 +80,7 @@
     var buttons = actions();
     strip.hidden = !st().plan;
     fill('attention', items.map(function (i) {
-      return '<button type="button" class="fp-chip ' + (i.cls || '') + '"' + (i.leave ? ' data-x="leave"' : i.x ? ' data-sheet="' + i.x + '"' : '') + '>' + i.icon + ' ' + esc(i.text) + '</button>';
+      return '<button type="button" class="fp-chip ' + (i.cls || '') + '"' + (i.leave ? ' data-x="leave"' : i.energy ? ' data-x="energy"' : i.x ? ' data-sheet="' + i.x + '"' : '') + '>' + i.icon + ' ' + esc(i.text) + '</button>';
     }).join(''));
     fill('actions', buttons.map(function (a, n) {
       return '<button type="button" class="fp-chip action" data-x="run" data-n="' + n + '">' + (a.kind === 'mood' ? '🎨' : '▶') + ' ' + esc(a.name) + '</button>';
@@ -267,6 +267,7 @@
     var b = ev.target.closest && ev.target.closest('[data-x]');
     if (!b) return;
     if (b.dataset.x === 'leave') { armed = false; renderLeave(); }
+    if (b.dataset.x === 'energy') { var link = document.querySelector('a[href*="energy"]'); if (link) location.href = link.href; }
     if (b.dataset.x === 'lights-off') {
       if (!armed) { armed = true; renderLeave(); return; }
       armed = false;

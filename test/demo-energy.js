@@ -62,7 +62,7 @@ function demoEnergyDevices(lang, date = new Date()) {
   const { solarW, carW, heatW, batteryW, gridW, soc } = demoState(date);
   const charging = carW > 0;
   return [
-    dev('e_boiler', lang === 'nl' ? 'Warmtepompboiler' : 'Heat pump water heater', 'waterheater', { measure_temperature: 54, target_temperature: 60 }),
+    dev('e_boiler', lang === 'nl' ? 'Warmtepompboiler' : 'Heat pump water heater', 'waterheater', { measure_temperature: 55, target_temperature: 55 }),
     dev('e_p1', N.p1, 'sensor', {
       measure_power: gridW, 'meter_power.consumed.t1': 3211.4, 'meter_power.consumed.t2': 2984.7,
       'meter_power.produced.t1': 812.2, 'meter_power.produced.t2': 1630.9, meter_gas: 512.3,

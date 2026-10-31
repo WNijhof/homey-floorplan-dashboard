@@ -62,13 +62,14 @@
       forecastOn: 'Solar forecast from Forecast.Solar (this service then knows roughly where your house is)',
       variablesTitle: 'Variables on the dashboard', variablesNote: 'Logic variables to see and change there.', variablesNone: 'No Logic variables yet.', roomVacuum: 'Flow that vacuums this room',
       actionsTitle: 'Buttons on the dashboard', actionsNote: 'Moods and Flows you can start with one tap.', actionsNone: 'No moods or Flows that can be started.',
-      front: 'Front of the house on the plan', frontBottom: 'At the bottom', frontTop: 'At the top', frontLeft: 'On the left', frontRight: 'On the right',
+      front: 'Which side of the plan is the front', frontBottom: 'At the bottom', frontTop: 'At the top', frontLeft: 'On the left', frontRight: 'On the right',
       outdoorLamps: 'Outdoor lamps', outdoorNote: 'Lamps with a name like garden, driveway or front door are found by themselves. They burn on the house when the real lamp is on, and tapping them switches it.', place_door: 'Beside the front door', place_path: 'Along the path', place_drive: 'Along the driveway', place_garden: 'In the garden',
       photo: 'Own photo', photoNote: 'Use a photo of your house instead of the 3D house. It stays in your Homey and is never part of a problem report.', photoPick: 'Choose a photo', photoReplace: 'Other photo', photoRemove: 'Remove photo',
       photoAreas: 'Draw what can be tapped', photoAreasNote: 'Choose a part and click its corners on the photo. Click the first corner again, or press Enter, to finish; Esc stops.', drawArea: 'Draw', redrawArea: 'Again', drawingArea: 'Drawing…', partHouse: 'The whole house',
       house: 'The house from outside', houseNote: 'The dashboard opens on the whole house. It is the same house for everyone, set up to look like yours: tap a storey to go inside. Parts such as solar panels or a car appear when Homey has such a device (Automatic).',
       houseType: 'House', detached: 'Detached', semi: 'Semi-detached', terraced: 'Terraced', neighbourSide: 'Neighbours on the', left: 'Left', right: 'Right',
       roof: 'Roof', gable: 'Gable roof', hip: 'Hip roof', flat: 'Flat roof', ridge: 'Ridge', ridgeWidth: 'Along the front', ridgeDepth: 'Front to back', pitch: 'Roof pitch (°)',
+      gas: 'Gas', gasToday: 'Gas today',
       houseForm: 'Shape of the house', formSimple: 'Simple block', formPlan: 'Follows the floor plan', formNote: 'The walls follow the rooms you drew, storey by storey, with extensions and all. The roof lies on the biggest rectangular part; the other parts get a flat roof. Windows are placed evenly and are not your real windows. Choose the front of the plan below.', facing: 'The front faces', dormer: 'Dormer at the back', extension: 'Extension', back: 'At the back', side: 'At the side', carport: 'Carport',
       houseParts: 'On and around the house', showAuto: 'Automatic', showOn: 'Always', showOff: 'Never', panels: 'Number of panels (0: as many as fit)',
       batteryPlace: 'Battery stands', underCarport: 'Under the carport', againstWall: 'Against the wall', noHouse3d: 'This browser cannot show the house in 3D.',
@@ -130,14 +131,16 @@
       forecastOn: 'Zonneverwachting van Forecast.Solar (die dienst weet dan ongeveer waar je huis staat)',
       variablesTitle: 'Variabelen op het dashboard', variablesNote: 'Logic-variabelen om daar te zien en te wijzigen.', variablesNone: 'Nog geen Logic-variabelen.', roomVacuum: 'Flow die deze kamer stofzuigt',
       actionsTitle: 'Knoppen op het dashboard', actionsNote: 'Moods en Flows die je met één tik start.', actionsNone: 'Geen moods of Flows die je kunt starten.',
-      front: 'Voorkant van het huis op de plattegrond', frontBottom: 'Onder', frontTop: 'Boven', frontLeft: 'Links', frontRight: 'Rechts',
+      front: 'Welke kant van de plattegrond is de voorkant', frontBottom: 'Onder', frontTop: 'Boven', frontLeft: 'Links', frontRight: 'Rechts',
       outdoorLamps: 'Buitenlampen', outdoorNote: 'Lampen met een naam als tuin, oprit of voordeur worden vanzelf gevonden. Ze branden op het huis als de echte lamp aan is, en tikken schakelt hem.', place_door: 'Naast de voordeur', place_path: 'Langs het pad', place_drive: 'Langs de oprit', place_garden: 'In de tuin',
       photo: 'Eigen foto', photoNote: 'Gebruik een foto van je huis in plaats van het 3D-huis. Hij blijft in je Homey en gaat nooit mee in een probleemrapport.', photoPick: 'Foto kiezen', photoReplace: 'Andere foto', photoRemove: 'Foto verwijderen',
       photoAreas: 'Teken waar je op kunt tikken', photoAreasNote: 'Kies een onderdeel en klik de hoeken aan op de foto. Klik de eerste hoek nog eens, of druk op Enter, om af te ronden; Esc stopt.', drawArea: 'Tekenen', redrawArea: 'Opnieuw', drawingArea: 'Bezig…', partHouse: 'Het hele huis',
       house: 'Het huis van buiten', houseNote: "Het dashboard opent op het hele huis. Het is voor iedereen hetzelfde huis, zo ingesteld dat het op het jouwe lijkt: tik op een verdieping om naar binnen te gaan. Onderdelen zoals zonnepanelen of een auto verschijnen als Homey zo'n apparaat heeft (Automatisch).",
       houseType: 'Woning', detached: 'Vrijstaand', semi: 'Twee-onder-een-kap', terraced: 'Tussenwoning', neighbourSide: 'Buren aan de', left: 'Linkerkant', right: 'Rechterkant',
       roof: 'Dak', gable: 'Zadeldak', hip: 'Schilddak', flat: 'Plat dak', ridge: 'Nok', ridgeWidth: 'Langs de voorkant', ridgeDepth: 'Van voor naar achter', pitch: 'Dakhelling (°)',
-      houseForm: 'Vorm van het huis', formSimple: 'Eenvoudig blok', formPlan: 'Volgens de plattegrond', formNote: 'De muren volgen de kamers die je hebt getekend, per verdieping, met uitbouw en al. Het dak ligt op het grootste rechthoekige deel; de andere delen krijgen een plat dak. Ramen staan gelijkmatig verdeeld en zijn niet je echte ramen. Kies hieronder welke kant de voorkant is.', facing: 'De voorkant ligt op het', dormer: 'Dakkapel aan de achterkant', extension: 'Aanbouw', back: 'Aan de achterkant', side: 'Aan de zijkant', carport: 'Carport',
+      gas: 'Gas', gasToday: 'Gas vandaag',
+      tips: { 'level-add': 'Verdieping toevoegen', undo: 'Ongedaan maken (Ctrl+Z)', redo: 'Opnieuw doen (Ctrl+Y)', snap: 'Uitlijnen (met Shift tijdelijk andersom)', 'toggle-grid': 'Raster', 'toggle-furniture': 'Meubels', 'lock-layout': 'Kamers en muren vastzetten', turn: 'Draaien', 'zoom-in': 'Inzoomen', 'zoom-out': 'Uitzoomen', 'zoom-fit': 'Hele verdieping tonen' },
+      houseForm: 'Vorm van het huis', formSimple: 'Eenvoudig blok', formPlan: 'Volgens de plattegrond', formNote: 'De muren volgen de kamers die je hebt getekend, per verdieping, met uitbouw en al. Het dak ligt op het grootste rechthoekige deel; de andere delen krijgen een plat dak. Ramen staan gelijkmatig verdeeld en zijn niet je echte ramen. Kies hieronder welke kant de voorkant is.', facing: 'Windrichting van de voorkant', dormer: 'Dakkapel aan de achterkant', extension: 'Aanbouw', back: 'Aan de achterkant', side: 'Aan de zijkant', carport: 'Carport',
       houseParts: 'Op en rond het huis', showAuto: 'Automatisch', showOn: 'Altijd', showOff: 'Nooit', panels: 'Aantal panelen (0: zoveel als past)',
       batteryPlace: 'Accu staat', underCarport: 'Onder de carport', againstWall: 'Tegen de muur', noHouse3d: 'Deze browser kan het huis niet in 3D tonen.',
       facade: 'Gevel', brick: 'Rode baksteen', darkbrick: 'Donkere baksteen', yellowbrick: 'Gele baksteen', plaster: 'Wit stucwerk', darkplaster: 'Donker stucwerk',
@@ -1696,7 +1699,7 @@
   // Names on the cards of the house preview (the dashboard has its own, longer texts)
   const HOUSE_TEXTS = {
     solar: T.partSolar, grid: T.partGrid, gridIn: T.partGrid, gridOut: T.partGrid, battery: T.partBattery, car: T.partCar,
-    heatpump: T.partHeatpump, airco: T.partAirco, boiler: T.partBoiler, home: T.houseType, charging: '', discharging: '', idle: '', on: '', off: '',
+    heatpump: T.partHeatpump, airco: T.partAirco, boiler: T.partBoiler, home: T.houseType, gas: T.gas, gasToday: T.gasToday, charging: '', discharging: '', idle: '', on: '', off: '',
   };
 
   // A tap on a storey of the house preview: on to that storey in the editor.
@@ -2396,6 +2399,7 @@
   window.onHomeyReady = async function onHomeyReady(Homey) {
     S.Homey = Homey;
     for (const el of document.querySelectorAll('[data-i18n]')) el.textContent = T[el.dataset.i18n] || el.textContent;
+    for (const [id, tip] of Object.entries(T.tips || {})) { const el = document.getElementById(id); if (el) el.title = tip; }
     for (const b of document.querySelectorAll('#tools [data-tool]')) b.title = b.querySelector('small').textContent + (b.dataset.key ? ` (${b.dataset.key})` : '');
     bind();
     setTool('select');

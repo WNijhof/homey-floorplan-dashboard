@@ -12,6 +12,7 @@
       alarm: 'Alarm', alarmOn: 'Alarm on', alarmPartial: 'Alarm partly on', alarmOff: 'Alarm off', arm: 'On', partial: 'Partly', disarm: 'Off', armPrompt: 'Set the alarm', siren: 'Alarm!',
       climate: 'Climate', noClimate: 'No rooms with a temperature on this plan.', target: 'Target', mode: 'Mode', lists: 'Lists', shopping: 'Shopping', tasks: 'Tasks', meals: 'Meals', add: 'Add', clearDone: 'Remove what is done', mealToday: 'Today we eat',
       mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday',
+      vacuumStates: { cleaning: 'Cleaning', spot_cleaning: 'Spot cleaning', docked: 'In its dock', charging: 'Charging', stopped: 'Stopped', idle: 'Idle', paused: 'Paused' },
       variables: 'Variables', yes: 'Yes', no: 'No', camera: 'Camera', vacuum: 'Vacuum', vacuumBusy: 'Vacuum is cleaning', start: 'Start', dock: 'Back to the dock', stop: 'Stop', home: 'home', away: 'away', asleep: 'asleep', people: 'Who is home', message: 'Message', close: 'Close',
     },
     nl: {
@@ -19,6 +20,7 @@
       alarm: 'Alarm', alarmOn: 'Alarm aan', alarmPartial: 'Alarm deels aan', alarmOff: 'Alarm uit', arm: 'Aan', partial: 'Deels', disarm: 'Uit', armPrompt: 'Alarm instellen', siren: 'Alarm!',
       climate: 'Klimaat', noClimate: 'Geen kamers met een temperatuur op deze plattegrond.', target: 'Doel', mode: 'Stand', lists: 'Lijstjes', shopping: 'Boodschappen', tasks: 'Taken', meals: 'Eten', add: 'Toevoegen', clearDone: 'Afgevinkte weghalen', mealToday: 'Vandaag eten we',
       mon: 'Maandag', tue: 'Dinsdag', wed: 'Woensdag', thu: 'Donderdag', fri: 'Vrijdag', sat: 'Zaterdag', sun: 'Zondag',
+      vacuumStates: { cleaning: 'Aan het stofzuigen', spot_cleaning: 'Stofzuigt een plek', docked: 'In het dock', charging: 'Aan het laden', stopped: 'Gestopt', idle: 'In rust', paused: 'Gepauzeerd' },
       variables: 'Variabelen', yes: 'Ja', no: 'Nee', camera: 'Camera', vacuum: 'Stofzuiger', vacuumBusy: 'Stofzuiger is bezig', start: 'Start', dock: 'Terug naar het dock', stop: 'Stop', home: 'thuis', away: 'weg', asleep: 'slaapt', people: 'Wie is er thuis', message: 'Bericht', close: 'Sluiten',
     },
   };
@@ -158,7 +160,7 @@
   function renderVacuum() {
     return vacuums().map(function (d) {
       var c = d.caps;
-      var status = c.vacuumcleaner_state || (c.onoff ? T.vacuumBusy : '');
+      var status = T.vacuumStates[c.vacuumcleaner_state] || c.vacuumcleaner_state || (c.onoff ? T.vacuumBusy : '');
       return '<p class="fp-sub">' + esc(d.name) + (typeof c.measure_battery === 'number' ? ' · ' + Math.round(c.measure_battery) + '%' : '') + '</p><div class="fp-row"><span class="fp-name">' + esc(status) + '</span></div><div class="fp-btns fp-wide">'
         + '<button type="button" class="fp-btn primary" data-p="vacuum" data-dev="' + esc(d.id) + '" data-value="cleaning">' + esc(T.start) + '</button><button type="button" class="fp-btn" data-p="vacuum" data-dev="' + esc(d.id) + '" data-value="stopped">' + esc(T.stop) + '</button><button type="button" class="fp-btn" data-p="vacuum" data-dev="' + esc(d.id) + '" data-value="docked">' + esc(T.dock) + '</button></div>';
     }).join('');
@@ -320,7 +322,7 @@
         if (s ? !IDLE_VACUUM.test(s) : d.caps.onoff === true) out.push({ icon: '🧹', text: T.vacuumBusy, x: 'vacuum' });
       });
       state.advice.slice(0, 2).forEach(function (i) {
-        out.push({ cls: i.id === 'dear' ? 'warn' : i.id === 'cheapAt' ? '' : 'good', icon: i.id === 'sunTomorrow' ? '☀' : '⚡', text: adviceText(i) });
+        out.push({ cls: i.id === 'dear' ? 'warn' : i.id === 'cheapAt' ? '' : 'good', icon: i.id === 'sunTomorrow' ? '☀' : '⚡', text: adviceText(i), energy: true });
       });
       return out;
     },

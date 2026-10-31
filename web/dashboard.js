@@ -280,6 +280,7 @@
   // The heading and tab title in the language of the page (the HTML holds the Dutch one).
   $('title').textContent = T.home;
   document.title = T.home;
+  $('btn-turn').title = T.turn;
   today();
   setInterval(today, 60000);
   renderTools();

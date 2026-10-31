@@ -154,8 +154,9 @@
   function banner() {
     var el = document.createElement('div');
     el.className = 'fp-demo-banner';
-    el.innerHTML = '<span></span><button type="button"></button><a target="_blank" rel="noopener"></a>';
+    el.innerHTML = '<span></span><button type="button"></button><a target="_blank" rel="noopener"></a><button type="button" class="fp-demo-close" aria-label="×">×</button>';
     el.querySelector('span').textContent = TEXT.banner;
+    el.querySelector('.fp-demo-close').addEventListener('click', function () { el.remove(); });
     el.querySelector('button').textContent = TEXT.reset;
     el.querySelector('a').textContent = TEXT.more;
     el.querySelector('a').href = REPO;
@@ -168,7 +169,7 @@
       + 'max-width:calc(100% - 32px);box-sizing:border-box;padding:8px 14px;border-radius:14px;background:rgba(28,28,30,.88);color:#f5f5f7;'
       + 'font:13px/1.3 system-ui,sans-serif;box-shadow:0 4px 18px rgba(0,0,0,.25);flex-wrap:wrap;justify-content:center}'
       + '.fp-demo-banner button{font:inherit;border:0;border-radius:9px;padding:4px 10px;background:#2e5bff;color:#fff;cursor:pointer}'
-      + '.fp-demo-banner a{color:#9db3ff}';
+      + '.fp-demo-banner a{color:#9db3ff}.fp-demo-banner .fp-demo-close{background:none;padding:2px 8px;font-size:16px}';
     document.head.appendChild(style);
     document.body.appendChild(el);
   }

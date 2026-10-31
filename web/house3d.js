@@ -222,6 +222,7 @@ class House3D {
         if (!idle) this.sharp.frame(t);
         this.renderer.render(this.scene, this.camera);
         this.labels.render(this.scene, this.camera);
+        this.keepTagsInView();
         this.frames = (this.frames || 0) + 1;
         this.layoutCallouts();
       }
@@ -398,6 +399,7 @@ class House3D {
     this.buildGround(t, W, D, carport, cs);
     if (set.scene === 'garden') this.buildGardenLights(t, W, D, carport, cs);
     else this.lights = this.outdoor.door.length ? { door: { door: true } } : {};
+    this.shape = shape;
     const anchors = this.buildHouse(t, set, shape, W, D);
     const body = shape.form ? shape.form.main : { x: 0 };
     this.buildNeighbours(t, set, shape, W, D);
@@ -574,13 +576,34 @@ class House3D {
 
   // A spot on the front wall nearest to x, a margin from its ends: with the real form that wall need not lie at D / 2.
   frontSpot(shape, x, margin) {
-    if (!shape.form) return { x, z: shape.depth / 2 };
-    const fronts = shape.form.floors[0].runs.filter((r) => r.n[1] === 1).map((r) => {
-      const m = Math.min(margin, (r.b[0] - r.a[0]) / 2);
-      const at = Math.max(r.a[0] + m, Math.min(r.b[0] - m, x));
-      return { x: at, z: r.a[1], off: Math.abs(at - x) };
+    return this.wallSpot(shape, 0, 1, x, margin);
+  }
+
+  // The spot on the real outside wall of the ground floor that faces (nx, nz), closest to a place along that wall.
+  wallSpot(shape, nx, nz, along, margin) {
+    if (!shape.form) return nx ? { x: nx * shape.width / 2, z: along } : { x: along, z: nz * shape.depth / 2 };
+    const axis = nx ? 1 : 0; // the wall runs along z or along x
+    const spots = shape.form.floors[0].runs.filter((r) => r.n[0] === nx && r.n[1] === nz).map((r) => {
+      const lo = Math.min(r.a[axis], r.b[axis]); const hi = Math.max(r.a[axis], r.b[axis]);
+      const m = Math.min(margin, (hi - lo) / 2);
+      const at = Math.max(lo + m, Math.min(hi - m, along));
+      return { x: nx ? r.a[0] : at, z: nx ? at : r.a[1], off: Math.abs(at - along) };
     });
-    return fronts.sort((p, q) => p.off - q.off || q.z - p.z)[0];
+    return spots.sort((p, q) => p.off - q.off || (nx * (q.x - p.x)) + (nz * (q.z - p.z)))[0];
+  }
+
+  // On a narrow screen a storey's name would stick out at the left of the view: it moves in just far enough.
+  keepTagsInView() {
+    const box = this.labels.domElement.getBoundingClientRect();
+    if (box.width >= 560 && !this.tagsMoved) return;
+    this.tagsMoved = box.width < 560;
+    for (const tag of this.tags) {
+      const shift = Number(tag.dataset.shift) || 0;
+      const want = this.tagsMoved ? Math.max(0, box.left + 6 - (tag.getBoundingClientRect().left - shift)) : 0;
+      if (Math.abs(want - shift) < 0.5) continue;
+      tag.dataset.shift = want;
+      tag.style.translate = want ? `${want}px 0` : '';
+    }
   }
 
   // The storeys: brick walls with a darker plinth, windows with frames and sills, the front door, the roof.
@@ -1022,10 +1045,12 @@ class House3D {
     const side = underCarport || carport === 'none' ? cs : -cs;
     // In a row of houses the sides are party walls: on the back wall, at its corner
     const terraced = set.type === 'terraced';
-    const x = terraced ? side * (W / 2 - 0.5) : side * (W / 2 + 0.22);
     // on a free piece of wall between two windows, also for its cable
     const sideCols = Math.max(1, Math.round(D / 3.4));
-    const z = terraced ? -D / 2 - 0.22 : underCarport ? D / 2 - 5.6 : sideCols > 1 ? -D / 2 + D / sideCols : -D / 2 + 0.6;
+    const wall = terraced ? this.wallSpot(this.shape, 0, -1, side * (W / 2 - 0.5), 0.5)
+      : this.wallSpot(this.shape, side, 0, underCarport ? D / 2 - 5.6 : sideCols > 1 ? -D / 2 + D / sideCols : -D / 2 + 0.6, 0.5);
+    const x = terraced ? wall.x : wall.x + side * 0.22;
+    const z = terraced ? wall.z - 0.22 : wall.z;
     const g = new THREE.Group();
     const body = box(0.32, 1.1, 0.75, mat('#f4f5f7', { roughness: 0.5 }), 0, 0, 0);
     g.add(body);
@@ -1067,8 +1092,9 @@ class House3D {
     this.root.add(g);
     // The charger on the house wall beside the car, and its cable to the car's charging port (front, house side)
     // In a row of houses that is the corner of the front wall
-    const wallX = terraced ? cs * (W / 2 - 0.25) : cs * (W / 2 + 0.06);
-    const wallZ = terraced ? D / 2 + 0.06 : cz;
+    const wall = terraced ? this.frontSpot(this.shape, cs * (W / 2 - 0.25), 0.2) : this.wallSpot(this.shape, cs, 0, cz, 0.2);
+    const wallX = terraced ? wall.x : wall.x + cs * 0.06;
+    const wallZ = terraced ? wall.z + 0.06 : wall.z;
     const charger = terraced ? box(0.28, 0.42, 0.1, mat('#30343a', { roughness: 0.4 }), wallX, 1.0, wallZ) : box(0.1, 0.42, 0.28, mat('#30343a', { roughness: 0.4 }), wallX, 1.0, wallZ);
     charger.userData.pick = { kind: 'car' };
     this.root.add(charger);
@@ -1094,13 +1120,14 @@ class House3D {
     // along the ground in front of the house, its own way, and up the wall to the charger
     const start = meter.x + cs * 0.14; const front = D / 2 + 0.66; const side = cs * (W / 2 + 0.14);
     if (terraced) this.addFlow('use', [p(start, meter.y, D / 2 + 0.06), p(start, 0.04, D / 2 + 0.06), p(start, 0.04, front), p(wallX, 0.04, front), p(wallX, 0.8, wallZ + 0.06)], 'car');
-    else this.addFlow('use', [p(start, meter.y, D / 2 + 0.06), p(start, 0.04, D / 2 + 0.06), p(start, 0.04, front), p(side, 0.04, front), p(side, 0.04, cz), p(wallX + cs * 0.06, 0.8, cz)], 'car');
+    else this.addFlow('use', [p(start, meter.y, D / 2 + 0.06), p(start, 0.04, D / 2 + 0.06), p(start, 0.04, front), p(side, 0.04, front), p(side, 0.04, wallZ), p(wallX + cs * 0.06, 0.8, wallZ)], 'car');
   }
 
   // The heat pump stands against the side wall on the carport side, towards the back: in view from the front corner.
   buildHeatpump(t, W, D, cs, meter) {
     // At the front, by the meter cupboard: far from the battery and the charger, with a cable of its own
-    const x = -cs * (W / 2 - 2.3); const z = D / 2 + 0.27;
+    const spot = this.frontSpot(this.shape, -cs * (W / 2 - 2.3), 0.6);
+    const { x } = spot; const z = spot.z + 0.27;
     const g = new THREE.Group();
     g.add(box(1.05, 0.85, 0.42, mat(t.unit, { roughness: 0.5 }), 0, 0, 0));
     const fan = this.fan(0.28, -0.2, 0.43, 0.22);
@@ -1113,7 +1140,7 @@ class House3D {
     this.cards.heatpump = this.card('heatpump', null, new THREE.Vector3(x, 1.3, z));
     const p = (px, py, pz) => new THREE.Vector3(px, py, pz);
     // low along the wall, the short way
-    const wz = D / 2 + 0.06;
+    const wz = Math.max(meter.z, spot.z + 0.06);
     this.addFlow('use', [meter, p(meter.x, 0.55, wz), p(x, 0.55, wz), p(x, 0.6, z - 0.2)], 'heatpump');
   }
 
