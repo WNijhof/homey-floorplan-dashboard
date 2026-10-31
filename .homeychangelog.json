@@ -1,4 +1,8 @@
 {
+  "0.2.2": {
+    "en": "The 3D house can follow the shape of your floor plan, a hot water boiler card on the facade, parts on the real walls, Dutch vacuum states and tooltips, and advice chips open Energy.",
+    "nl": "Het 3D-huis kan de vorm van je plattegrond volgen, een warmwaterboiler als kaart op de gevel, onderdelen op de echte muren, Nederlandse stofzuigerstatussen en hulpteksten, en adviezen openen Energie."
+  },
   "0.2.1": {
     "en": "Open a wall between two rooms, place a device more than once, curved walls, change the order of the levels, bins from Trashcan Reminder, and room labels in 3D step aside for lamps.",
     "nl": "Maak een muur tussen twee kamers open, plaats een apparaat vaker, gebogen muren, wijzig de volgorde van verdiepingen, de container uit Afval Herinnering, en kamerlabels in 3D gaan opzij voor lampen."
