@@ -42,3 +42,11 @@ test('a model piece is created with its real size and drawn from its top view in
   assert.ok(!plain.svg.includes('<image') && plain.svg.includes('fp-item'));
   assert.ok(core.furnitureParts(item).length >= 3);
 });
+
+test('a fan coil unit is a climate model, and there is a dishwasher', () => {
+  assert.ok(MODELS.climate().some((m) => m.id === 'fx-fancoil' && m.mount === 'wall'));
+  const dish = MODELS.get('own-dishwasher');
+  assert.ok(dish && dish.group === 'appliances');
+  const parts = core.furnitureParts({ type: 'own-dishwasher', w: 60, d: 60, h: 85 });
+  assert.ok(parts.length === 2 && parts.some((p) => p.tone === 'dark'));
+});

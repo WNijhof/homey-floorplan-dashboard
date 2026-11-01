@@ -29,6 +29,8 @@ The left bar holds the tools: Select, Room, Walls, Doors, Windows, Open wall, Fu
 - Several spots on one switch: select the device and choose **Place this device again**, or copy and paste it.
 - Shape of the 3D house: under **House**, choose **Simple block** or **Follows the floor plan** at **Shape of the house**. With the real shape the walls follow your rooms, extensions included. Storeys stand on each other by themselves, also when you moved a level in the editor. Choose which side is the front as well. The roof lies on the biggest rectangular part, the other parts get a flat roof, and the windows are spread evenly.
 - Drag devices to their place. For lamps you choose the kind: ceiling, pendant, wall, floor or table lamp.
+- A thermostat or air conditioner can look like a wall thermostat, a radiator valve or a fan coil unit: select it and choose under **Shown as**.
+- A switch with more buttons (in Homey for example onoff.2) shows each extra button as a device of its own in the list, with the number or name of that button after it. That way you link a lamp to the button that switches it.
 - Starting from a picture or PDF: set the scale by measuring one known length. The editor recognises walls, rooms, doors and windows. This happens in your browser; nothing is sent anywhere.
 
 Handy: Ctrl+C and Ctrl+V copy and paste, Delete removes, and Space with dragging moves the view.
@@ -47,7 +49,7 @@ Under **House** you set how your home looks from outside.
 
 Levels with a name such as Other, Basement, Shed or Garage, or Garden or Terrace, do not count as a storey of the house. They keep their own tab.
 
-Parts such as panels, battery, car, heat pump and air conditioning appear by themselves when Homey has such a device. For each part you can choose Automatic, Always or Never.
+Parts such as panels, battery, car, heat pump and air conditioning appear by themselves when Homey has such a device. For each part you can choose Automatic, Always or Never. With a flat roof, the heat pump can also lie flat on the roof. Fan coil units without an outdoor unit? Set the air conditioner to Never.
 
 ## The dashboard
 

@@ -396,3 +396,24 @@ test('error reports: off by default, and on they stay anonymous from the app and
     assert.strictEqual((await get('/api/client-error', { method: 'POST', body: {}, headers: { Origin: 'https://evil.example' } })).status, 403);
   });
 });
+
+test('a switch with two buttons: the second button is a device of its own', async () => {
+  const devices = [{ id: 'd_double', name: 'Schakelaar keuken', zone: 'z_hall', cls: 'socket', caps: { onoff: false, 'onoff.2': false, 'measure_power.2': 0 } }];
+  await withApp({ devices }, async ({ homey, api }, get) => {
+    const data = (await get('/api/data')).json;
+    const second = data.devices.find((d) => d.id === 'd_double::2');
+    assert.ok(second, 'the second button is listed');
+    assert.strictEqual(second.name, 'Schakelaar keuken (2)');
+    assert.deepStrictEqual(second.caps, { onoff: false, measure_power: 0 });
+    assert.ok(data.devices.some((d) => d.id === 'd_double' && d.caps.onoff === false));
+    const res = await get('/api/capability', { method: 'POST', body: { deviceId: 'd_double::2', capabilityId: 'onoff', value: true } });
+    assert.strictEqual(res.status, 200, res.text);
+    const real = (await api.devices.getDevices()).d_double;
+    assert.strictEqual(real.capabilitiesObj['onoff.2'].value, true);
+    assert.strictEqual(real.capabilitiesObj.onoff.value, false, 'the first button stays as it was');
+    await new Promise((r) => setTimeout(r, 350));
+    assert.ok(homey.realtimeEvents.some(([e, d]) => e === 'caps' && d['d_double::2'] && d['d_double::2'].onoff === true));
+    const refused = await get('/api/capability', { method: 'POST', body: { deviceId: 'd_double::2', capabilityId: 'speaker_playing', value: true } });
+    assert.strictEqual(refused.status, 500);
+  });
+});

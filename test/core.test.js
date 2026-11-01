@@ -192,3 +192,29 @@ test('empty level renders', () => {
   const out = core.render({ plan: core.newPlan(), level: core.newLevel('x'), devices: [] });
   assert.ok(out.viewBox.every(Number.isFinite));
 });
+
+test('walls drawn without rooms know their outside, whichever way they were drawn', () => {
+  const box = [[0, 0], [600, 0], [600, 400], [0, 400]];
+  for (const pts of [box, box.slice().reverse()]) {
+    const level = core.newLevel('L');
+    level.walls = pts.map((a, i) => ({ id: `w${i}`, a, b: pts[(i + 1) % pts.length], t: 20 }));
+    level.walls.push({ id: 'inner', a: [300, 0], b: [300, 400], t: 10 });
+    const walls = core.levelWalls(level);
+    for (const w of walls) {
+      const s = core.wallOutside(w.a, w.b, w.t, level, walls);
+      if (w.id === 'inner') { assert.strictEqual(s, 0, 'a wall inside the house'); continue; }
+      const u = core.geom.norm(core.geom.sub(w.b, w.a));
+      const out = [-u[1] * s, u[0] * s];
+      const mid = core.geom.mul(core.geom.add(w.a, w.b), 0.5);
+      // the outside points away from the middle of the house
+      assert.ok(core.geom.dot(out, core.geom.sub(mid, [300, 200])) > 0, `${w.id} ${JSON.stringify(pts[0])}`);
+    }
+  }
+  // A room on one side still decides it
+  const level = core.newLevel('L');
+  level.rooms = [{ id: 'r', name: 'R', points: box }];
+  const edge = core.levelWalls(level)[0];
+  const s = core.wallOutside(edge.a, edge.b, 12, level);
+  const u = core.geom.norm(core.geom.sub(edge.b, edge.a));
+  assert.ok(core.geom.pointInPolygon(core.geom.add(core.geom.mul(core.geom.add(edge.a, edge.b), 0.5), [u[1] * s * 50, -u[0] * s * 50]), box), 'the other side is the room');
+});

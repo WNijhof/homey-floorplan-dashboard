@@ -203,6 +203,14 @@ function fixtureMesh(kind, item, wallHeight, theme) {
     knob.rotation.x = Math.PI / 2; knob.position.set(0, h / 2, 0); g.add(knob);
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(w / 2 * 0.8, w / 2 * 0.8, 0.004, 24), dark);
     ring.rotation.x = Math.PI / 2; ring.position.set(0, h / 2, d / 2 + 0.002); g.add(ring);
+  } else if (kind === 'fancoil') {
+    // A fan coil unit: a white cabinet low on the wall with a dark grille on top and a strip at the front.
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), white);
+    body.position.set(0, h / 2, 0); body.castShadow = true; g.add(body);
+    const grille = new THREE.Mesh(new THREE.BoxGeometry(w * 0.9, 0.006, d * 0.7), dark);
+    grille.position.set(0, h + 0.003, 0); g.add(grille);
+    const strip = new THREE.Mesh(new THREE.BoxGeometry(w * 0.9, h * 0.12, 0.004), dark);
+    strip.position.set(0, h * 0.2, d / 2 + 0.002); g.add(strip);
   }
   g.userData.bulb = bulb;
   return g;
@@ -506,7 +514,8 @@ class View3D {
     // The outside of outer walls in the facade of the house view (brick or plaster)
     const hs = window.HouseCore ? window.HouseCore.settings(plan) : { facade: 'brick', roofColor: 'anthracite' };
     const facade = LOOK.textures(this.renderer, hs.facade, hs.roofColor, t.night);
-    for (const wall of core.levelWalls(level)) {
+    const levelWalls = core.levelWalls(level);
+    for (const wall of levelWalls) {
       for (const piece of core.wallPieces(wall, level.openings, level, true)) {
         const u = core.geom.norm(core.geom.sub(piece.b, piece.a));
         const ext0 = piece.capA ? wall.t / 2 : 0; const ext1 = piece.capB ? wall.t / 2 : 0;
@@ -520,9 +529,7 @@ class View3D {
         // Which side is outside the house, for the facade and the cut-away of walls in front of the camera.
         const mid = core.geom.mul(core.geom.add(a, bb), 0.5);
         const n = [-u[1], u[0]];
-        const probe = (s) => core.geom.add(mid, core.geom.mul(n, s * (wall.t / 2 + 25)));
-        const inside = (p) => level.rooms.some((r) => core.geom.pointInPolygon(p, r.points));
-        const outside = !inside(probe(1)) ? 1 : !inside(probe(-1)) ? -1 : 0;
+        const outside = core.wallOutside(piece.a, piece.b, wall.t, level, levelWalls);
         if (outside) {
           const brick = new THREE.MeshStandardMaterial({ map: facade.wall.clone(), roughness: 0.92, color: t.night ? '#8f8f8f' : '#ffffff' });
           brick.map.needsUpdate = true;

@@ -29,6 +29,8 @@ In de linkerbalk staan de gereedschappen: Selecteren, Kamer, Muren, Deuren, Rame
 - Trap: selecteer een kwartslagtrap of wenteltrap en kies **Trap spiegelen** om de bocht de andere kant op te laten lopen.
 - Speakers: selecteer een speaker en kies onder **Weergave** een box. Die staat dan als model op de plattegrond en in 3D.
 - Apparaten sleep je naar hun plek. Bij lampen kies je de soort: plafond-, hang-, wand-, staande of tafellamp.
+- Een thermostaat of airco kan er als wandthermostaat, radiatorknop of fancoil uitzien: selecteer hem en kies onder **Weergave**.
+- Een schakelaar met meer knoppen (in Homey bijvoorbeeld onoff.2) staat per extra knop als eigen apparaat in de lijst, met het nummer of de naam van die knop erachter. Zo koppel je een lamp aan de knop die hem schakelt.
 - Begin je met een afbeelding of pdf, zet dan de schaal door één bekende lengte te meten. De editor herkent muren, kamers, deuren en ramen. Dat gebeurt in je browser; er wordt niets verstuurd.
 
 Handig: Ctrl+C en Ctrl+V kopiëren en plakken, Delete verwijdert, en Spatie met slepen verschuift het beeld.
@@ -47,7 +49,7 @@ Onder **Huis** stel je in hoe je huis er van buiten uitziet.
 
 Verdiepingen die bijvoorbeeld Overig, Kelder, Schuur of Garage heten, of Tuin of Terras, tellen niet mee als verdieping van het huis. Ze blijven wel een eigen tabblad.
 
-Onderdelen zoals panelen, accu, auto, warmtepomp en airco verschijnen vanzelf als Homey zo'n apparaat heeft. Per onderdeel kun je kiezen voor Automatisch, Altijd of Nooit.
+Onderdelen zoals panelen, accu, auto, warmtepomp en airco verschijnen vanzelf als Homey zo'n apparaat heeft. Per onderdeel kun je kiezen voor Automatisch, Altijd of Nooit. Heeft het huis een plat dak, dan kan de warmtepomp ook plat op het dak liggen. Fancoils zonder buitenunit? Zet de airco dan op Nooit.
 
 ## Het dashboard
 

@@ -174,6 +174,36 @@
     return [...map.values()];
   }
 
+  /**
+   * Which side of wall (piece) ab is outside the house: 1 along n = [-u.y, u.x] (u from a to b), -1 the
+   * other side, 0 for a wall inside the house or one standing on its own. A room on one side decides it.
+   * Walls drawn without rooms beside them look along each side for other walls, so the direction the
+   * wall was drawn in does not matter.
+   */
+  function wallOutside(a, b, t, level, walls) {
+    const u = norm(sub(b, a));
+    const n = [-u[1], u[0]];
+    const mid = mul(add(a, b), 0.5);
+    const rooms = level.rooms || [];
+    const inRoom = (s) => { const p = add(mid, mul(n, s * (t / 2 + 25))); return rooms.some((r) => pointInPolygon(p, r.points)); };
+    const r1 = inRoom(1); const r2 = inRoom(-1);
+    if (r1 !== r2) return r1 ? -1 : 1;
+    if (r1) return 0;
+    const all = walls || levelWalls(level);
+    const blocked = (s) => {
+      const o = add(mid, mul(n, s * (t / 2 + 1))); const dir = mul(n, s);
+      return all.some((w) => {
+        const e = sub(w.b, w.a); const den = cross(dir, e);
+        if (Math.abs(den) < 1e-9) return false;
+        const q = sub(w.a, o);
+        const k = cross(q, e) / den; const m = cross(q, dir) / den;
+        return k > 0 && m >= 0 && m <= 1;
+      });
+    };
+    const b1 = blocked(1); const b2 = blocked(-1);
+    return b1 === b2 ? 0 : b1 ? -1 : 1;
+  }
+
   /** Openings that sit on wall ab, as intervals along the wall in cm. */
   function openingsOnWall(wall, openings) {
     const L = dist(wall.a, wall.b);
@@ -329,6 +359,9 @@
         return [P(rect(x0, y0, x1, y1), 0, h, 'white'), P(regularPolygon(0, 2, w / 2 - 8, d / 2 - 8, 14), h, h + 0.5, 'water')];
       case 'washer': case 'dryer':
         return [P(rect(x0, y0, x1, y1), 0, h, 'white'), P(regularPolygon(0, 4, w / 2 - 12, d / 2 - 12, 16), h, h + 0.5, 'glass')];
+      case 'dishwasher':
+        // white with a dark control strip along the top of the front
+        return [P(rect(x0, y0, x1, y1), 0, h, 'white'), P(rect(x0, y1 - 4, x1, y1), h - 10, h + 0.5, 'dark')];
       case 'plant':
         return [P(regularPolygon(0, 0, w / 3, d / 3, 10), 0, 35, 'dark'), P(regularPolygon(0, 0, w / 2, d / 2, 10), 35, h, 'green')];
       case 'cylinder':
@@ -920,13 +953,11 @@
 
     // Walls and openings
     const blocks = []; // 2.5D prisms: { pts, z0, z1, color, key, attrs }
-    const isExteriorFacingViewer = (piece) => {
+    const isExteriorFacingViewer = (piece, thick) => {
+      const s = wallOutside(piece.a, piece.b, thick || t, level, walls);
+      if (!s) return false;
       const u = norm(sub(piece.b, piece.a));
-      let n = [-u[1], u[0]];
-      if (view.facing(n[0], n[1]) < 0) n = [-n[0], -n[1]];
-      const mid = mul(add(piece.a, piece.b), 0.5);
-      const probe = add(mid, mul(n, t / 2 + 25));
-      return !rooms.some((r) => pointInPolygon(probe, r.points));
+      return view.facing(-u[1] * s, u[0] * s) >= 0;
     };
 
     for (const wall of walls) {
@@ -938,7 +969,7 @@
           continue;
         }
         let z1 = piece.z1;
-        if (isExteriorFacingViewer(piece)) {
+        if (isExteriorFacingViewer(piece, wall.t)) {
           if (piece.z0 >= DEFAULTS.lowWallHeight) continue; // lintels of lowered walls disappear
           z1 = Math.min(z1, DEFAULTS.lowWallHeight);
         }
@@ -1285,7 +1316,7 @@
     DEFAULTS, CATALOGUE, GLYPHS, LIGHT_PALETTE, DARK_PALETTE, ALARM_CAPS,
     uid, newPlan, newLevel, newFurniture, newDeviceItem,
     geom: { sub, add, mul, dot, cross, len, norm, dist, signedArea, pointInPolygon, projectOnSegment, bbox, labelPoint, rotatePt, rect },
-    levelWalls, openingsOnWall, wallPieces, arcPoints, furnitureParts,
+    levelWalls, wallOutside, openingsOnWall, wallPieces, arcPoints, furnitureParts,
     deviceKind, deviceFixture, isLampItem, defaultMount, isOn, coverClosed, lightColor, lightIntensity, deviceValueText, roomReadings, roomLabel, tintColor, modelOf,
     makeView, render, levelsFromZones, autoPlace,
   };

@@ -284,3 +284,9 @@ test('panels on both roof halves: two faces and two planes for the forecast', ()
   assert.strictEqual(house.settings({ house: { objects: { solar: { layout: 'x' } } } }).objects.solar.layout, 'sunny');
   assert.doesNotThrow(() => house.drawing(both, { texts: {} }));
 });
+
+test('the heat pump stands beside the house, or lies on a flat roof', () => {
+  assert.strictEqual(house.settings({}).objects.heatpump.place, 'ground');
+  assert.strictEqual(house.settings({ house: { objects: { heatpump: { place: 'roof' } } } }).objects.heatpump.place, 'roof');
+  assert.strictEqual(house.settings({ house: { objects: { heatpump: { place: 'attic' } } } }).objects.heatpump.place, 'ground');
+});

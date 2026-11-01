@@ -179,6 +179,15 @@
     // A speaker can be a box: a model in the room, no lamp.
     for (let i = 0; i < 30 && !(v3.holderOf('i_sp') && v3.holderOf('i_sp').children.length); i++) await wait(100);
     report.speakerBox3d = v3.holderOf('i_sp').children.length > 0 && !v3.lamps.some((l) => l.item.id === 'i_sp');
+    // Outer walls know their outside: the walls between the camera and the house drop, the far ones stay up.
+    const outer = v3.walls.filter((w) => w.exterior);
+    const { cx, cz } = v3.bounds;
+    report.wallsOutward = outer.length >= 4 && outer.every((w) => w.nx * (w.mesh.position.x - cx) + w.nz * (w.mesh.position.z - cz) > 0);
+    const cam = v3.camera.position;
+    const far = (w) => Math.hypot(w.mesh.position.x - cam.x, w.mesh.position.z - cam.z);
+    const byDistance = outer.filter((w) => w.z0 < 0.01).sort((a, b) => far(a) - far(b));
+    report.nearWallsLow = byDistance[0].target < byDistance[0].h && byDistance[byDistance.length - 1].target === byDistance[byDistance.length - 1].h;
+    if (!report.nearWallsLow) report.wallsSeen = byDistance.map((w) => `${far(w).toFixed(1)}:${w.target.toFixed(2)}/${w.h.toFixed(2)}`).join(' ');
     document.getElementById('btn-view').click();
     for (let i = 0; i < 20 && !document.getElementById('view3d').hidden === false; i++) await wait(50);
     for (let i = 0; i < 100 && !document.getElementById('view3d').hidden; i++) await wait(50);

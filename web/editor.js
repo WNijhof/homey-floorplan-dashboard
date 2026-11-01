@@ -73,7 +73,7 @@
       gas: 'Gas', gasToday: 'Gas today',
       houseForm: 'Shape of the house', formSimple: 'Simple block', formPlan: 'Follows the floor plan', formNote: 'The walls follow the rooms you drew, storey by storey, with extensions and all. The roof lies on the biggest rectangular part; the other parts get a flat roof. Windows are placed evenly and are not your real windows. Choose the front of the plan below.', facing: 'The front faces', dormer: 'Dormer at the back', extension: 'Extension', back: 'At the back', side: 'At the side', carport: 'Carport',
       houseParts: 'On and around the house', showAuto: 'Automatic', showOn: 'Always', showOff: 'Never', panels: 'Number of panels (0: as many as fit)',
-      batteryPlace: 'Battery stands', underCarport: 'Under the carport', againstWall: 'Against the wall', noHouse3d: 'This browser cannot show the house in 3D.',
+      batteryPlace: 'Battery stands', underCarport: 'Under the carport', againstWall: 'Against the wall', heatpumpPlace: 'Heat pump stands', besideHouse: 'Beside the house', onFlatRoof: 'On the flat roof',noHouse3d: 'This browser cannot show the house in 3D.',
       facade: 'Facade', brick: 'Red brick', darkbrick: 'Dark brick', yellowbrick: 'Yellow brick', plaster: 'White plaster', darkplaster: 'Dark plaster',
       roofColor: 'Roof tiles', anthracite: 'Anthracite', red: 'Red', black: 'Black', white: 'White', frames: 'Window frames', doorColor: 'Front door',
       solarLayout: 'Place of the panels', solarSunny: 'On the sunny side of the roof', solarBoth: 'On both roof halves (such as east-west)',
@@ -144,7 +144,7 @@
       tips: { 'level-add': 'Verdieping toevoegen', undo: 'Ongedaan maken (Ctrl+Z)', redo: 'Opnieuw doen (Ctrl+Y)', snap: 'Uitlijnen (met Shift tijdelijk andersom)', 'toggle-grid': 'Raster', 'toggle-furniture': 'Meubels', 'lock-layout': 'Kamers en muren vastzetten', turn: 'Draaien', 'zoom-in': 'Inzoomen', 'zoom-out': 'Uitzoomen', 'zoom-fit': 'Hele verdieping tonen' },
       houseForm: 'Vorm van het huis', formSimple: 'Eenvoudig blok', formPlan: 'Volgens de plattegrond', formNote: 'De muren volgen de kamers die je hebt getekend, per verdieping, met uitbouw en al. Het dak ligt op het grootste rechthoekige deel; de andere delen krijgen een plat dak. Ramen staan gelijkmatig verdeeld en zijn niet je echte ramen. Kies hieronder welke kant de voorkant is.', facing: 'Windrichting van de voorkant', dormer: 'Dakkapel aan de achterkant', extension: 'Aanbouw', back: 'Aan de achterkant', side: 'Aan de zijkant', carport: 'Carport',
       houseParts: 'Op en rond het huis', showAuto: 'Automatisch', showOn: 'Altijd', showOff: 'Nooit', panels: 'Aantal panelen (0: zoveel als past)',
-      batteryPlace: 'Accu staat', underCarport: 'Onder de carport', againstWall: 'Tegen de muur', noHouse3d: 'Deze browser kan het huis niet in 3D tonen.',
+      batteryPlace: 'Accu staat', underCarport: 'Onder de carport', againstWall: 'Tegen de muur', heatpumpPlace: 'Warmtepomp staat', besideHouse: 'Naast het huis', onFlatRoof: 'Op het platte dak',noHouse3d: 'Deze browser kan het huis niet in 3D tonen.',
       facade: 'Gevel', brick: 'Rode baksteen', darkbrick: 'Donkere baksteen', yellowbrick: 'Gele baksteen', plaster: 'Wit stucwerk', darkplaster: 'Donker stucwerk',
       roofColor: 'Dakpannen', anthracite: 'Antraciet', red: 'Rood', black: 'Zwart', white: 'Wit', frames: 'Kozijnen', doorColor: 'Voordeur',
       solarLayout: 'Plaats van de panelen', solarSunny: 'Op de zonnigste dakhelft', solarBoth: 'Op beide dakhelften (zoals oost-west)',
@@ -1539,6 +1539,7 @@
       strip: '<rect x="10" y="40" width="80" height="6" rx="3" fill="#ffe7a8" stroke="#e0b84f"/>',
       thermostat: '<rect x="34" y="14" width="32" height="44" rx="5" fill="#f4f3ef" stroke="#999"/><rect x="39" y="20" width="22" height="22" rx="2" fill="#1d2226"/><text x="50" y="35" font-size="9" font-weight="600" fill="#fff" text-anchor="middle">21°</text>',
       trv: '<rect x="12" y="28" width="36" height="18" rx="2" fill="#ddd" stroke="#bbb"/><circle cx="62" cy="37" r="14" fill="#f4f3ef" stroke="#999"/><circle cx="62" cy="37" r="7" fill="#2b2b2d"/>',
+      fancoil: '<rect x="12" y="26" width="76" height="34" rx="3" fill="#f4f3ef" stroke="#999"/><rect x="16" y="22" width="68" height="5" rx="1" fill="#2b2b2d"/><rect x="18" y="50" width="64" height="4" fill="#2b2b2d"/>',
     };
     let body;
     if (entry.fixture) body = icons[entry.fixture];
@@ -1831,6 +1832,7 @@
       ${h.objects.battery.show !== 'off' && h.carport !== 'none' && h.type !== 'terraced' ? field(T.batteryPlace, sel('objects.battery.place', h.objects.battery.place, [['carport', T.underCarport], ['wall', T.againstWall]])) : ''}
       ${field(T.partCar, show('car'))}
       ${field(T.partHeatpump, show('heatpump'))}
+      ${h.objects.heatpump.show !== 'off' && h.roof === 'flat' ? field(T.heatpumpPlace, sel('objects.heatpump.place', h.objects.heatpump.place, [['ground', T.besideHouse], ['roof', T.onFlatRoof]])) : ''}
       ${field(T.partAirco, show('airco'))}
       ${field(T.partBoiler, show('boiler'))}
       <h3>${T.outdoorLamps}</h3><p class="ed-note">${T.outdoorNote}</p>

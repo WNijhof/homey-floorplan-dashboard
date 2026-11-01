@@ -397,6 +397,25 @@
     if (tile) tile.click();
     await wait(100);
     report.speakerBox = S.plan.levels.flatMap((l) => l.items).find((i) => i.id === 'boxy').fixture === 'k-speaker';
+    // A thermostat or air conditioner can look like a fan coil unit
+    const climateDev = [...S.devices.values()].find((d) => core.deviceKind(d) === 'thermostat');
+    l0.items.push({ id: 'coil', kind: 'device', deviceId: climateDev.id, x: 3070, y: 440 });
+    tool('select');
+    await wait(50);
+    click([3070, 440]);
+    await wait(100);
+    const coilTile = document.querySelector('[data-action=pick-fixture][data-type=fx-fancoil]');
+    if (coilTile) coilTile.click();
+    await wait(100);
+    report.fancoil = S.plan.levels.flatMap((l) => l.items).find((i) => i.id === 'coil').fixture === 'fx-fancoil';
+    // On a flat roof the heat pump can lie on the roof
+    S.plan.house = { ...(S.plan.house || {}), roof: 'flat' };
+    document.querySelector('[data-tool=house]').click();
+    await wait(150);
+    const place = document.querySelector('select[data-house="objects.heatpump.place"]');
+    if (place) { place.value = 'roof'; place.dispatchEvent(new Event('change', { bubbles: true })); }
+    await wait(100);
+    report.heatpumpOnRoof = !!place && window.__editorState().plan.house.objects.heatpump.place === 'roof';
 
     // A curved wall
     const cur = S.plan.levels.find((l) => l.id === S.levelId);

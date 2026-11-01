@@ -525,7 +525,7 @@ class House3D {
     }
     for (const x of [-W / 2 + 0.9, -W / 2 + 2.2, W / 2 - 2.2, W / 2 - 0.9]) {
       if (Math.abs(x) < 1.3) continue;
-      if (this.shows.heatpump && Math.sign(x) === -cs && Math.abs(x) < W / 2 - 1.2) continue; // the heat pump stands here
+      if (this.shows.heatpump && !(this.set.roof === 'flat' && this.set.objects.heatpump.place === 'roof') && Math.sign(x) === -cs && Math.abs(x) < W / 2 - 1.2) continue; // the heat pump stands here
       const bush = new THREE.Mesh(LOOK.blob(0.42, x), M.leaves);
       bush.position.set(x, 0.32, D / 2 + 0.95); bush.scale.y = 0.75; bush.castShadow = true;
       this.root.add(bush);
@@ -1125,6 +1125,7 @@ class House3D {
 
   // The heat pump stands against the side wall on the carport side, towards the back: in view from the front corner.
   buildHeatpump(t, W, D, cs, meter) {
+    if (this.set.roof === 'flat' && this.set.objects.heatpump.place === 'roof' && this.roofFrame) return this.buildHeatpumpOnRoof(t, W, D, cs, meter);
     // At the front, by the meter cupboard: far from the battery and the charger, with a cable of its own
     const spot = this.frontSpot(this.shape, -cs * (W / 2 - 2.3), 0.6);
     const { x } = spot; const z = spot.z + 0.27;
@@ -1142,6 +1143,29 @@ class House3D {
     // low along the wall, the short way
     const wz = Math.max(meter.z, spot.z + 0.06);
     this.addFlow('use', [meter, p(meter.x, 0.55, wz), p(x, 0.55, wz), p(x, 0.6, z - 0.2)], 'heatpump');
+  }
+
+  // A flat heat pump lying on a flat roof, in the back corner, its fan looking up; it lifts away with the roof.
+  buildHeatpumpOnRoof(t, W, D, cs, meter) {
+    const main = this.shape.form ? this.shape.form.main : { x: 0, z: 0, w: W, d: D };
+    const y0 = this.roofFrame.y;
+    const x = main.x - cs * (main.w / 2 - 0.9); const z = main.z - main.d / 2 + 0.75;
+    const g = new THREE.Group();
+    g.add(box(1.05, 0.85, 0.42, mat(t.unit, { roughness: 0.5 }), 0, 0, 0));
+    const fan = this.fan(0.28, -0.2, 0.43, 0.22);
+    g.add(fan.ring, fan.mesh);
+    g.rotation.x = -Math.PI / 2; // the front with the fan faces the sky
+    g.position.set(x, y0 + 0.21, z + 0.425);
+    g.userData.pick = { kind: 'heatpump' };
+    this.root.add(g);
+    this.liftWith.push(g);
+    this.fans.push(fan);
+    this.heatFan = fan;
+    this.cards.heatpump = this.card('heatpump', null, new THREE.Vector3(x, y0 + 1.4, z));
+    // along the wall to the back, up to the roof edge and over it to the unit
+    const p = (px, py, pz) => new THREE.Vector3(px, py, pz);
+    const wall = this.onWall(p(x, 0, z));
+    this.addFlow('use', [...this.cableRoute(meter, p(wall.x, 0.9, wall.z)), p(wall.x, y0 + 0.3, wall.z), p(x, y0 + 0.3, z)], 'heatpump');
   }
 
   // The outdoor unit of the air conditioner hangs on the front wall of the upper storey, above the meter cupboard.
