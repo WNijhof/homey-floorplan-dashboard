@@ -1,4 +1,8 @@
 {
+  "0.2.3": {
+    "en": "Smoke detectors show OK or Alarm beside their icon, and a tap names smoke, heat, temperature and battery. A detector that has not reported yet says so. Heat, fire, gas and CO2 alarms turn the icon red.",
+    "nl": "Rookmelders tonen OK of Alarm naast hun icoon, en een tik noemt rook, hitte, temperatuur en batterij. Een melder die nog niets heeft gemeld zegt dat ook. Alarm voor hitte, brand, gas en CO2 kleurt het icoon rood."
+  },
   "0.2.2": {
     "en": "The 3D house can follow the shape of your floor plan, a hot water boiler card on the facade, parts on the real walls, Dutch vacuum states and tooltips, and advice chips open Energy.",
     "nl": "Het 3D-huis kan de vorm van je plattegrond volgen, een warmwaterboiler als kaart op de gevel, onderdelen op de echte muren, Nederlandse stofzuigerstatussen en hulpteksten, en adviezen openen Energie."

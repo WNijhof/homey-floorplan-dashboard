@@ -425,6 +425,11 @@
     return !!(entry && entry.light);
   }
 
+  // What turns a device's marker red.
+  const ALARM_CAPS = ['alarm_smoke', 'alarm_heat', 'alarm_fire', 'alarm_co', 'alarm_co2', 'alarm_gas', 'alarm_water', 'alarm_generic', 'alarm_tamper'];
+  // What a smoke, CO or gas detector watches. A detector on battery knows nothing (null) until its first report.
+  const DETECTOR_CAPS = ['alarm_smoke', 'alarm_heat', 'alarm_fire', 'alarm_co', 'alarm_co2', 'alarm_gas'];
+
   function deviceKind(device) {
     if (!device) return 'other';
     const c = device.caps || {};
@@ -433,7 +438,7 @@
     if (cls === 'light' || ('dim' in c && 'onoff' in c && cls !== 'fan')) return 'light';
     // A group of lamps from a group app: any light capability, or a group that is only switched.
     if (device.group && ('light_hue' in c || 'light_temperature' in c || ('onoff' in c && !('measure_power' in c) && cls !== 'socket'))) return 'light';
-    if ('alarm_smoke' in c || 'alarm_co' in c) return 'smoke';
+    if ('alarm_smoke' in c || 'alarm_co' in c || 'alarm_fire' in c || 'alarm_gas' in c) return 'smoke';
     if (cls === 'lock' || 'locked' in c) return 'lock';
     if (cls === 'thermostat' || cls === 'heater' || 'target_temperature' in c) return 'thermostat';
     if (cls === 'windowcoverings' || cls === 'blinds' || cls === 'curtain' || cls === 'sunshade' || 'windowcoverings_set' in c || 'windowcoverings_state' in c) return 'cover';
@@ -479,6 +484,12 @@
     if (skip) for (const cap of skip) delete c[cap];
     const kind = deviceKind(device);
     const parts = [];
+    // A detector says how it is doing, also without a temperature. 'Alarm' and 'OK' read the same in Dutch.
+    if (kind === 'smoke' && device.available !== false) {
+      const watched = DETECTOR_CAPS.map((cap) => device.caps[cap]);
+      if (watched.includes(true)) parts.push('Alarm');
+      else if (watched.includes(false)) parts.push('OK');
+    }
     // Measured and set temperature read as one value, "20.9° → 21°", like the room labels.
     const target = typeof c.target_temperature === 'number' && kind === 'thermostat' ? `→ ${c.target_temperature}°` : null;
     if (typeof c.measure_temperature === 'number') parts.push(`${c.measure_temperature.toFixed(1)}°${target ? ` ${target}` : ''}`);
@@ -1119,7 +1130,7 @@
     for (const e of devices2) {
       const { item, dev, kind } = e;
       const on = isOn(dev);
-      const alarm = dev && ['alarm_smoke', 'alarm_water', 'alarm_co', 'alarm_generic', 'alarm_tamper'].some((cap) => dev.caps[cap] === true);
+      const alarm = dev && ALARM_CAPS.some((cap) => dev.caps[cap] === true);
       const motion = dev && dev.caps.alarm_motion === true;
       let fill = pal.deviceOff; let stroke = pal.deviceStroke; let glyph = pal.deviceStroke;
       if (kind === 'light' && on) { fill = lightColor(dev); glyph = '#3a2a10'; stroke = fill; }
@@ -1269,7 +1280,7 @@
 
   return {
     floorKind,
-    DEFAULTS, CATALOGUE, GLYPHS, LIGHT_PALETTE, DARK_PALETTE,
+    DEFAULTS, CATALOGUE, GLYPHS, LIGHT_PALETTE, DARK_PALETTE, ALARM_CAPS,
     uid, newPlan, newLevel, newFurniture, newDeviceItem,
     geom: { sub, add, mul, dot, cross, len, norm, dist, signedArea, pointInPolygon, projectOnSegment, bbox, labelPoint, rotatePt, rect },
     levelWalls, openingsOnWall, wallPieces, arcPoints, furnitureParts,

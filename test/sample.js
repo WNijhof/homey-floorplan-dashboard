@@ -75,7 +75,7 @@ function sampleDevices() {
     d('d_temp_util', 'Utility sensor', 'z_util', 'sensor', { measure_temperature: 20.8, measure_humidity: 71 }),
     d('d_temp_bed', 'Bedroom sensor', 'z_bed', 'sensor', { measure_temperature: 17.2, measure_humidity: 44 }),
     d('d_plug', 'TV plug', 'z_living', 'socket', { onoff: true, measure_power: 85 }),
-    d('d_smoke', 'Smoke detector', 'z_hall', 'sensor', { alarm_smoke: false }),
+    d('d_smoke', 'Smoke detector', 'z_hall', 'sensor', { alarm_smoke: false, alarm_heat: false, measure_battery: 87 }),
     d('d_motion', 'Hall motion', 'z_hall', 'sensor', { alarm_motion: true }),
     d('d_contact', 'Front door', 'z_hall', 'sensor', { alarm_contact: false }),
     d('d_bed_contact', 'Bedroom door', 'z_bed', 'sensor', { alarm_contact: true }),

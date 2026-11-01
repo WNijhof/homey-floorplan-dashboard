@@ -890,7 +890,7 @@ class View3D {
     for (const b of this.badges) {
       const dev = this.devices.get(b.item.deviceId);
       const on = core.isOn(dev);
-      const alarm = dev && ['alarm_smoke', 'alarm_water', 'alarm_co', 'alarm_generic', 'alarm_tamper'].some((c) => dev.caps[c] === true);
+      const alarm = dev && core.ALARM_CAPS.some((c) => dev.caps[c] === true);
       const motion = dev && dev.caps.alarm_motion === true;
       const value = this.values && b.item.showValue !== false ? core.deviceValueText(dev, dev && shownByRoom.get(dev.id)) : null;
       const glyph = core.GLYPHS[b.kind] || core.GLYPHS.other;

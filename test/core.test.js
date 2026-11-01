@@ -110,6 +110,19 @@ test('value text beside devices', () => {
   assert.strictEqual(core.deviceValueText({ cls: 'thermostat', caps: { measure_temperature: 20.94, target_temperature: 21 } }), '20.9° → 21°');
 });
 
+test('a smoke detector always tells how it is doing', () => {
+  // As the Fibaro app makes it: class sensor, smoke, heat, temperature and battery.
+  const fibaro = (caps, available = true) => ({ cls: 'sensor', available, caps: { alarm_smoke: false, alarm_heat: false, measure_temperature: 20.44, measure_battery: 90, ...caps } });
+  assert.strictEqual(core.deviceKind(fibaro({})), 'smoke');
+  assert.strictEqual(core.deviceValueText(fibaro({})), 'OK · 20.4°');
+  assert.strictEqual(core.deviceValueText(fibaro({}), ['measure_temperature']), 'OK');
+  assert.strictEqual(core.deviceValueText(fibaro({ alarm_heat: true })), 'Alarm · 20.4°');
+  // Not heard from yet, or gone: no OK.
+  assert.strictEqual(core.deviceValueText(fibaro({ alarm_smoke: null, alarm_heat: null, measure_temperature: null })), null);
+  assert.strictEqual(core.deviceValueText(fibaro({}, false)), '20.4°');
+  assert.ok(core.ALARM_CAPS.includes('alarm_heat'));
+});
+
 test('cover state', () => {
   assert.strictEqual(core.coverClosed({ caps: { windowcoverings_set: 0.25 } }), 0.75);
   assert.strictEqual(core.coverClosed({ caps: { windowcoverings_state: 'down' } }), 1);

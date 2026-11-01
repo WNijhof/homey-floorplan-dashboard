@@ -142,7 +142,7 @@ function demoDevices(lang) {
     d('d_kitchen', N.kitchenLamp, 'z_kitchen', 'light', { onoff: true, dim: 1, light_temperature: 0.6, light_mode: 'temperature' }),
     d('d_ksensor', N.kitchenSensor, 'z_kitchen', 'sensor', { measure_temperature: 21.4, measure_humidity: 58 }),
     d('d_hall', N.hallLamp, 'z_hall', 'light', { onoff: false, dim: 0.5 }),
-    d('d_smoke', N.smoke, 'z_hall', 'sensor', { alarm_smoke: false }),
+    d('d_smoke', N.smoke, 'z_hall', 'sensor', { alarm_smoke: false, alarm_heat: false, measure_battery: 87 }),
     d('d_front', N.frontDoor, 'z_hall', 'sensor', { alarm_contact: false }),
     d('d_lock', N.lock, 'z_hall', 'lock', { locked: true }),
     d('d_washer', N.washer, 'z_utility', 'socket', { onoff: true, measure_power: 1840 }),

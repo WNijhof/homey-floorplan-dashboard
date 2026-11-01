@@ -11,7 +11,8 @@
       target: 'Target', temperature: 'Temperature', humidity: 'Humidity', power: 'Power',
       locked: 'Locked', unlocked: 'Unlocked', lock: 'Lock', unlock: 'Unlock', confirmUnlock: 'Tap again to unlock',
       lights: 'Lights', allOn: 'All on', allOff: 'All off', devices: 'Devices', play: 'Play', pause: 'Pause',
-      openState: 'Open', closedState: 'Closed', motion: 'Motion', noMotion: 'No motion', alarm: 'Alarm', ok: 'OK',
+      openState: 'Open', closedState: 'Closed', motion: 'Motion', noMotion: 'No motion', alarm: 'Alarm', ok: 'OK', noReport: 'No report yet',
+      smoke: 'Smoke', heat: 'Heat', fire: 'Fire', co: 'Carbon monoxide', co2: 'CO₂', tamper: 'Tampered with', batteryLow: 'Battery low',
       unavailable: 'Unavailable', failed: 'Could not reach the device', more: 'More',
       today: 'Today', tomorrow: 'Tomorrow', allDay: 'All day', agendaError: 'Calendar could not be loaded',
       zoomReset: 'Show the whole level',
@@ -30,7 +31,8 @@
       target: 'Doel', temperature: 'Temperatuur', humidity: 'Luchtvochtigheid', power: 'Vermogen',
       locked: 'Op slot', unlocked: 'Niet op slot', lock: 'Op slot doen', unlock: 'Ontgrendelen', confirmUnlock: 'Tik nogmaals om te ontgrendelen',
       lights: 'Lampen', allOn: 'Alles aan', allOff: 'Alles uit', devices: 'Apparaten', play: 'Afspelen', pause: 'Pauze',
-      openState: 'Open', closedState: 'Dicht', motion: 'Beweging', noMotion: 'Geen beweging', alarm: 'Alarm', ok: 'OK',
+      openState: 'Open', closedState: 'Dicht', motion: 'Beweging', noMotion: 'Geen beweging', alarm: 'Alarm', ok: 'OK', noReport: 'Nog geen melding',
+      smoke: 'Rook', heat: 'Hitte', fire: 'Brand', co: 'Koolmonoxide', co2: 'CO₂', tamper: 'Sabotage', batteryLow: 'Batterij bijna leeg',
       unavailable: 'Niet beschikbaar', failed: 'Apparaat niet bereikbaar', more: 'Meer',
       today: 'Vandaag', tomorrow: 'Morgen', allDay: 'Hele dag', agendaError: 'Agenda kon niet worden geladen',
       zoomReset: 'Hele verdieping tonen',
@@ -644,12 +646,18 @@
       rows.push(`<div class="fp-row"><span class="fp-name">${esc(track) || '—'}</span><button type="button" class="fp-btn" data-act="toggle" data-dev="${esc(dev.id)}" data-cap="speaker_playing">${c.speaker_playing ? T.pause : T.play}</button></div>`);
     }
     const reads = [];
+    // Alarms first, each with its name. OK only when the device really said so: a detector on battery can stay silent for a long time.
+    for (const [cap, name] of [['alarm_smoke', T.smoke], ['alarm_heat', T.heat], ['alarm_fire', T.fire], ['alarm_co', T.co], ['alarm_co2', T.co2], ['alarm_gas', T.gas], ['alarm_water', T.water]]) {
+      if (cap in c) reads.push([name, c[cap] === true ? T.alarm : (c[cap] === false && dev.available ? T.ok : T.noReport)]);
+    }
+    if (c.alarm_tamper === true) reads.push([T.tamper, T.alarm]);
     if (typeof c.measure_temperature === 'number') reads.push([T.temperature, `${c.measure_temperature.toFixed(1)}°`]);
     if (typeof c.measure_humidity === 'number') reads.push([T.humidity, `${Math.round(c.measure_humidity)}%`]);
     if (typeof c.measure_power === 'number') reads.push([T.power, `${Math.round(c.measure_power)} W`]);
     if ('alarm_contact' in c) reads.push(['', c.alarm_contact ? T.openState : T.closedState]);
     if ('alarm_motion' in c) reads.push(['', c.alarm_motion ? T.motion : T.noMotion]);
-    for (const cap of ['alarm_smoke', 'alarm_water', 'alarm_co']) if (cap in c) reads.push(['', c[cap] ? T.alarm : T.ok]);
+    if (typeof c.measure_battery === 'number') reads.push([T.battery, `${Math.round(c.measure_battery)}%`]);
+    if (c.alarm_battery === true) reads.push(['', T.batteryLow]);
     for (const [k, v] of reads) rows.push(`<div class="fp-row"><span class="fp-name">${esc(k)}</span><span class="fp-val">${esc(v)}</span></div>`);
     if (!rows.length) rows.push(`<div class="fp-row"><span class="fp-val">${esc(kind)}</span></div>`);
     return rows.join('');

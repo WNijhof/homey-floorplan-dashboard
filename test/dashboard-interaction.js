@@ -54,6 +54,21 @@
     const server = (await (await fetch('/api/plan')).json()).devices.find((d) => d.id === 'd_light_hall').caps.onoff;
     report.tapReachesServer = server === !before && st().devices.get('d_light_hall').caps.onoff === !before;
 
+    // A smoke detector shows its state beside the marker, and a tap names what it watches.
+    const smokeMark = document.querySelector('.fp-device[data-id="i_s1"]');
+    report.smokeValue = /OK/.test(smokeMark.textContent);
+    press(smokeMark.querySelector('circle:nth-of-type(2)'));
+    await wait(450);
+    const smokeText = (document.querySelector('#quick .fp-quick-body') || {}).textContent || '';
+    report.smokeQuick = /(Smoke|Rook)OK/.test(smokeText) && /(Heat|Hitte)OK/.test(smokeText) && /87%/.test(smokeText);
+    st().devices.get('d_smoke').caps.alarm_smoke = null;
+    window.dispatchEvent(new Event('fp-theme'));
+    press(document.querySelector('.fp-device[data-id="i_s1"] circle:nth-of-type(2)'));
+    await wait(450);
+    report.smokeSilent = /(No report yet|Nog geen melding)/.test(document.querySelector('#quick .fp-quick-body').textContent);
+    st().devices.get('d_smoke').caps.alarm_smoke = false;
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+
     // Side panel with weather and calendar (on by default on the web page).
     report.sidePanel = !document.getElementById('side').hidden && document.querySelectorAll('#agenda .fp-aev').length === 3 && /11°/.test(document.getElementById('weather').textContent);
 
