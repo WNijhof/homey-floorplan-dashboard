@@ -188,6 +188,19 @@ test('render escapes names', () => {
   assert.ok(!out.svg.includes('<img'));
 });
 
+test('a room without a name, or with its name switched off, has no label', () => {
+  const plan = samplePlan();
+  const rooms = plan.levels[0].rooms;
+  const count = () => (core.render({ plan, level: plan.levels[0], devices: [] }).svg.match(/class="fp-label"/g) || []).length;
+  const all = count();
+  assert.ok(all >= 2);
+  rooms[0].name = '  ';
+  assert.strictEqual(count(), all - 1, 'a blank name');
+  rooms[1].showLabel = false;
+  assert.strictEqual(count(), all - 2, 'a name switched off');
+  assert.ok(!core.showsLabel(rooms[1]) && core.showsLabel({ name: 'Kast' }));
+});
+
 test('empty level renders', () => {
   const out = core.render({ plan: core.newPlan(), level: core.newLevel('x'), devices: [] });
   assert.ok(out.viewBox.every(Number.isFinite));

@@ -241,6 +241,32 @@
     report.settingsStored = window.HomeyWeb.Homey.getSettings().view === 'steep';
     window.HomeyWeb.Homey.setSettings({ view: '2d' });
 
+    // The camera on the side is chosen in the screen settings, or switched off.
+    {
+      st().devices.set('cam1', { id: 'cam1', name: 'Oprit', cls: 'camera', caps: {}, camera: '/api/image/c1' });
+      st().devices.set('cam2', { id: 'cam2', name: 'Tuin', cls: 'camera', caps: {}, camera: '/api/image/c2' });
+      document.querySelector('[data-tb="settings"]').click();
+      for (let i = 0; i < 30 && !document.querySelector('#sheet-body [data-set="cameraPick"]'); i++) await wait(100);
+      const pick = document.querySelector('#sheet-body [data-set="cameraPick"]');
+      const opts = pick ? [...pick.options].map((o) => o.value) : [];
+      const card = () => document.getElementById('cam-card');
+      window.HomeyWeb.Homey.setSettings({ camera: 'cam2' });
+      window.FpPanels.tick();
+      const second = !card() || (!card().hidden && document.getElementById('cam-img').src.includes('/api/image/c2'));
+      window.HomeyWeb.Homey.setSettings({ camera: 'off' });
+      window.FpPanels.tick();
+      const off = !card() || card().hidden;
+      // A doorbell Flow still shows a camera over the screen
+      const flow = window.FpPanels.showCamera() && !document.getElementById('camview').hidden;
+      document.getElementById('camview').click();
+      report.cameraChoice = opts.includes('cam1') && opts.includes('cam2') && opts.includes('off') && second && off && flow;
+      if (!report.cameraChoice) report.cameraSeen = JSON.stringify({ opts, second, off, flow, card: !!card() });
+      window.HomeyWeb.Homey.setSettings({ camera: undefined });
+      st().devices.delete('cam1'); st().devices.delete('cam2');
+      window.FpPanels.tick();
+      document.getElementById('sheet').hidden = true;
+    }
+
     // Light or dark: the choice beats the device, reaches the plan, and is the same on the Energy page
     const bg = () => getComputedStyle(document.body).backgroundColor;
     window.FpTheme.set('dark');

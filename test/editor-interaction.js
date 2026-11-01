@@ -275,6 +275,21 @@
     window.__editorState().sel = { kind: 'room', id: shaped.id };
     window.dispatchEvent(new Event('resize'));
     await wait(100);
+    // A room's name can stay off the plan (a built-in cupboard)
+    {
+      const box = () => document.querySelector('[data-path="sel.showLabel"]');
+      const c = shaped.points.reduce((s, p) => [s[0] + p[0] / shaped.points.length, s[1] + p[1] / shaped.points.length], [0, 0]);
+      click([shaped.points[0][0] + (c[0] - shaped.points[0][0]) * 0.25, shaped.points[0][1] + (c[1] - shaped.points[0][1]) * 0.25]);
+      await wait(100);
+      const shown = !!box() && box().checked;
+      if (box()) box().click();
+      await wait(50);
+      const off = lv().rooms.find((r) => r.id === shaped.id).showLabel === false;
+      if (box()) box().click();
+      await wait(50);
+      report.roomNameOff = shown && off && lv().rooms.find((r) => r.id === shaped.id).showLabel === true;
+      if (!report.roomNameOff) report.roomNameSeen = JSON.stringify({ shown, off, box: !!box(), panel: (document.getElementById("panel") || {}).textContent?.slice(0, 80), now: lv().rooms.find((r) => r.id === shaped.id).showLabel });
+    }
     const plus = document.querySelector('[data-handle="m:0"]');
     report.cornerPlus = !!plus;
     const box = plus.getBoundingClientRect();

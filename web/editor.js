@@ -17,7 +17,7 @@
       otherLevel: 'Other', roomsFromZones: 'Rooms from Homey', place: 'Place', allPlaced: 'Every zone already has a room on the plan.',
       plan: 'Plan', deleteLevel: 'Delete level', deletePlan: 'Delete plan', confirmAgain: 'Click again to confirm',
       startFromZones: 'Quick start from Homey zones', startBlank: 'Start blank', startNote: 'Your zones become levels and rooms with their devices in them, ready to drag into place. Then you set up the look of the house.',
-      room: 'Room', floorColour: 'Floor colour', themeColour: 'Theme colour', tempFrom: 'Temperature from', humFrom: 'Humidity from', climate: 'Thermostat',
+      room: 'Room', floorColour: 'Floor colour', themeColour: 'Theme colour', tempFrom: 'Temperature from', humFrom: 'Humidity from', showRoomLabel: 'Show the name on the plan', climate: 'Thermostat',
       zoneAverage: 'Average of the zone', area: 'Area', delete: 'Delete',
       device: 'Device', shape: 'Shape', auto: 'Automatic', mount: 'Sits', ceiling: 'Ceiling', wall: 'Wall', floor: 'Floor',
       reach: 'Light reach (cm)', showValue: 'Show value beside it', label: 'Label',
@@ -87,7 +87,7 @@
       otherLevel: 'Overig', roomsFromZones: 'Kamers uit Homey', place: 'Plaatsen', allPlaced: 'Elke zone heeft al een kamer op de plattegrond.',
       plan: 'Plattegrond', deleteLevel: 'Verdieping verwijderen', deletePlan: 'Plattegrond verwijderen', confirmAgain: 'Klik nogmaals om te bevestigen',
       startFromZones: 'Snelle start vanuit Homey-zones', startBlank: 'Leeg beginnen', startNote: 'Je zones worden verdiepingen en kamers met hun apparaten erin, klaar om op hun plek te slepen. Daarna stel je het uiterlijk van het huis in.',
-      room: 'Kamer', floorColour: 'Vloerkleur', themeColour: 'Themakleur', tempFrom: 'Temperatuur van', humFrom: 'Luchtvochtigheid van', climate: 'Thermostaat',
+      room: 'Kamer', floorColour: 'Vloerkleur', themeColour: 'Themakleur', tempFrom: 'Temperatuur van', humFrom: 'Luchtvochtigheid van', showRoomLabel: 'Naam tonen op de plattegrond', climate: 'Thermostaat',
       zoneAverage: 'Gemiddelde van de zone', area: 'Oppervlakte', delete: 'Verwijderen',
       device: 'Apparaat', shape: 'Vorm', auto: 'Automatisch', mount: 'Zit', ceiling: 'Plafond', wall: 'Muur', floor: 'Vloer',
       reach: 'Bereik van het licht (cm)', showValue: 'Waarde ernaast tonen', label: 'Label',
@@ -1419,6 +1419,7 @@
     const area = Math.abs(G.signedArea(room.points)) / 10000;
     return `<h2>${T.room}</h2>
       ${field(T.name, input('sel.name', room.name))}
+      <label class="ed-check"><input type="checkbox" data-path="sel.showLabel" data-bool="1"${room.showLabel !== false ? ' checked' : ''}>${T.showRoomLabel}</label>
       ${field(T.zone, `<select data-path="sel.zoneId" data-rerender="1">${options(zoneList, room.zoneId, T.none)}</select>`)}
       <p class="ed-note">${T.area}: ${area.toFixed(1)} m²</p>
       ${lockRow(room)}

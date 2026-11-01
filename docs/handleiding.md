@@ -18,7 +18,7 @@ Eerst kijken kan zonder installeren: [de demo](https://wnijhof.github.io/homey-f
 
 In de linkerbalk staan de gereedschappen: Selecteren, Kamer, Muren, Deuren, Ramen, Open muur, Meubels, Apparaten, Meten, Afbeelding, Agenda en Huis.
 
-- Kamers: sleep een rechthoek. Sleep de hoeken om de vorm aan te passen. Voor een L-vorm trek je aan een blauwe plus op de rand, of je kiest **Maak L-vorm**. Met Alt-klik op een hoek haal je die weg.
+- Kamers: sleep een rechthoek. Sleep de hoeken om de vorm aan te passen. Voor een L-vorm trek je aan een blauwe plus op de rand, of je kiest **Maak L-vorm**. Met Alt-klik op een hoek haal je die weg. Een kamer zonder naam krijgt geen label; wil je de naam van een kamer niet op de plattegrond, zoals bij een inbouwkast, haal dan het vinkje **Naam tonen op de plattegrond** weg.
 - Deuren en ramen plaats je op een muur.
 - Open keuken of doorgang: kies **Open muur** en klik op de muur tussen twee kamers. Kies de breedte of **Hele muur open**. Beide kamers houden hun eigen naam en temperatuur.
 - Gebogen muur: selecteer een losse muur en kies een van de buigknoppen. Een kamerrand buig je door met de blauwe plussen hoeken toe te voegen.
@@ -67,7 +67,7 @@ Dimbare apparaten tellen als lamp, ook als hun app ze als stopcontact meldt. Bij
 
 ## Dit scherm instellen
 
-Onder het tandwiel kies je per scherm: licht of donker, waarmee het start, de weergave, inzoomen op een kamer, de knop voor de stofzuiger, de zijkolom, de speakers, de nachtklok en de gastweergave. Geef je een scherm een naam, dan neemt een nieuwe tablet alle keuzes over met één link.
+Onder het tandwiel kies je per scherm: licht of donker, waarmee het start, de weergave, inzoomen op een kamer, de knop voor de stofzuiger, de zijkolom, welke camera in de zijkolom staat (of geen), de speakers, de nachtklok en de gastweergave. Geef je een scherm een naam, dan neemt een nieuwe tablet alle keuzes over met één link.
 
 ## Energie
 

@@ -574,6 +574,7 @@ class View3D {
 
     // Room labels.
     for (const room of level.rooms) {
+      if (!core.showsLabel(room)) continue;
       const lp = core.geom.labelPoint(room.points);
       const el = document.createElement('div');
       el.className = 'fp3-room';

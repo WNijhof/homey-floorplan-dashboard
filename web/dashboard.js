@@ -118,6 +118,15 @@
     return !!now && Array.from(now.devices.values()).some(function (d) { return d.cls === 'vacuumcleaner' || 'vacuumcleaner_state' in d.caps; });
   }
 
+  // The camera on the side: one of them, or none. Without a choice the first camera shows.
+  function cameraChoice(s) {
+    var now = window.__widgetState && window.__widgetState();
+    var cams = now ? Array.from(now.devices.values()).filter(function (d) { return !!d.camera && !('speaker_playing' in d.caps); }) : [];
+    if (!cams.length) return '';
+    var value = s.camera === 'off' || cams.some(function (d) { return d.id === s.camera; }) ? s.camera : cams[0].id;
+    return select('cameraPick', value, cams.map(function (d) { return [d.id, d.name]; }).concat([['off', T.none]]));
+  }
+
   function speakerChoice(s) {
     var now = window.__widgetState && window.__widgetState();
     var speakers = now ? Array.from(now.devices.values()).filter(function (d) { return 'speaker_playing' in d.caps; }) : [];
@@ -160,6 +169,7 @@
         check('furniture', s.furniture), check('values', s.values), check('zoomRoom', s.zoomRoom), hasVacuum() ? check('vacuumButton', s.vacuumButton) : '',
         select('side', s.sidebar, [['none', T.none], ['right', T.right], ['bottom', T.bottom], ['energy', T.split]]),
         check('weather', s.sideWeather), check('agenda', s.sideAgenda),
+        cameraChoice(s),
         speakerChoice(s),
         select('saver', s.saver || 'off', [['off', T.saverOff], ['night', T.saverNight], ['always', T.saverAlways]]),
         select('landing', s.landing || '0', [['0', T.never], ['2', '2' + T.minutes], ['5', '5' + T.minutes], ['15', '15' + T.minutes]]),
@@ -178,7 +188,7 @@
   }
 
   function applySettings() {
-    var map = { side: 'sidebar', weather: 'sideWeather', agenda: 'sideAgenda', tap: 'tapAction' };
+    var map = { side: 'sidebar', weather: 'sideWeather', agenda: 'sideAgenda', tap: 'tapAction', cameraPick: 'camera' };
     var values = {};
     Array.prototype.forEach.call(document.querySelectorAll('#sheet-body [data-set]'), function (el) {
       var key = map[el.dataset.set] || el.dataset.set;

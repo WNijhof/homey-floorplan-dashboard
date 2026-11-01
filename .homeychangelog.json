@@ -1,4 +1,8 @@
 {
+  "0.2.6": {
+    "en": "Rooms without a name no longer show an empty label, and a room's name can be kept off the plan. Under the gear you choose which camera shows in the side column, or none.",
+    "nl": "Kamers zonder naam tonen geen leeg label meer, en de naam van een kamer kan van de plattegrond af. Onder het tandwiel kies je welke camera in de zijkolom staat, of geen."
+  },
   "0.2.5": {
     "en": "Each extra button of a switch with more buttons is a device of its own, to link a lamp to it. In 3D, walls drawn without rooms now drop on the right side. New: a fan coil unit model for thermostats and air conditioners, a dishwasher, and a heat pump lying on a flat roof.",
     "nl": "Elke extra knop van een schakelaar met meer knoppen is een eigen apparaat, zodat je er een lamp aan koppelt. In 3D zakken muren die zonder kamers getekend zijn nu aan de goede kant. Nieuw: een fancoil als model voor thermostaten en airco's, een vaatwasser, en een warmtepomp plat op een plat dak."

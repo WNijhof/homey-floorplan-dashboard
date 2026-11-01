@@ -623,6 +623,11 @@
     return readings;
   }
 
+  /** A room shows its label when it has a name and the name is not switched off (a built-in cupboard needs none). */
+  function showsLabel(room) {
+    return !!(room && typeof room.name === 'string' && room.name.trim()) && room.showLabel !== false;
+  }
+
   /**
    * What a room label shows, and which device values it takes over: a sensor or thermostat whose
    * temperature, target or humidity is already on the room label does not show it again by itself.
@@ -1097,7 +1102,7 @@
     // Labels
     if (opts.labels !== false) {
       for (const room of rooms) {
-        if (!room.name) continue;
+        if (!showsLabel(room)) continue;
         const lp = labelPoint(room.points);
         const at = view.project(lp[0], lp[1], 0);
         const { values } = roomLabel(room, devices, opts);
@@ -1110,6 +1115,7 @@
     const shownByRoom = new Map();
     if (opts.labels !== false) {
       for (const room of rooms) {
+        if (!showsLabel(room)) continue;
         for (const [id, caps] of roomLabel(room, devices, opts).hidden) shownByRoom.set(id, (shownByRoom.get(id) || []).concat(caps));
       }
     }
@@ -1317,7 +1323,7 @@
     uid, newPlan, newLevel, newFurniture, newDeviceItem,
     geom: { sub, add, mul, dot, cross, len, norm, dist, signedArea, pointInPolygon, projectOnSegment, bbox, labelPoint, rotatePt, rect },
     levelWalls, wallOutside, openingsOnWall, wallPieces, arcPoints, furnitureParts,
-    deviceKind, deviceFixture, isLampItem, defaultMount, isOn, coverClosed, lightColor, lightIntensity, deviceValueText, roomReadings, roomLabel, tintColor, modelOf,
+    deviceKind, deviceFixture, isLampItem, defaultMount, isOn, coverClosed, lightColor, lightIntensity, deviceValueText, roomReadings, roomLabel, showsLabel, tintColor, modelOf,
     makeView, render, levelsFromZones, autoPlace,
   };
 }));

@@ -220,20 +220,28 @@
     // Homey serves the picture of a camera on its own address
     return location.protocol + '//' + location.hostname + d.camera + (d.camera.indexOf('?') < 0 ? '?' : '&') + 't=' + Date.now();
   }
+  // The camera the screen settings chose, the first one without a choice, none when switched off
+  function chosenCamera() {
+    var chosen = HomeyWeb.Homey.getSettings().camera;
+    if (chosen === 'off') return null;
+    var list = cameras();
+    return list.filter(function (d) { return d.id === chosen; })[0] || list[0] || null;
+  }
   function tickCameras() {
     camCount += 1;
-    var list = cameras();
-    var chosen = HomeyWeb.Homey.getSettings().camera;
-    var cam = list.filter(function (d) { return d.id === chosen; })[0] || list[0];
+    var cam = chosenCamera();
     var card = $('cam-card');
     if (card) {
       card.hidden = !cam;
-      if (cam && camCount % 5 === 1) $('cam-img').src = cameraUrl(cam);
+      // A new picture every fifth tick, and at once when another camera is chosen
+      if (cam && (camCount % 5 === 1 || card.dataset.cam !== cam.id)) { card.dataset.cam = cam.id; $('cam-img').src = cameraUrl(cam); }
     }
-    if (state.showing && !$('camview').hidden && camCount % 2 === 0 && cam) $('camview-img').src = cameraUrl(cam);
+    var big = cam || cameras()[0];
+    if (state.showing && !$('camview').hidden && camCount % 2 === 0 && big) $('camview-img').src = cameraUrl(big);
   }
   function showCamera() {
-    var cam = cameras()[0];
+    // A Flow (a doorbell) still shows a camera when the side card is switched off
+    var cam = chosenCamera() || cameras()[0];
     if (!cam) return false;
     $('camview-img').src = cameraUrl(cam);
     $('camview-name').textContent = cam.name;

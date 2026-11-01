@@ -18,7 +18,7 @@ You can look around without installing anything: [the demo](https://wnijhof.gith
 
 The left bar holds the tools: Select, Room, Walls, Doors, Windows, Open wall, Furniture, Devices, Measure, Picture, Calendar and House.
 
-- Rooms: drag a rectangle. Drag the corners to change the shape. For an L-shape, pull a blue plus on the edge, or choose **Make L-shaped**. Alt-click a corner to remove it.
+- Rooms: drag a rectangle. Drag the corners to change the shape. For an L-shape, pull a blue plus on the edge, or choose **Make L-shaped**. Alt-click a corner to remove it. A room without a name gets no label; to keep a room's name off the plan, such as for a built-in cupboard, untick **Show the name on the plan**.
 - Doors and windows go on a wall.
 - Furniture comes from a catalogue. Near a wall it turns its back to the wall by itself; use the turn buttons to adjust it.
 - Stairs: select quarter-turn or spiral stairs and choose **Mirror the stairs** to make the turn go the other way.
@@ -67,7 +67,7 @@ Dimmable devices count as lamps, even when their app reports them as a socket. F
 
 ## Settings of this screen
 
-Under the gear you choose per screen: light or dark, what it starts with, the view, zooming in on a room, the vacuum button, the side column, the speakers, the night clock and the guest view. Give a screen a name and a new tablet takes over all choices with one link.
+Under the gear you choose per screen: light or dark, what it starts with, the view, zooming in on a room, the vacuum button, the side column, which camera shows in the side column (or none), the speakers, the night clock and the guest view. Give a screen a name and a new tablet takes over all choices with one link.
 
 ## Energy
 
