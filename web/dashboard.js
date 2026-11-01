@@ -15,6 +15,7 @@
       weather: 'Weather', agenda: 'Calendar', none: 'Nothing', right: 'Right', bottom: 'Below', soft: 'Soft', bright: 'Bright', off: 'Off',
       temperature: 'Temperature', humidity: 'Humidity', steep: '2.5D', d3: '3D', close: 'Done',
       fullscreen: 'Full screen', note: 'These choices are kept on this screen only.', live: 'Live', connecting: 'Connecting…', offline: 'No connection',
+      vacuumButton: 'Vacuum button', zoomRoom: 'Zoom in on a room you tap', speakers: 'Speakers beside the plan',
       tap: 'Tapping a device', controls: 'Shows its controls', toggle: 'Switches it at once', names: 'Names on the plan', devices: 'Devices', all: 'Devices and furniture',
       report: 'Report a problem', reportNote: 'Is a device missing, or does something look wrong? Send the maker a report: which kinds of devices the app finds and how your plan is built, without names, rooms or address.',
       reportPlan: 'Include my floor plan (names replaced)', reportMail: 'Mail the report', reportGithub: 'Share on GitHub', reportCopy: 'Copy the report', reportMaking: 'Making the report…',
@@ -29,6 +30,7 @@
       weather: 'Weer', agenda: 'Agenda', none: 'Niets', right: 'Rechts', bottom: 'Onder', soft: 'Zacht', bright: 'Fel', off: 'Uit',
       temperature: 'Temperatuur', humidity: 'Luchtvochtigheid', steep: '2.5D', d3: '3D', close: 'Klaar',
       fullscreen: 'Volledig scherm', note: 'Deze keuzes gelden alleen voor dit scherm.', live: 'Live', connecting: 'Verbinden…', offline: 'Geen verbinding',
+      vacuumButton: 'Knop voor de stofzuiger', zoomRoom: 'Inzoomen op een kamer die je aantikt', speakers: 'Speakers naast de plattegrond',
       tap: 'Tikken op een apparaat', controls: 'Toont de bediening', toggle: 'Schakelt direct', names: 'Namen op de plattegrond', devices: 'Apparaten', all: 'Apparaten en meubels',
       report: 'Probleem melden', reportNote: 'Ontbreekt er een apparaat of klopt er iets niet? Stuur de maker een rapport: welke soorten apparaten de app vindt en hoe je plattegrond is opgebouwd, zonder namen, kamers of adres.',
       reportPlan: 'Mijn plattegrond meesturen (namen vervangen)', reportMail: 'Rapport mailen', reportGithub: 'Delen op GitHub', reportCopy: 'Rapport kopiëren', reportMaking: 'Rapport maken…',
@@ -111,6 +113,21 @@
     return '<label class="fp-row"><span class="fp-name">' + esc(T[id] || id) + '</span><input type="checkbox" data-set="' + id + '"' + (value !== false ? ' checked' : '') + '></label>';
   }
 
+  function hasVacuum() {
+    var now = window.__widgetState && window.__widgetState();
+    return !!now && Array.from(now.devices.values()).some(function (d) { return d.cls === 'vacuumcleaner' || 'vacuumcleaner_state' in d.caps; });
+  }
+
+  function speakerChoice(s) {
+    var now = window.__widgetState && window.__widgetState();
+    var speakers = now ? Array.from(now.devices.values()).filter(function (d) { return 'speaker_playing' in d.caps; }) : [];
+    if (speakers.length < 2) return '';
+    var hidden = s.hiddenSpeakers || [];
+    return '<p class="fp-sub" style="text-transform:none;letter-spacing:0">' + esc(T.speakers) + '</p>' + speakers.map(function (d) {
+      return '<label class="fp-row"><span class="fp-name">' + esc(d.name) + '</span><input type="checkbox" data-speaker="' + esc(d.id) + '"' + (hidden.indexOf(d.id) < 0 ? ' checked' : '') + '></label>';
+    }).join('');
+  }
+
   // In the guest view the settings ask for the edit PIN first.
   function openSettings() {
     if (!Homey.getSettings().guest) { showSettings(); return; }
@@ -140,9 +157,10 @@
         select('tint', s.tint, [['none', T.none], ['temperature', T.temperature], ['humidity', T.humidity]]),
         select('tap', s.tapAction, [['controls', T.controls], ['toggle', T.toggle]]),
         select('names', s.names, [['none', T.none], ['devices', T.devices], ['all', T.all]]),
-        check('furniture', s.furniture), check('values', s.values),
+        check('furniture', s.furniture), check('values', s.values), check('zoomRoom', s.zoomRoom), hasVacuum() ? check('vacuumButton', s.vacuumButton) : '',
         select('side', s.sidebar, [['none', T.none], ['right', T.right], ['bottom', T.bottom], ['energy', T.split]]),
         check('weather', s.sideWeather), check('agenda', s.sideAgenda),
+        speakerChoice(s),
         select('saver', s.saver || 'off', [['off', T.saverOff], ['night', T.saverNight], ['always', T.saverAlways]]),
         select('landing', s.landing || '0', [['0', T.never], ['2', '2' + T.minutes], ['5', '5' + T.minutes], ['15', '15' + T.minutes]]),
         '<label class="fp-row"><span class="fp-name">' + esc(T.peopleOn) + '</span><input type="checkbox" data-set="people"' + (s.people !== false ? ' checked' : '') + '></label>',
@@ -166,6 +184,8 @@
       var key = map[el.dataset.set] || el.dataset.set;
       values[key] = el.type === 'checkbox' ? el.checked : el.value;
     });
+    var boxes = Array.prototype.slice.call(document.querySelectorAll('#sheet-body [data-speaker]'));
+    if (boxes.length) values.hiddenSpeakers = boxes.filter(function (el) { return !el.checked; }).map(function (el) { return el.dataset.speaker; });
     if (values.plan) values.plan = { id: values.plan };
     window.FpTheme.set(values.theme);
     delete values.theme;

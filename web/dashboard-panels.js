@@ -13,7 +13,7 @@
       climate: 'Climate', noClimate: 'No rooms with a temperature on this plan.', target: 'Target', mode: 'Mode', lists: 'Lists', shopping: 'Shopping', tasks: 'Tasks', meals: 'Meals', add: 'Add', clearDone: 'Remove what is done', mealToday: 'Today we eat',
       mon: 'Monday', tue: 'Tuesday', wed: 'Wednesday', thu: 'Thursday', fri: 'Friday', sat: 'Saturday', sun: 'Sunday',
       vacuumStates: { cleaning: 'Cleaning', spot_cleaning: 'Spot cleaning', docked: 'In its dock', charging: 'Charging', stopped: 'Stopped', idle: 'Idle', paused: 'Paused' },
-      variables: 'Variables', yes: 'Yes', no: 'No', camera: 'Camera', vacuum: 'Vacuum', vacuumBusy: 'Vacuum is cleaning', start: 'Start', dock: 'Back to the dock', stop: 'Stop', home: 'home', away: 'away', asleep: 'asleep', people: 'Who is home', message: 'Message', close: 'Close',
+      silent: 'Nothing is playing', volume: 'Volume', variables: 'Variables', yes: 'Yes', no: 'No', camera: 'Camera', vacuum: 'Vacuum', vacuumBusy: 'Vacuum is cleaning', start: 'Start', dock: 'Back to the dock', stop: 'Stop', home: 'home', away: 'away', asleep: 'asleep', people: 'Who is home', message: 'Message', close: 'Close',
     },
     nl: {
       surplus: '%v over: goed moment voor de was of de auto', cheapNow: 'Stroom is goedkoop tot %t', cheapAt: 'Goedkoopst vanaf %t', dear: 'Stroom is nu duur', sunTomorrow: 'Morgen veel zon (%k kWh): laad de auto dan',
@@ -21,7 +21,7 @@
       climate: 'Klimaat', noClimate: 'Geen kamers met een temperatuur op deze plattegrond.', target: 'Doel', mode: 'Stand', lists: 'Lijstjes', shopping: 'Boodschappen', tasks: 'Taken', meals: 'Eten', add: 'Toevoegen', clearDone: 'Afgevinkte weghalen', mealToday: 'Vandaag eten we',
       mon: 'Maandag', tue: 'Dinsdag', wed: 'Woensdag', thu: 'Donderdag', fri: 'Vrijdag', sat: 'Zaterdag', sun: 'Zondag',
       vacuumStates: { cleaning: 'Aan het stofzuigen', spot_cleaning: 'Stofzuigt een plek', docked: 'In het dock', charging: 'Aan het laden', stopped: 'Gestopt', idle: 'In rust', paused: 'Gepauzeerd' },
-      variables: 'Variabelen', yes: 'Ja', no: 'Nee', camera: 'Camera', vacuum: 'Stofzuiger', vacuumBusy: 'Stofzuiger is bezig', start: 'Start', dock: 'Terug naar het dock', stop: 'Stop', home: 'thuis', away: 'weg', asleep: 'slaapt', people: 'Wie is er thuis', message: 'Bericht', close: 'Sluiten',
+      silent: 'Er speelt niets', volume: 'Volume', variables: 'Variabelen', yes: 'Ja', no: 'Nee', camera: 'Camera', vacuum: 'Stofzuiger', vacuumBusy: 'Stofzuiger is bezig', start: 'Start', dock: 'Terug naar het dock', stop: 'Stop', home: 'thuis', away: 'weg', asleep: 'slaapt', people: 'Wie is er thuis', message: 'Bericht', close: 'Sluiten',
     },
   };
   var lang = (navigator.language || 'en').slice(0, 2);
@@ -46,7 +46,8 @@
   var guest = function () { return !!HomeyWeb.Homey.getSettings().guest; };
   var alarmDevices = function () { return find(function (d) { return 'homealarm_state' in d.caps; }); };
   var vacuums = function () { return find(function (d) { return d.cls === 'vacuumcleaner' || 'vacuumcleaner_state' in d.caps; }); };
-  var cameras = function () { return find(function (d) { return !!d.camera; }); };
+  // (a speaker's picture is its album cover, not a camera)
+  var cameras = function () { return find(function (d) { return !!d.camera && !('speaker_playing' in d.caps); }); };
 
   // Replaces content only when it differs, so a finger on a button or a cursor in a field stays where it is.
   function fill(el, html) {
@@ -241,16 +242,33 @@
     return true;
   }
 
+  // Music: on the right beside the plan when that panel is there, else above it. All speakers stay within reach;
+  // the settings choose which ones show here.
   function renderMedia() {
     var box = $('media');
-    var speakers = find(function (d) { return 'speaker_playing' in d.caps; });
-    var d = speakers.filter(function (s) { return s.caps.speaker_playing === true; })[0];
-    box.hidden = !d;
-    if (!d) return;
+    var side = $('side');
+    var home = side && !side.hidden ? side : $('main-media');
+    if (home === side ? box.parentNode !== side : box.parentNode !== home.parentNode) {
+      if (home === side) side.insertBefore(box, side.firstChild); else home.parentNode.insertBefore(box, home);
+    }
+    var hidden = HomeyWeb.Homey.getSettings().hiddenSpeakers || [];
+    var speakers = find(function (d) { return 'speaker_playing' in d.caps && hidden.indexOf(d.id) < 0; });
+    box.hidden = !speakers.length;
+    if (!speakers.length) return;
+    var playing = function (s) { return s.caps.speaker_playing === true; };
+    var d = speakers.filter(function (s) { return s.id === state.mediaId; })[0] || speakers.filter(playing)[0] || speakers[0];
     var c = d.caps;
-    var title = [c.speaker_artist, c.speaker_track].filter(Boolean).join(' – ') || d.name;
-    fill(box, '<span class="fp-media-title">🎵 ' + esc(title) + '</span><span class="fp-media-keys"><button type="button" class="fp-step" data-p="media" data-dev="' + esc(d.id) + '" data-cap="speaker_prev">⏮</button><button type="button" class="fp-step" data-p="media" data-dev="' + esc(d.id) + '" data-cap="speaker_playing">⏸</button><button type="button" class="fp-step" data-p="media" data-dev="' + esc(d.id) + '" data-cap="speaker_next">⏭</button>'
-      + (typeof c.volume_set === 'number' ? '<input type="range" min="0" max="100" value="' + Math.round(c.volume_set * 100) + '" data-p="volume" data-dev="' + esc(d.id) + '">' : '') + '</span>');
+    var on = playing(d);
+    var line = [c.speaker_artist, c.speaker_album].filter(Boolean).join(' · ');
+    var key = function (cap, label) { return '<button type="button" class="fp-step" data-p="media" data-dev="' + esc(d.id) + '" data-cap="' + cap + '">' + label + '</button>'; };
+    var art = d.camera ? '<img class="fp-media-art" alt="" src="' + esc(location.protocol + '//' + location.hostname + d.camera + (d.camera.indexOf('?') < 0 ? '?' : '&') + 't=' + encodeURIComponent(c.speaker_track || '')) + '">' : '<span class="fp-media-art fp-media-note">♪</span>';
+    fill(box, '<div class="fp-media-now">' + art + '<div class="fp-media-text"><span class="fp-media-title">' + esc(c.speaker_track || (on ? d.name : T.silent)) + '</span>'
+      + (line ? '<span class="fp-media-line">' + esc(line) + '</span>' : '') + '<span class="fp-media-where">' + esc(d.name) + '</span></div></div>'
+      + '<span class="fp-media-keys">' + key('speaker_prev', '⏮') + key('speaker_playing', on ? '⏸' : '▶') + key('speaker_next', '⏭')
+      + (typeof c.volume_set === 'number' ? '<input type="range" min="0" max="100" value="' + Math.round(c.volume_set * 100) + '" data-p="volume" data-dev="' + esc(d.id) + '" aria-label="' + esc(T.volume) + '">' : '') + '</span>'
+      + (speakers.length > 1 ? '<div class="fp-media-rooms">' + speakers.map(function (s) {
+        return '<button type="button" class="fp-media-chip' + (s.id === d.id ? ' on' : '') + '" data-p="speaker" data-dev="' + esc(s.id) + '">' + (playing(s) ? '♪ ' : '') + esc(s.name) + '</button>';
+      }).join('') + '</div>' : ''));
   }
 
   function renderPeople() {
@@ -272,6 +290,7 @@
       var p = el.dataset.p;
       if (p === 'alarm') send(el.dataset.dev, 'homealarm_state', el.dataset.value).catch(function () {});
       if (p === 'list-tab') { state.listTab = el.dataset.value; refresh(); }
+      if (p === 'speaker') { state.mediaId = el.dataset.dev; renderMedia(); }
       if (p === 'item-remove') { ev.preventDefault(); state.lists[state.listTab].splice(n, 1); saveLists(); }
       if (p === 'clear-done') { state.lists[state.listTab] = state.lists[state.listTab].filter(function (i) { return !i.done; }); saveLists(); }
       if (p === 'vacuum') send(el.dataset.dev, 'vacuumcleaner_state', el.dataset.value).catch(function () {});
@@ -283,6 +302,11 @@
     if (ev.target.id === 'cam-img') showCamera();
     if (ev.target.closest && ev.target.closest('#camview')) { $('camview').hidden = true; state.showing = false; }
   });
+  // No cover to show: the note instead of a broken picture.
+  document.addEventListener('error', function (ev) {
+    var el = ev.target;
+    if (el.classList && el.classList.contains('fp-media-art')) { el.outerHTML = '<span class="fp-media-art fp-media-note">♪</span>'; }
+  }, true);
   document.addEventListener('change', function (ev) {
     var el = ev.target;
     if (el.dataset.p === 'item') { state.lists[state.listTab][Number(el.dataset.n)].done = el.checked; saveLists(); }
@@ -330,7 +354,7 @@
     buttons: function () {
       var out = [['lists', '📝', T.lists], ['climate', '🌡', T.climate]];
       if (alarmDevices().length) out.push(['alarm', '🛡', T.alarm]);
-      if (vacuums().length) out.push(['vacuum', '🧹', T.vacuum]);
+      if (vacuums().length && HomeyWeb.Homey.getSettings().vacuumButton !== false) out.push(['vacuum', '🧹', T.vacuum]);
       if (state.variables.length) out.push(['variables', '🎚', T.variables]);
       return out;
     },

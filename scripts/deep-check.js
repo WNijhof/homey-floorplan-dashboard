@@ -278,11 +278,11 @@ const PARTS = {
       await t.js('document.getElementById("sheet-close").click()');
 
       (await device(s, 'd_speaker')).report('speaker_playing', true);
-      check('music bar appears', await t.until('!document.getElementById("media").hidden && /Miles Davis/.test(document.getElementById("media").textContent)'));
-      await t.click('[data-p=media][data-cap=speaker_playing]');
+      check('music bar appears', await t.until('!document.getElementById("media").hidden && /Miles Davis/.test(document.getElementById("media").textContent) && (document.querySelector("#media [data-cap=speaker_playing][data-dev=d_speaker]") || {}).textContent === "⏸"'));
+      await t.click('#media [data-cap=speaker_playing][data-dev=d_speaker]');
       await sleep(400);
       check('pause reaches the speaker', await value(s, 'd_speaker', 'speaker_playing') === false);
-      check('music bar goes', await t.until('document.getElementById("media").hidden'));
+      check('music panel stays, ready to play again', await t.until('!document.getElementById("media").hidden && !!document.querySelector("#media [data-cap=speaker_playing]")'));
 
       await t.click('[data-sheet=vacuum]');
       await t.until('document.querySelector("[data-p=vacuum][data-value=cleaning]")');

@@ -21,11 +21,13 @@ The left bar holds the tools: Select, Room, Walls, Doors, Windows, Open wall, Fu
 - Rooms: drag a rectangle. Drag the corners to change the shape. For an L-shape, pull a blue plus on the edge, or choose **Make L-shaped**. Alt-click a corner to remove it.
 - Doors and windows go on a wall.
 - Furniture comes from a catalogue. Near a wall it turns its back to the wall by itself; use the turn buttons to adjust it.
+- Stairs: select quarter-turn or spiral stairs and choose **Mirror the stairs** to make the turn go the other way.
+- Speakers: select a speaker and choose a box under **Shown as**. It then stands as a model on the plan and in 3D.
 - Open kitchen or passage: choose **Open wall** and click the wall between two rooms. Choose the width or **Open the whole wall**. Both rooms keep their own name and temperature.
 - Curved wall: select a free wall and choose one of the curve buttons. To curve a room edge, add corners with the blue plusses.
 - Order of the levels: click an empty spot beside the plan and choose **Move level down** or **Move level up**.
 - Several spots on one switch: select the device and choose **Place this device again**, or copy and paste it.
-- Shape of the 3D house: under **House**, choose **Simple block** or **Follows the floor plan** at **Shape of the house**. With the real shape the walls follow your rooms, extensions included. Choose which side is the front as well. The roof lies on the biggest rectangular part, the other parts get a flat roof, and the windows are spread evenly.
+- Shape of the 3D house: under **House**, choose **Simple block** or **Follows the floor plan** at **Shape of the house**. With the real shape the walls follow your rooms, extensions included. Storeys stand on each other by themselves, also when you moved a level in the editor. Choose which side is the front as well. The roof lies on the biggest rectangular part, the other parts get a flat roof, and the windows are spread evenly.
 - Drag devices to their place. For lamps you choose the kind: ceiling, pendant, wall, floor or table lamp.
 - Starting from a picture or PDF: set the scale by measuring one known length. The editor recognises walls, rooms, doors and windows. This happens in your browser; nothing is sent anywhere.
 
@@ -51,9 +53,11 @@ Parts such as panels, battery, car, heat pump and air conditioning appear by the
 
 - **House**: your home with the values in rows above and below it. Tap a value or part for its page with chart, forecast and costs. Tap a storey to go inside.
 - The lines show the power: yellow is solar, grey-blue the grid, green the battery and light blue what is used.
-- **Storeys**: the button beside the tabs switches between 2D, 3D and 2.5D. Tap a lamp to switch or dim it.
+- **Storeys**: the button beside the tabs switches between 2D, 3D and 2.5D. Tap a lamp to switch or dim it. Tap a room to zoom in, with the room card beside it; closing the card zooms back out. In 3D, walls stop the light of a lamp. Rooms joined by an open wall share their light.
+- **Music**: your speakers are on the right in the side column, or above the plan when that column is off. Choose a speaker with the buttons below it. Under the gear you choose which speakers show.
 - The strip at the top only shows what needs attention, such as an open window, the bins or the cheapest hours. With the app Trashcan Reminder 2.0, the bins come from there. Otherwise HomeDeck looks in your calendar for events with words such as bin, trash or garbage.
-- **I'm leaving** shows what is open, what is not locked and which lamps are on, with a button to turn all lamps off. You tap twice, so it cannot happen by accident.
+- The buttons in that strip show what they are about: the battery button the devices with a low battery, the button for open doors and windows what is open.
+- **I'm leaving** shows what is open, what is not locked and which lamps are on, with a button to turn all lamps off. You tap twice, so it cannot happen by accident. Untick a lamp that should stay on; this screen remembers it.
 - **Variables**: Logic variables you choose in the editor are on the dashboard to read. You change them in Homey or with a Flow.
 - **Hot water boiler**: a boiler known to Homey is a card on the facade, with its temperature. Tap it for the target and the hot water left. Turn it on or off under **House** in the editor.
 
@@ -61,7 +65,7 @@ Dimmable devices count as lamps, even when their app reports them as a socket. F
 
 ## Settings of this screen
 
-Under the gear you choose per screen: light or dark, what it starts with, the view, the side column, the night clock and the guest view. Give a screen a name and a new tablet takes over all choices with one link.
+Under the gear you choose per screen: light or dark, what it starts with, the view, zooming in on a room, the vacuum button, the side column, the speakers, the night clock and the guest view. Give a screen a name and a new tablet takes over all choices with one link.
 
 ## Energy
 

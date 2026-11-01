@@ -40,6 +40,7 @@
       hintPlace: 'Click on the plan to place it. Esc cancels.',
       preview: 'Preview — switch back to 2D to edit.',
       levelName: 'Level', roomName: 'Room',
+      mirrorStairs: 'Mirror the stairs', mirrorStairsNote: 'The turn then goes the other way.',
       lampType: 'Kind of lamp', keepRatio: 'Keep proportions', searchFurniture: 'Search furniture', modelsBy: 'Models', drop: 'Hangs down (cm)',
       size: 'Size (cm)', standsOn: 'Stands on furniture at (cm)', preview3d: '3D: click a device or piece to change it in the panel, drag the selected one to move it. Drag elsewhere to look around, scroll to zoom.',
       resizeHint: 'Drag the corners to resize; the dot in front turns it. Shift keeps proportions.',
@@ -109,6 +110,7 @@
       hintPlace: 'Klik op de plattegrond om te plaatsen. Esc annuleert.',
       preview: 'Voorbeeld — schakel terug naar 2D om te bewerken.',
       levelName: 'Verdieping', roomName: 'Kamer',
+      mirrorStairs: 'Trap spiegelen', mirrorStairsNote: 'De bocht loopt dan de andere kant op.',
       lampType: 'Soort lamp', keepRatio: 'Verhoudingen behouden', searchFurniture: 'Meubels zoeken', modelsBy: 'Modellen', drop: 'Hangt omlaag (cm)',
       size: 'Maat (cm)', standsOn: 'Staat op meubel op (cm)', preview3d: '3D: klik op een apparaat of meubel om het in het paneel aan te passen, sleep het geselecteerde om het te verplaatsen. Elders slepen draait de camera, scrollen zoomt.',
       resizeHint: 'Sleep aan de hoeken om de maat te wijzigen; met het bolletje ervoor draai je hem. Shift houdt de verhoudingen.',
@@ -1440,7 +1442,8 @@
     const kinds = Object.keys(core.GLYPHS).map((k) => ({ id: k, name: k }));
     const mounts = [{ id: 'ceiling', name: T.ceiling }, { id: 'wall', name: T.wall }, { id: 'floor', name: T.floor }];
     const isLight = core.isLampItem(item, dev);
-    const climate = !isLight && dev && core.deviceKind(dev) === 'thermostat' ? core.deviceFixture(item, dev) : undefined;
+    const isSpeaker = !isLight && dev && core.deviceKind(dev) === 'speaker';
+    const climate = !isLight && dev && (core.deviceKind(dev) === 'thermostat' || isSpeaker) ? core.deviceFixture(item, dev) : undefined;
     // Anything that switches (a group of lamps, a plug with a lamp on it) can be shown as a lamp.
     const switchable = dev && ('onoff' in dev.caps || 'dim' in dev.caps);
     const lampToggle = !isLight && switchable
@@ -1452,7 +1455,7 @@
     const badgeTile = `<button type="button" class="ed-tile${climate === null ? ' on' : ''}" data-action="pick-fixture" data-type="none"><svg viewBox="0 0 100 75"><circle cx="50" cy="37" r="16" fill="var(--ed-accent)"/><circle cx="50" cy="37" r="6" fill="#fff"/></svg><span>${T.badgeOnly}</span></button>`;
     const fixtures = isLight
       ? `<h3>${T.lampType}</h3><div class="ed-grid">${MODELS.lights().map(tile).join('')}</div>`
-      : climate !== undefined ? `<h3>${T.model}</h3><div class="ed-grid">${MODELS.climate().map(tile).join('')}${badgeTile}</div>` : '';
+      : climate !== undefined ? `<h3>${T.model}</h3><div class="ed-grid">${(isSpeaker ? MODELS.speakers() : MODELS.climate()).map(tile).join('')}${badgeTile}</div>` : '';
     const sizes = fixture
       ? `<div class="ed-three">${field(T.width, input('sel.w', item.w || fixture.w, 'number'))}${field(T.depth, input('sel.d', item.d || fixture.d, 'number'))}${field(fixture.fixture === 'pendant' ? T.drop : T.height, input('sel.h', item.h || fixture.h, 'number'))}</div>
       ${fixture.mount !== 'ceiling' ? field(fixture.mount === 'surface' ? T.standsOn : T.elevation, input('sel.z', item.z != null ? item.z : fixture.z, 'number')) : ''}
@@ -1483,6 +1486,7 @@
       <p class="ed-note">${T.resizeHint}</p>
       <div class="ed-two">${field(item.mount === 'surface' ? T.standsOn : T.elevation, input('sel.z', item.z || 0, 'number'))}${field(T.rotation, input('sel.rot', item.rot || 0, 'number'))}</div>
       ${turnButtons()}
+      ${entry && /^stairs_/.test(entry.parts || '') ? `<div class="ed-row-btns"><button type="button" class="ed-btn${item.mirror ? ' on' : ''}" data-action="mirror-stairs">⇋ ${T.mirrorStairs}</button></div><p class="ed-note">${T.mirrorStairsNote}</p>` : ''}
       ${field(T.colour, `<div class="ed-color"><input type="color" data-path="sel.color" value="${esc(item.color || '#cfc8bd')}"><button type="button" class="ed-btn small" data-action="clear-color">${T.themeColour}</button></div>`)}
       <div class="ed-row-btns">${deleteBtn('sel')}</div>`;
   }
@@ -1992,6 +1996,7 @@
       case 'flip-swing': commit(() => { const o = selectedObject(); o.swing = -(o.swing || 1); }); break;
       case 'flip-hinge': commit(() => { const o = selectedObject(); o.hinge = -(o.hinge || 1); }); break;
       case 'flip-blind': commit(() => { const o = selectedObject(); o.blindSide = -(o.blindSide || 1); }); break;
+      case 'mirror-stairs': commit(() => { const it = selectedObject(); it.mirror = !it.mirror; }); break;
       case 'wall-h': case 'wall-v': {
         // Turn the wall about its middle to exactly horizontal or vertical, keeping its length.
         const w = selectedObject();

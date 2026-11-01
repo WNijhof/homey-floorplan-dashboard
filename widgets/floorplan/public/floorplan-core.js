@@ -339,8 +339,10 @@
         return [P(rect(x0, y0, x1, y1), 0, h, 'soft')];
       case 'car':
         return [P(rect(x0, y0, x1, y1), 15, 85, 'accent'), P(rect(x0 + 10, y0 + 120, x1 - 10, y1 - 110), 85, h, 'glass')];
-      case 'stairs': case 'stairs_l': case 'stairs_spiral':
-        return stairParts(item.type, w, d, h, P);
+      case 'stairs': case 'stairs_l': case 'stairs_spiral': {
+        const steps = stairParts(item.type, w, d, h, P);
+        return item.mirror ? steps.map((q) => ({ ...q, poly: q.poly.map(([x, y]) => [-x, y]).reverse() })) : steps;
+      }
       case 'lowboard':
         return [P(rect(x0, y0, x1, y1), 8, h), P(rect(x0 + 4, y0 + 4, x0 + 10, y1 - 4), 0, 8, 'dark'), P(rect(x1 - 10, y0 + 4, x1 - 4, y1 - 4), 0, 8, 'dark')];
       default:

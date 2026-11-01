@@ -80,6 +80,8 @@ button { font: inherit; color: inherit; }
 .fp-sheet-body { display: flex; flex-direction: column; gap: 12px; }
 /* Pages of the house view: key figures and a chart of the day */
 .fp-sheet.wide .fp-sheet-card { width: min(680px, 100%); }
+.fp-sheet.beside { justify-content: flex-end; align-items: center; padding: 12px; box-sizing: border-box; background: transparent; pointer-events: none; }
+.fp-sheet.beside .fp-sheet-card { width: min(360px, 100%); border-radius: 16px; pointer-events: auto; }
 .fp-stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 8px; }
 .fp-stat { background: var(--fp-bg); border-radius: 12px; padding: 8px 12px; }
 .fp-stat span { display: block; font-size: 12px; color: var(--fp-dim); }

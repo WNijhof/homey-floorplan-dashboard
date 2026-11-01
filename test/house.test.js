@@ -185,6 +185,24 @@ test('real form: an extension on the ground floor only, with the choice off by d
   }
 });
 
+test('real form: storeys stand on each other, also when a level was moved', () => {
+  const room = (x0, y0, x1, y1) => ({ id: `r${x0}${y0}`, name: 'r', points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] });
+  const shape = (levels) => house.shape({ levels, house: { form: 'plan' } }).form;
+  // Three equal storeys, the top one half a house to the side
+  const moved = shape([
+    { id: 'a', name: 'a', rooms: [room(0, 0, 1000, 800)] },
+    { id: 'b', name: 'b', rooms: [room(0, 0, 1000, 800)] },
+    { id: 'c', name: 'c', rooms: [room(500, 300, 1500, 1100)] },
+  ]);
+  assert.deepStrictEqual(moved.floors[2].rects, moved.floors[0].rects);
+  assert.deepStrictEqual([moved.w, moved.d], [10, 8]);
+  assert.strictEqual(moved.floors[2].runs.length, 4);
+  // A smaller storey inside the one below stays where it was drawn, an extension on the ground floor too
+  const inside = shape([{ id: 'a', name: 'a', rooms: [room(0, 0, 1000, 800)] }, { id: 'b', name: 'b', rooms: [room(100, 100, 600, 600)] }]);
+  assert.deepStrictEqual([inside.floors[1].rects[0].w, inside.floors[1].rects[0].d], [5, 5]);
+  assert.strictEqual(inside.floors[1].rects[0].x, inside.floors[0].rects[0].x - 1.5);
+});
+
 test('real form: rooms that nearly touch are one house, a small gap is filled, an L stays an L', () => {
   const room = (id, x0, y0, x1, y1) => ({ id, name: id, points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] });
   const near = house.shape({ levels: [{ id: 'g', name: 'g', rooms: [room('a', 0, 0, 500, 500), room('b', 512, 0, 1000, 500)] }], house: { form: 'plan' } });

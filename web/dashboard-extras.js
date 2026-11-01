@@ -8,10 +8,12 @@
 
   var STRINGS = {
     en: {
+      batteries: 'Batteries low', low: 'Low', keepNote: 'Untick a lamp that should stay on. This screen remembers it.',
       leave: "I'm leaving", leaveTitle: 'Before you go', allFine: 'Everything is closed and off.', open: 'Open', unlocked: 'Not locked', lights: 'Lamps on', lightsOff: 'All lamps are off', allOff: 'Turn all lamps off', sure: 'Tap again to turn them off', done: 'Done',
       openCount: ' open', rainOpen: 'Rain is coming, %n open', lowBattery: ' low on battery', cheapest: 'Cheapest at ', cheapNow: 'Electricity is cheap now', tomorrow: 'Tomorrow: ', today: 'Today: ', ring: 'Someone is at the door', runFailed: 'Could not start',
     },
     nl: {
+      batteries: 'Batterijen bijna leeg', low: 'Bijna leeg', keepNote: 'Vink een lamp uit die aan moet blijven. Dit scherm onthoudt dat.',
       leave: 'Ik ga weg', leaveTitle: 'Voordat je gaat', allFine: 'Alles is dicht en uit.', open: 'Open', unlocked: 'Niet op slot', lights: 'Lampen aan', lightsOff: 'Alle lampen zijn uit', allOff: 'Alle lampen uit', sure: 'Tik nogmaals om ze uit te doen', done: 'Klaar',
       openCount: ' open', rainOpen: 'Er komt regen, %n open', lowBattery: ' batterij bijna leeg', cheapest: 'Goedkoopst om ', cheapNow: 'Stroom is nu goedkoop', tomorrow: 'Morgen: ', today: 'Vandaag: ', ring: 'Er staat iemand aan de deur', runFailed: 'Starten lukte niet',
     },
@@ -37,6 +39,8 @@
   // Also what only its name tells is a lamp, on a plug; other sockets (a fridge) stay on
   var LAMP_NAME = /(lamp|licht|light|verlichting)/i;
   var isLightOn = function (d) { return (core.deviceKind(d) === 'light' || ('onoff' in d.caps && LAMP_NAME.test(d.name))) && core.isOn(d); };
+  var isLow = function (d) { return d.caps.alarm_battery === true || (typeof d.caps.measure_battery === 'number' && d.caps.measure_battery < 15); };
+  var kept = function () { return HomeyWeb.Homey.getSettings().leaveKeep || []; };
   function send(deviceId, capabilityId, value) {
     return HomeyWeb.request('POST', '/capability', { deviceId: deviceId, capabilityId: capabilityId, value: value });
   }
@@ -54,10 +58,10 @@
       var weather = st().weather;
       var soon = weather && Array.isArray(weather.hourly) ? weather.hourly.slice(0, 3) : [];
       var rain = window.HouseCore && soon.some(function (h) { return window.HouseCore.weatherKind(h.iconId) === 'rain'; });
-      out.push(rain ? { cls: 'warn', icon: '🌧', text: T.rainOpen.replace('%n', open.length), leave: true } : { icon: '🚪', text: open.length + T.openCount, leave: true });
+      out.push(rain ? { cls: 'warn', icon: '🌧', text: T.rainOpen.replace('%n', open.length), list: 'open' } : { icon: '🚪', text: open.length + T.openCount, list: 'open' });
     }
-    var low = all.filter(function (d) { return d.caps.alarm_battery === true || (typeof d.caps.measure_battery === 'number' && d.caps.measure_battery < 15); });
-    if (low.length) out.push({ icon: '🪫', text: low.length + T.lowBattery });
+    var low = all.filter(isLow);
+    if (low.length) out.push({ icon: '🪫', text: low.length + T.lowBattery, list: 'battery' });
     var now = new Date();
     var morning = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     if (waste && waste.today && now.getHours() < 12) out.push({ icon: '🗑', text: T.today + waste.today });
@@ -80,7 +84,7 @@
     var buttons = actions();
     strip.hidden = !st().plan;
     fill('attention', items.map(function (i) {
-      return '<button type="button" class="fp-chip ' + (i.cls || '') + '"' + (i.leave ? ' data-x="leave"' : i.energy ? ' data-x="energy"' : i.x ? ' data-sheet="' + i.x + '"' : '') + '>' + i.icon + ' ' + esc(i.text) + '</button>';
+      return '<button type="button" class="fp-chip ' + (i.cls || '') + '"' + (i.list ? ' data-x="list" data-list="' + i.list + '"' : i.energy ? ' data-x="energy"' : i.x ? ' data-sheet="' + i.x + '"' : '') + '>' + i.icon + ' ' + esc(i.text) + '</button>';
     }).join(''));
     fill('actions', buttons.map(function (a, n) {
       return '<button type="button" class="fp-chip action" data-x="run" data-n="' + n + '">' + (a.kind === 'mood' ? '🎨' : '▶') + ' ' + esc(a.name) + '</button>';
@@ -99,6 +103,18 @@
 
   /* -------------------------------------------------------- I'm leaving */
 
+  // A chip in the strip shows the devices it is about.
+  function renderList(kind) {
+    var battery = kind === 'battery';
+    var list = devices().filter(battery ? isLow : isOpen);
+    $('sheet-title').textContent = battery ? T.batteries : T.open;
+    $('sheet-body').innerHTML = list.map(function (d) {
+      var value = !battery ? T.open : typeof d.caps.measure_battery === 'number' ? Math.round(d.caps.measure_battery) + '%' : T.low;
+      return '<div class="fp-row"><span class="fp-name">' + esc(d.name) + '</span><span class="fp-val">' + esc(value) + '</span></div>';
+    }).join('');
+    $('sheet').hidden = false;
+  }
+
   var armed = false;
   function renderLeave() {
     var all = devices();
@@ -108,10 +124,14 @@
     var open = all.filter(isOpen);
     var unlocked = all.filter(function (d) { return d.caps.locked === false; });
     var lights = all.filter(isLightOn);
-    var body = group(T.open, open) + group(T.unlocked, unlocked) + group(T.lights, lights);
+    var keep = kept();
+    var lamps = lights.length ? '<p class="fp-sub">' + esc(T.lights) + '</p>' + lights.map(function (d) {
+      return '<label class="fp-row"><span class="fp-name">' + esc(d.name) + '</span><input type="checkbox" data-leave-lamp="' + esc(d.id) + '"' + (keep.indexOf(d.id) < 0 ? ' checked' : '') + '></label>';
+    }).join('') + '<p class="fp-sub" style="text-transform:none;letter-spacing:0">' + esc(T.keepNote) + '</p>' : '';
+    var body = group(T.open, open) + group(T.unlocked, unlocked) + lamps;
     if (!body) body = '<p>' + esc(T.allFine) + '</p>';
     else if (!lights.length) body += '<p class="fp-sub">' + esc(T.lightsOff) + '</p>';
-    if (lights.length) body += '<button type="button" class="fp-btn primary" data-x="lights-off">' + esc(armed ? T.sure : T.allOff) + '</button>';
+    if (lights.some(function (d) { return keep.indexOf(d.id) < 0; })) body += '<button type="button" class="fp-btn primary" data-x="lights-off">' + esc(armed ? T.sure : T.allOff) + '</button>';
     $('sheet-title').textContent = T.leaveTitle;
     $('sheet-body').innerHTML = body;
     $('sheet').hidden = false;
@@ -260,6 +280,16 @@
     }
   }
 
+  document.addEventListener('change', function (ev) {
+    var id = ev.target.dataset && ev.target.dataset.leaveLamp;
+    if (!id) return;
+    var keep = kept().filter(function (k) { return k !== id; });
+    if (!ev.target.checked) keep.push(id);
+    HomeyWeb.Homey.setSettings({ leaveKeep: keep });
+    armed = false;
+    renderLeave();
+  });
+
   document.addEventListener('click', function (ev) {
     var sheet = ev.target.closest && ev.target.closest('[data-sheet]');
     if (sheet) window.FpPanels.open(sheet.dataset.sheet);
@@ -267,11 +297,12 @@
     var b = ev.target.closest && ev.target.closest('[data-x]');
     if (!b) return;
     if (b.dataset.x === 'leave') { armed = false; renderLeave(); }
+    if (b.dataset.x === 'list') renderList(b.dataset.list);
     if (b.dataset.x === 'energy') { var link = document.querySelector('a[href*="energy"]'); if (link) location.href = link.href; }
     if (b.dataset.x === 'lights-off') {
       if (!armed) { armed = true; renderLeave(); return; }
       armed = false;
-      devices().filter(isLightOn).forEach(function (d) { send(d.id, 'onoff', false).catch(function () {}); });
+      devices().filter(isLightOn).filter(function (d) { return kept().indexOf(d.id) < 0; }).forEach(function (d) { send(d.id, 'onoff', false).catch(function () {}); });
       $('sheet').hidden = true;
     }
     if (b.dataset.x === 'run') {

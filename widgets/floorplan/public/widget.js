@@ -201,22 +201,42 @@
     let out = core.render(opts);
     const [bx, by, bw, bh] = out.viewBox;
     state.baseCenter = [bx + bw / 2, by + bh / 2];
+    state.baseBox = [bx, by, bw, bh];
     // Zoomed in: the same plan with a smaller window on it, markers and texts at their usual size.
     const z = state.zoom && state.zoom.key === zoomKey() ? state.zoom : null;
     if (z) {
       const vw = bw / z.k; const vh = bh / z.k;
-      z.c = [Math.min(bx + bw - vw / 2, Math.max(bx + vw / 2, z.c[0])), Math.min(by + bh - vh / 2, Math.max(by + vh / 2, z.c[1]))];
+      // (a room in focus may go past the edge, to stay beside its card)
+      if (!z.free) z.c = [Math.min(bx + bw - vw / 2, Math.max(bx + vw / 2, z.c[0])), Math.min(by + bh - vh / 2, Math.max(by + vh / 2, z.c[1]))];
       out = core.render(Object.assign({}, opts, { viewBox: [z.c[0] - vw / 2, z.c[1] - vh / 2, vw, vh], markerSize: out.marker / z.k }));
     }
     const reset = document.querySelector('.fp-zoom-reset');
     if (reset) reset.hidden = !z;
     svg.setAttribute('viewBox', out.viewBox.map((v) => v.toFixed(1)).join(' '));
+    state.planView = out.view;
+    if (state.glideFrom) { glide(svg, state.glideFrom, out.viewBox); state.glideFrom = null; }
     const before = lampPools(svg);
     svg.innerHTML = out.svg;
     fadeLamps(svg, before, `${level.id}|${state.view}|${state.turn}`);
     renderLevels();
     if (state.sheet) renderSheet();
     if (state.quick) renderQuick();
+  }
+
+  // The plan moves to its new window in a short glide; a new drawing during the glide does not stop it.
+  function glide(svg, from, to) {
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+    const start = performance.now();
+    state.glideStart = start;
+    const step = (now) => {
+      if (state.glideStart !== start) return;
+      const t = Math.min(1, Math.max(0, (now - start) / 380));
+      const e = t * t * (3 - 2 * t);
+      svg.setAttribute('viewBox', from.map((v, i) => (v + (to[i] - v) * e).toFixed(1)).join(' '));
+      if (t < 1) requestAnimationFrame(step);
+    };
+    svg.setAttribute('viewBox', from.map((v) => v.toFixed(1)).join(' '));
+    requestAnimationFrame(step);
   }
 
   // The light of a lamp fades instead of jumping. The drawing is replaced on every update, so a fade keeps its start time
@@ -612,12 +632,49 @@
     state.unlockArmed = null;
     $('sheet').hidden = false;
     renderSheet();
+    if (target.type === 'room') focusRoom(target.id);
   }
 
   function closeSheet() {
     state.sheet = null;
     $('sheet').hidden = true;
-    $('sheet').classList.remove('wide');
+    $('sheet').classList.remove('wide', 'beside');
+    leaveRoom();
+  }
+
+  // Web page: a room card goes beside the room and the view moves in on the room. Closing the card moves back.
+  function focusRoom(id) {
+    const level = currentLevel();
+    const room = level && level.rooms.find((r) => r.id === id);
+    if (!room || !state.Homey.isWeb || state.settings.zoomRoom === false) return;
+    const stage = document.querySelector('.fp-stage').getBoundingClientRect();
+    if (window.innerWidth >= 760) $('sheet').classList.add('beside');
+    const card = document.querySelector('.fp-sheet-card').getBoundingClientRect();
+    const covered = $('sheet').classList.contains('beside') ? Math.max(0, stage.right - card.left + 12) : 0;
+    const on3d = state.view === '3d' && state.v3d && !$('view3d').hidden;
+    if (on3d) { state.v3d.focusRoom(room, covered); state.focused = state.focused || { on3d: true }; return; }
+    if (!state.planView || !state.baseBox) return;
+    if (!state.focused) state.focused = { zoom: state.zoom };
+    const pts = room.points.map((p) => state.planView.project(p[0], p[1], 0));
+    const xs = pts.map((p) => p[0]); const ys = pts.map((p) => p[1]);
+    const rw = Math.max(...xs) - Math.min(...xs); const rh = Math.max(...ys) - Math.min(...ys);
+    const [, , bw, bh] = state.baseBox;
+    const free = Math.max(0.4, (stage.width - covered) / stage.width);
+    const k = Math.max(1.05, Math.min(5, Math.min((bw * free) / (rw * 1.35), bh / (rh * 1.35))));
+    const c = [(Math.min(...xs) + Math.max(...xs)) / 2 + (covered / stage.width) * (bw / k) * 0.5, (Math.min(...ys) + Math.max(...ys)) / 2];
+    state.glideFrom = $('plan').getAttribute('viewBox').split(' ').map(Number);
+    state.zoom = { key: zoomKey(), k, c, free: true };
+    scheduleRender();
+  }
+
+  function leaveRoom() {
+    const f = state.focused;
+    if (!f) return;
+    state.focused = null;
+    if (f.on3d) { if (state.v3d) state.v3d.leaveRoom(); return; }
+    state.glideFrom = $('plan').getAttribute('viewBox').split(' ').map(Number);
+    state.zoom = f.zoom || null;
+    scheduleRender();
   }
 
   function deviceControls(dev) {

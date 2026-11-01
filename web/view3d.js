@@ -102,6 +102,52 @@ function esc(s) {
   return String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 }
 
+/* ----------------------------------------------------------- room light */
+
+// A lamp lights its own room and not the one behind the wall. Shadows for every lamp would be too heavy for a
+// tablet, so the rooms are drawn once into a small top-view map; each surface looks up its room there and skips
+// the lamps of other rooms. A lamp carries its room in the tens of its decay, which needs no extra uniform.
+const ROOM_FRAGMENT_HEAD = `
+uniform sampler2D roomMask;
+uniform vec4 roomBox;
+varying vec3 vRoomAt;
+float roomAt( vec2 p ) { return floor( texture2D( roomMask, ( p - roomBox.xy ) / roomBox.zw ).r * 255.0 + 0.5 ); }
+`;
+const ROOM_LIGHTS = `
+vec3 roomNormal = inverseTransformDirection( normal, viewMatrix );
+float surfaceRoom = roomAt( vRoomAt.xz + roomNormal.xz * 0.07 ); // just off a wall, into the room that wall faces
+float lampRoom; // (one for all lamps: three.js writes out its loop without braces)
+${THREE.ShaderChunk.lights_fragment_begin.replace('getPointLightInfo( pointLight, geometryPosition, directLight );', `
+lampRoom = floor( pointLight.decay / 10.0 );
+pointLight.decay -= lampRoom * 10.0;
+getPointLightInfo( pointLight, geometryPosition, directLight );
+if ( lampRoom > 0.5 && abs( lampRoom - surfaceRoom ) > 0.5 ) directLight.color = vec3( 0.0 );
+`)}`;
+const roomLitMaterials = new WeakSet();
+
+function makeRoomLit(material, uniforms) {
+  if (roomLitMaterials.has(material)) return;
+  roomLitMaterials.add(material);
+  if (!material.isMeshStandardMaterial && !material.isMeshLambertMaterial && !material.isMeshPhongMaterial) return;
+  const before = material.onBeforeCompile;
+  const key = material.customProgramCacheKey;
+  material.onBeforeCompile = function (shader, renderer) {
+    before.call(this, shader, renderer);
+    Object.assign(shader.uniforms, uniforms);
+    shader.vertexShader = `varying vec3 vRoomAt;\n${shader.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+      vec4 roomPoint = vec4( transformed, 1.0 );
+      #ifdef USE_INSTANCING
+        roomPoint = instanceMatrix * roomPoint;
+      #endif
+      vRoomAt = ( modelMatrix * roomPoint ).xyz;`)}`;
+    shader.fragmentShader = shader.fragmentShader
+      .replace('#include <common>', `#include <common>${ROOM_FRAGMENT_HEAD}`)
+      .replace('#include <lights_fragment_begin>', ROOM_LIGHTS);
+  };
+  material.customProgramCacheKey = function () { return `${key.call(this)}|room`; };
+  material.needsUpdate = true;
+}
+
 /* ------------------------------------------------------------- fixtures */
 
 // Lamps drawn in code, built around their bulb; the group's origin is the fixture's base (or top for ceiling lamps).
@@ -217,6 +263,10 @@ class View3D {
     this.lamps = [];
     this.raf = null;
     this.theme = THEMES.light;
+    const noRooms = new THREE.DataTexture(new Uint8Array(1), 1, 1, THREE.RedFormat, THREE.UnsignedByteType);
+    noRooms.needsUpdate = true;
+    this.roomUniforms = { roomMask: { value: noRooms }, roomBox: { value: new THREE.Vector4(0, 0, 1, 1) } };
+    this.roomOf = new Map();
 
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(container);
@@ -232,8 +282,17 @@ class View3D {
     this.renderer.domElement.style.height = `${h}px`;
     this.labels.setSize(w, h);
     this.camera.aspect = w / h;
-    this.camera.updateProjectionMatrix();
+    this.setShift(this.shift || 0);
     this.request();
+  }
+
+  // The picture slides to the left by half of this, to stay beside a card that covers the right part.
+  setShift(px) {
+    this.shift = px;
+    const w = this.el.clientWidth || 1; const h = this.el.clientHeight || 1;
+    if (px) this.camera.setViewOffset(w, h, px / 2, 0, w, h);
+    else this.camera.clearViewOffset();
+    this.camera.updateProjectionMatrix();
   }
 
   request() {
@@ -243,9 +302,11 @@ class View3D {
       const orbiting = this.controls.update();
       const walls = this.walls ? this.stepWalls(0.16) : false;
       const lamps = this.stepLamps();
-      const moving = orbiting || walls || lamps;
+      const flying = this.stepFlight();
+      const moving = orbiting || walls || lamps || flying;
       if (moving) this.sharp.frame(performance.now());
       if (this.gizmo) this.gizmo.scale.setScalar(this.camera.position.distanceTo(this.gizmo.position) * 0.09);
+      this.root.traverse((o) => { if (o.isMesh) for (const m of [].concat(o.material)) makeRoomLit(m, this.roomUniforms); });
       this.renderer.render(this.scene, this.camera);
       this.updateOcclusion();
       this.labels.render(this.scene, this.camera);
@@ -307,10 +368,61 @@ class View3D {
     this.firstCutaway = true; // a new scene starts with the walls already in place, without animation
   }
 
+  // The map of rooms for the lamps: one number per room, 0 outside. Rooms joined by an open wall share their light.
+  drawRoomMap(level) {
+    const rooms = (level.rooms || []).slice(0, 255);
+    const inside = (p) => rooms.findIndex((r) => core.geom.pointInPolygon(p, r.points));
+    const joined = rooms.map((r, i) => i);
+    const top = (i) => { while (joined[i] !== i) i = joined[i]; return i; };
+    for (const o of level.openings || []) {
+      if (o.type !== 'passage') continue;
+      const n = [-Math.sin(o.angle || 0) * 30, Math.cos(o.angle || 0) * 30];
+      const a = inside([o.x + n[0], o.y + n[1]]); const b = inside([o.x - n[0], o.y - n[1]]);
+      if (a >= 0 && b >= 0) joined[top(a)] = top(b);
+    }
+    this.roomOf = new Map(rooms.map((r, i) => [r.id, top(i) + 1]));
+    const pts = rooms.flatMap((r) => r.points);
+    if (!pts.length) return;
+    const pad = 40;
+    const x0 = Math.min(...pts.map((p) => p[0])) - pad; const y0 = Math.min(...pts.map((p) => p[1])) - pad;
+    const W = Math.max(...pts.map((p) => p[0])) + pad - x0; const H = Math.max(...pts.map((p) => p[1])) + pad - y0;
+    const cell = Math.max(5, Math.max(W, H) / 1024);
+    const cols = Math.ceil(W / cell); const rows = Math.ceil(H / cell);
+    const data = new Uint8Array(cols * rows);
+    rooms.forEach((r) => {
+      const xs = r.points.map((p) => p[0]); const ys = r.points.map((p) => p[1]);
+      const c0 = Math.max(0, Math.floor((Math.min(...xs) - x0) / cell)); const c1 = Math.min(cols - 1, Math.ceil((Math.max(...xs) - x0) / cell));
+      const r0 = Math.max(0, Math.floor((Math.min(...ys) - y0) / cell)); const r1 = Math.min(rows - 1, Math.ceil((Math.max(...ys) - y0) / cell));
+      const id = this.roomOf.get(r.id);
+      for (let row = r0; row <= r1; row++) {
+        for (let col = c0; col <= c1; col++) {
+          if (!data[row * cols + col] && core.geom.pointInPolygon([x0 + (col + 0.5) * cell, y0 + (row + 0.5) * cell], r.points)) data[row * cols + col] = id;
+        }
+      }
+    });
+    const map = new THREE.DataTexture(data, cols, rows, THREE.RedFormat, THREE.UnsignedByteType);
+    map.minFilter = THREE.NearestFilter; map.magFilter = THREE.NearestFilter;
+    map.needsUpdate = true;
+    this.roomUniforms.roomMask.value.dispose();
+    this.roomUniforms.roomMask.value = map;
+    this.roomUniforms.roomBox.value.set(x0 * CM, y0 * CM, cols * cell * CM, rows * cell * CM);
+  }
+
+  // The room number of a lamp, also for a wall lamp that sits just outside its room's edge. 0: lights everything.
+  lampRoom(item) {
+    const spots = [[0, 0], [30, 0], [-30, 0], [0, 30], [0, -30]];
+    for (const s of spots) {
+      const room = (this.level.rooms || []).find((r) => core.geom.pointInPolygon([item.x + s[0], item.y + s[1]], r.points));
+      if (room) return this.roomOf.get(room.id) || 0;
+    }
+    return 0;
+  }
+
   build(plan, level, dark, showFurniture) {
     this.clear();
     const t = this.theme = dark ? THEMES.dark : THEMES.light;
     this.level = level;
+    this.drawRoomMap(level);
     const H = (level.wallHeight || core.DEFAULTS.wallHeight) * CM;
     this.wallHeight = H;
     this.hemi.color.set(t.hemiSky); this.hemi.groundColor.set(t.hemiGround); this.hemi.intensity = t.hemi;
@@ -626,21 +738,20 @@ class View3D {
       } else if (entry.file) {
         const at = entry.light ? entry.light.at * (h / entry.h) * CM : h * CM;
         bulbLocal = new THREE.Vector3(0, mount === 'ceiling' ? -h * CM + at : at, 0);
-        const lamp = this.registerLamp(item, holder, null, bulbLocal, entry);
+        const lamp = entry.light ? this.registerLamp(item, holder, null, bulbLocal, entry) : null;
         loadModel(entry.file).then((model) => {
           const fitted = fitModel(model, entry, w, d, h);
           if (mount === 'ceiling') fitted.position.y = -h * CM;
           // The lamp's own light parts glow: the lightest material in the model.
           const glowMats = [];
-          fitted.traverse((o) => {
+          if (lamp) fitted.traverse((o) => {
             if (!o.isMesh) return;
             o.material = o.material.clone();
             const c = o.material.color; const lum = c.r * 0.3 + c.g * 0.59 + c.b * 0.11;
             if (lum > 0.55 || /lamp|light|glass/i.test(o.material.name || '')) glowMats.push(o.material);
           });
-          lamp.glowMats = glowMats;
           holder.add(fitted);
-          this.updateLamp(lamp);
+          if (lamp) { lamp.glowMats = glowMats; this.updateLamp(lamp); }
           this.request();
         }).catch(() => {});
       }
@@ -898,14 +1009,21 @@ class View3D {
       b.el.className = `fp3-dev${b.kind === 'light' ? ' is-light' : ''}${on ? ' on' : ''}${alarm ? ' alarm' : ''}${motion ? ' motion' : ''}${dev && !dev.available ? ' off' : ''}${b.behind ? ' behind' : ''}${b.item.id === this.selectedId ? ' sel' : ''}`;
       b.el.style.setProperty('--dev', color || '');
       const name = this.names === 'devices' || this.names === 'all' ? (b.item.label || (dev && dev.name) || '') : '';
-      b.el.innerHTML = `<span class="fp3-dot"><svg viewBox="0 0 24 24"><path d="${glyph}"/></svg></span>${value ? `<span class="fp3-val">${esc(value)}</span>` : ''}${name ? `<span class="fp3-name">${esc(name)}</span>` : ''}`;
-      // Keep the last decision until the next tidy-up, so a live update does not flash every name.
+      // Only what changed is drawn again. What the tidy-up hid stays hidden until the next one, or a live update
+      // of any device would flash every hidden value and name.
+      const html = `<span class="fp3-dot"><svg viewBox="0 0 24 24"><path d="${glyph}"/></svg></span>${value ? `<span class="fp3-val">${esc(value)}</span>` : ''}${name ? `<span class="fp3-name">${esc(name)}</span>` : ''}`;
+      if (b.html === html) continue;
+      b.html = html;
+      b.el.innerHTML = html;
       const tag = this.shownNames && b.el.querySelector('.fp3-name');
       if (tag && !this.shownNames.has(b.item.id)) tag.style.visibility = 'hidden';
+      const val = this.shownVals && b.el.querySelector('.fp3-val');
+      if (val && !this.shownVals.has(b.item.id)) val.style.visibility = 'hidden';
     }
     for (const l of this.roomLabels) {
       const vals = labels.get(l).values;
-      l.el.innerHTML = `<b>${esc(l.room.name)}</b>${vals.length ? `<span>${esc(vals.join(' '))}</span>` : ''}`;
+      const html = `<b>${esc(l.room.name)}</b>${vals.length ? `<span>${esc(vals.join(' '))}</span>` : ''}`;
+      if (l.html !== html) { l.html = html; l.el.innerHTML = html; }
     }
     void pal;
     this.request();
@@ -951,7 +1069,7 @@ class View3D {
     }
     const reach = (lamp.item.reach || core.DEFAULTS.lightReach) * CM;
     if (on && !lamp.light) {
-      lamp.light = new THREE.PointLight(color, 1, reach * 1.4, 1.6);
+      lamp.light = new THREE.PointLight(color, 1, reach * 1.4, 1.6 + 10 * this.lampRoom(lamp.item));
       lamp.light.position.copy(lamp.bulbLocal);
       lamp.holder.add(lamp.light);
       lamp.glow = this.makeGlow(lamp);
@@ -1024,7 +1142,54 @@ class View3D {
 
   /* ------------------------------------------------------------ camera */
 
+  // Flies in on a room and keeps it beside a card that covers the given pixels on the right. leaveRoom flies back.
+  focusRoom(room, shift) {
+    const xs = room.points.map((p) => p[0] * CM); const zs = room.points.map((p) => p[1] * CM);
+    const x0 = Math.min(...xs); const x1 = Math.max(...xs); const z0 = Math.min(...zs); const z1 = Math.max(...zs);
+    const target = new THREE.Vector3((x0 + x1) / 2, 0, (z0 + z1) / 2);
+    const around = new THREE.Vector3().subVectors(this.camera.position, this.controls.target).setY(0);
+    if (around.lengthSq() < 1e-6) around.set(1, 0, 1);
+    around.normalize();
+    const w = this.el.clientWidth || 1; const h = this.el.clientHeight || 1;
+    const aspect = Math.max(0.5, (w - (shift || 0)) / h);
+    const size = Math.max(Math.max(x1 - x0, z1 - z0) * 1.25, 2.5);
+    const dist = (size / (2 * Math.tan(THREE.MathUtils.degToRad(16)))) * Math.max(1, 1.1 / aspect);
+    const el = THREE.MathUtils.degToRad(60);
+    const position = target.clone().addScaledVector(around, Math.cos(el) * dist).setY(Math.sin(el) * dist);
+    if (!this.home) this.home = { position: this.camera.position.clone(), target: this.controls.target.clone() };
+    this.flyTo(position, target, shift || 0);
+  }
+
+  leaveRoom() {
+    if (!this.home) return;
+    this.flyTo(this.home.position, this.home.target, 0);
+    this.home = null;
+  }
+
+  flyTo(position, target, shift) {
+    this.flight = { start: performance.now(), from: { position: this.camera.position.clone(), target: this.controls.target.clone(), shift: this.shift || 0 }, to: { position, target, shift } };
+    if (!LAMP_FADE) this.flight.start = -1e9;
+    this.request();
+  }
+
+  // A step of the flight; true while it goes on.
+  stepFlight() {
+    const f = this.flight;
+    if (!f) return false;
+    const t = Math.min(1, (performance.now() - f.start) / 700);
+    const e = t * t * (3 - 2 * t);
+    this.camera.position.lerpVectors(f.from.position, f.to.position, e);
+    this.controls.target.lerpVectors(f.from.target, f.to.target, e);
+    this.setShift(f.from.shift + (f.to.shift - f.from.shift) * e);
+    this.controls.update();
+    this.updateCutaway();
+    if (t >= 1) this.flight = null;
+    return t < 1;
+  }
+
   resetCamera(turn) {
+    this.flight = null; this.home = null;
+    this.setShift(0);
     const { cx, cz, size } = this.bounds;
     const az = THREE.MathUtils.degToRad(45 + 90 * (Number(turn) || 0));
     const el = THREE.MathUtils.degToRad(42);

@@ -54,7 +54,7 @@ function samplePlan() {
     { id: 'i_p1', kind: 'device', deviceId: 'd_plug', x: 700, y: 485 },
     { id: 'i_s1', kind: 'device', deviceId: 'd_smoke', x: 150, y: 380 },
     { id: 'i_m1', kind: 'device', deviceId: 'd_motion', x: 20, y: 760 },
-    { id: 'i_sp', kind: 'device', deviceId: 'd_speaker', x: 820, y: 30 },
+    { id: 'i_sp', kind: 'device', deviceId: 'd_speaker', x: 820, y: 30, fixture: 'k-speakerSmall', w: 20, d: 20, h: 30, z: 0 },
   ];
   const plan = core.newPlan('Sample home');
   plan.levels = [level];
@@ -83,6 +83,7 @@ function sampleDevices() {
     d('d_blind', 'Living blind', 'z_living', 'windowcoverings', { windowcoverings_set: 0.6 }),
     d('d_bed_blind', 'Bedroom blind', 'z_bed', 'windowcoverings', { windowcoverings_set: 0 }),
     d('d_speaker', 'Sonos', 'z_living', 'speaker', { speaker_playing: false }),
+    d('d_speaker2', 'Sonos keuken', 'z_living', 'speaker', { speaker_playing: true, speaker_track: 'So What', speaker_artist: 'Miles Davis', speaker_album: 'Kind of Blue' }),
   ];
 }
 

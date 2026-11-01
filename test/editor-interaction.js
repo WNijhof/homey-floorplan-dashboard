@@ -378,6 +378,26 @@
     await wait(100);
     report.placedTwice = count() === was + 1;
 
+    // Quarter-turn stairs can be mirrored, a speaker can be a box
+    l0.items.push({ id: 'turnstairs', kind: 'furniture', type: 'own-stairsL', x: 3070, y: 80, w: 120, d: 120, h: 260, rot: 0, label: 'Trap' });
+    tool('select');
+    await wait(50);
+    click([3070, 80]);
+    await wait(100);
+    act('mirror-stairs');
+    await wait(100);
+    report.stairsMirrored = S.plan.levels.flatMap((l) => l.items).find((i) => i.id === 'turnstairs').mirror === true;
+    const speaker = [...S.devices.values()].find((d) => 'speaker_playing' in d.caps);
+    l0.items.push({ id: 'boxy', kind: 'device', deviceId: speaker.id, x: 3070, y: 320 });
+    tool('select');
+    await wait(50);
+    click([3070, 320]);
+    await wait(100);
+    const tile = document.querySelector('[data-action=pick-fixture][data-type=k-speaker]');
+    if (tile) tile.click();
+    await wait(100);
+    report.speakerBox = S.plan.levels.flatMap((l) => l.items).find((i) => i.id === 'boxy').fixture === 'k-speaker';
+
     // A curved wall
     const cur = S.plan.levels.find((l) => l.id === S.levelId);
     cur.walls.push({ id: 'bendme', a: [3000, 550], b: [3400, 550] });

@@ -1,4 +1,8 @@
 {
+  "0.2.4": {
+    "en": "In 3D, walls stop the light of a lamp. Tap a room to zoom in with its card beside it. Quarter-turn and spiral stairs can be mirrored. Music is clearer and on the right, with a choice of speakers, and a speaker can be a box on the plan. Values in 3D no longer blink. Storeys stand on each other in the shape of the plan, the battery and open chips show their devices, I'm leaving can keep lamps on, and the vacuum button can be hidden.",
+    "nl": "In 3D houden muren het licht van een lamp tegen. Tik op een kamer om in te zoomen, met de kaart ernaast. Kwartslag- en wenteltrappen kun je spiegelen. Muziek is duidelijker en staat rechts, met een keuze uit je speakers, en een speaker kan een box op de plattegrond zijn. Waarden in 3D knipperen niet meer. Verdiepingen staan op elkaar bij de vorm van de plattegrond, de knoppen voor batterijen en open ramen tonen hun apparaten, bij Ik ga weg kunnen lampen aan blijven, en de stofzuigerknop kan weg."
+  },
   "0.2.3": {
     "en": "Smoke detectors show OK or Alarm beside their icon, and a tap names smoke, heat, temperature and battery. A detector that has not reported yet says so. Heat, fire, gas and CO2 alarms turn the icon red.",
     "nl": "Rookmelders tonen OK of Alarm naast hun icoon, en een tik noemt rook, hitte, temperatuur en batterij. Een melder die nog niets heeft gemeld zegt dat ook. Alarm voor hitte, brand, gas en CO2 kleurt het icoon rood."

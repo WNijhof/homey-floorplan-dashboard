@@ -6,6 +6,10 @@
   window.addEventListener('error', (e) => errors.push(String(e.message)));
   try {
     const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+    // A shader that does not compile only shows in the console, and leaves the rooms see-through.
+    const consoleError = console.error;
+    const shaderErrors = [];
+    console.error = (...args) => { if (/Shader Error|WebGLProgram/.test(String(args[0]))) shaderErrors.push(String(args[0]).slice(0, 300)); consoleError.apply(console, args); };
     const st = () => window.__widgetState();
     const press = (el) => {
       const r = el.getBoundingClientRect();
@@ -69,6 +73,23 @@
     st().devices.get('d_smoke').caps.alarm_smoke = false;
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
 
+    // Tapping a room in 2D moves in on it beside its card; closing the card moves back.
+    press(document.querySelector('.fp-label[data-kind=room]'));
+    await wait(650);
+    report.roomFocus2d = !document.getElementById('sheet').hidden && st().zoom && st().zoom.k > 1.2 && document.getElementById('sheet').classList.contains('beside');
+    document.getElementById('sheet-close').click();
+    await wait(650);
+    report.roomBack2d = !st().zoom;
+
+    // Music: on the right with every speaker to choose from, a speaker as a picture on the plan.
+    const media = document.getElementById('media');
+    report.mediaRight = media.parentNode === document.getElementById('side') && /So What/.test(media.textContent) && /Kind of Blue/.test(media.textContent) && document.querySelectorAll('#media .fp-media-chip').length === 2;
+    report.speakerBox2d = !!document.querySelector('image[href*="k-speakerSmall"]');
+    document.querySelector('#media [data-p=speaker][data-dev=d_speaker]').click();
+    await wait(100);
+    report.mediaChoice = /Sonos/.test(document.querySelector('#media .fp-media-where').textContent) && !/So What/.test(media.textContent) && !media.hidden;
+    document.querySelector('#media [data-p=speaker][data-dev=d_speaker2]').click();
+
     // Side panel with weather and calendar (on by default on the web page).
     report.sidePanel = !document.getElementById('side').hidden && document.querySelectorAll('#agenda .fp-aev').length === 3 && /11°/.test(document.getElementById('weather').textContent);
 
@@ -94,13 +115,70 @@
     press(document.querySelector('.fp3-room'));
     await wait(450);
     const sheet = document.querySelector('.fp-sheet:not([hidden])');
+    const cardBox = sheet.querySelector('.fp-sheet-card').getBoundingClientRect();
     const covered = [...document.querySelectorAll('.fp3-dev:not(.behind)')].map((el) => el.getBoundingClientRect())
-      .filter((r) => r.width && r.top >= 0 && r.left >= 0 && r.top < innerHeight && r.left < innerWidth)
+      .filter((r) => r.width && r.left > cardBox.left && r.right < cardBox.right && r.top > cardBox.top && r.bottom < cardBox.bottom)
       .every((r) => { const hit = document.elementFromPoint(r.left + r.width / 2, r.top + r.height / 2); return !hit || !hit.closest('.fp3-dev'); });
     report.sheetOverLabels = !!sheet && covered;
-    const closeBtn = sheet && sheet.querySelector('[data-act=close], .fp-close');
-    if (closeBtn) closeBtn.click(); else if (sheet) sheet.click();
+    // The card stands beside the room and the view moves in; closing it moves back.
+    const v3 = st().v3d;
+    const away = () => v3.camera.position.distanceTo(v3.controls.target);
+    const near = away();
+    report.roomFocus3d = !!v3.home && document.getElementById('sheet').classList.contains('beside') && v3.shift > 0;
+    document.getElementById('sheet-close').click();
     await wait(200);
+    report.roomBack3d = !v3.home && !v3.shift && away() > near * 1.1 && !document.getElementById('sheet').classList.contains('beside');
+
+    // A value the tidy-up hid stays hidden through live updates, also when its own number changes.
+    const plugBadge = document.querySelector('.fp3-dev[data-id="i_p1"]');
+    const plugVal = plugBadge.querySelector('.fp3-val');
+    v3.shownVals.delete('i_p1'); plugVal.style.visibility = 'hidden';
+    v3.updateLive();
+    report.valueKept = plugBadge.querySelector('.fp3-val') === plugVal && plugVal.style.visibility === 'hidden';
+    st().devices.get('d_plug').caps.measure_power += 7;
+    v3.updateLive();
+    report.valueStaysHidden = plugBadge.querySelector('.fp3-val').style.visibility === 'hidden';
+    v3.declutterNames();
+
+    // A lamp lights its own room and leaves the room behind the wall alone. Measured on the real picture.
+    const gl = v3.renderer.getContext();
+    const pixel = (x, y) => {
+      const p = new (v3.camera.position.constructor)(x * 0.01, 0.02, y * 0.01).project(v3.camera);
+      const c = v3.renderer.domElement;
+      v3.renderer.render(v3.scene, v3.camera);
+      const px = new Uint8Array(4);
+      gl.readPixels(Math.round((p.x + 1) / 2 * c.width), Math.round((p.y + 1) / 2 * c.height), 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      return px[0] + px[1] + px[2];
+    };
+    const lvl = st().plan.levels[0];
+    const lamp = lvl.items.find((i) => i.id === 'i_l1');
+    const roomAt = (p) => lvl.rooms.find((r) => window.FloorplanCore.geom.pointInPolygon(p, r.points));
+    const lampHome = roomAt([lamp.x, lamp.y]);
+    const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    let nextRoom = null;
+    for (let d = 40; d < 300 && !nextRoom; d += 10) for (const u of dirs) { const p = [lamp.x + u[0] * d, lamp.y + u[1] * d]; const r = roomAt(p); if (r && r !== lampHome) { nextRoom = [p[0] + u[0] * 30, p[1] + u[1] * 30]; break; } }
+    const lampDev = st().devices.get(lamp.deviceId);
+    lampDev.caps.onoff = false; v3.updateLive();
+    await wait(100);
+    const lampOff = [[[70, 70], [-70, 70], [70, -70], [-70, -70]].reduce((sum, o) => sum + pixel(lamp.x + o[0], lamp.y + o[1]), 0), pixel(nextRoom[0], nextRoom[1])];
+    lampDev.caps.onoff = true; if ('dim' in lampDev.caps) lampDev.caps.dim = 1; v3.updateLive();
+    await wait(100);
+    // Far brighter than real, so a leak cannot hide in the daylight of the test.
+    const bright = v3.lamps.find((l) => l.item.id === 'i_l1').light;
+    bright.intensity *= 40;
+    const lampOn = [[[70, 70], [-70, 70], [70, -70], [-70, -70]].reduce((sum, o) => sum + pixel(lamp.x + o[0], lamp.y + o[1]), 0), pixel(nextRoom[0], nextRoom[1])];
+    const roomDecay = bright.decay;
+    bright.decay = 1.6; // without its room the same lamp does shine through the wall
+    const leak = pixel(nextRoom[0], nextRoom[1]);
+    bright.decay = roomDecay;
+    bright.intensity /= 40;
+    report.lightStaysInRoom = !!nextRoom && lampOff[0] > 30 && lampOff[1] > 30 && lampOn[0] > lampOff[0] + 6 && Math.abs(lampOn[1] - lampOff[1]) <= 3 && leak > lampOff[1] + 6;
+    report.lightMeasured = lampOff.concat(lampOn, [leak]).join(' ');
+    report.noShaderErrors = shaderErrors.length === 0;
+
+    // A speaker can be a box: a model in the room, no lamp.
+    for (let i = 0; i < 30 && !(v3.holderOf('i_sp') && v3.holderOf('i_sp').children.length); i++) await wait(100);
+    report.speakerBox3d = v3.holderOf('i_sp').children.length > 0 && !v3.lamps.some((l) => l.item.id === 'i_sp');
     document.getElementById('btn-view').click();
     for (let i = 0; i < 20 && !document.getElementById('view3d').hidden === false; i++) await wait(50);
     for (let i = 0; i < 100 && !document.getElementById('view3d').hidden; i++) await wait(50);
@@ -178,10 +256,28 @@
     const anyDevice = [...st().devices.values()];
     const door = anyDevice.find((d) => d.cls !== 'light') || anyDevice[0];
     door.caps.alarm_contact = true;
-    report.attentionOpen = window.__extras.attention().some((a) => a.leave);
+    report.attentionOpen = window.__extras.attention().some((a) => a.list === 'open');
+    // The chips of the strip show the devices they are about
+    door.caps.measure_battery = 9;
+    await wait(1200);
+    document.querySelector('#attention [data-list=battery]').click();
+    report.batteryList = !document.getElementById('sheet').hidden && document.getElementById('sheet-body').textContent.includes(door.name) && /9%/.test(document.getElementById('sheet-body').textContent);
+    document.querySelector('#attention [data-list=open]').click();
+    report.openList = document.getElementById('sheet-body').textContent.includes(door.name) && !document.querySelector('#sheet-body [data-x=lights-off]');
+    document.getElementById('sheet-close').click();
+    delete door.caps.measure_battery;
     // I'm leaving: what is open, and all lamps off after a second tap
     const lit = anyDevice.filter((d) => d.cls === 'light' && d.caps.onoff === true);
     await wait(1200);
+    // A lamp can stay on: untick it, and the button leaves it alone
+    const stay = lit[0];
+    document.querySelector('#actions [data-x=leave]').click();
+    const box = document.querySelector(`[data-leave-lamp="${stay.id}"]`);
+    box.click();
+    report.leaveKeeps = window.HomeyWeb.Homey.getSettings().leaveKeep.includes(stay.id) && !document.querySelector(`[data-leave-lamp="${stay.id}"]`).checked;
+    document.querySelector(`[data-leave-lamp="${stay.id}"]`).click();
+    report.leaveKeepsBack = !window.HomeyWeb.Homey.getSettings().leaveKeep.includes(stay.id);
+    document.getElementById('sheet-close').click();
     document.querySelector('#actions [data-x=leave]').click();
     report.leaveSheet = !document.getElementById('sheet').hidden && document.getElementById('sheet-body').textContent.includes(door.name);
     if (lit.length) {

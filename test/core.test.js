@@ -110,6 +110,15 @@ test('value text beside devices', () => {
   assert.strictEqual(core.deviceValueText({ cls: 'thermostat', caps: { measure_temperature: 20.94, target_temperature: 21 } }), '20.9° → 21°');
 });
 
+test('stairs can be mirrored', () => {
+  const stairs = (mirror) => core.furnitureParts({ type: 'own-stairsL', w: 200, d: 260, h: 260, mirror });
+  const firstStep = (parts) => parts[0].poly.map((p) => p[0]);
+  assert.ok(Math.min(...firstStep(stairs(false))) >= 0); // starts on the right, turns left
+  assert.ok(Math.max(...firstStep(stairs(true))) <= 0); // starts on the left, turns right
+  assert.strictEqual(stairs(true).length, stairs(false).length);
+  assert.deepStrictEqual(stairs(true).map((q) => q.z1), stairs(false).map((q) => q.z1));
+});
+
 test('a smoke detector always tells how it is doing', () => {
   // As the Fibaro app makes it: class sensor, smoke, heat, temperature and battery.
   const fibaro = (caps, available = true) => ({ cls: 'sensor', available, caps: { alarm_smoke: false, alarm_heat: false, measure_temperature: 20.44, measure_battery: 90, ...caps } });
