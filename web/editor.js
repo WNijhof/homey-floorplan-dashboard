@@ -13,7 +13,7 @@
   const STRINGS = {
     en: {
       newPlan: 'New plan', saved: 'Saved', saving: 'Saving…', unsaved: 'Not saved', saveFailed: 'Save failed',
-      level: 'Level', name: 'Name', wallHeight: 'Wall height (cm)', wallThickness: 'Wall thickness (cm)', zone: 'Homey zone', none: '— none —',
+      level: 'Level', slopeTitle: 'Sloping roof', slopeNote: 'Is this level under the roof? Tick the sides of the drawing where the roof comes down. In 3D the walls there are as high as the knee wall and rise with the roof; rooms in the middle keep their full height.', slopeTop: 'Top', slopeBottom: 'Bottom', slopeLeft: 'Left', slopeRight: 'Right', kneeWall: 'Knee wall (cm)', slopePitch: 'Pitch (°)', slopeHouse: 'Like the roof of the house', name: 'Name', wallHeight: 'Wall height (cm)', wallThickness: 'Wall thickness (cm)', zone: 'Homey zone', none: '— none —',
       otherLevel: 'Other', roomsFromZones: 'Rooms from Homey', place: 'Place', allPlaced: 'Every zone already has a room on the plan.',
       plan: 'Plan', deleteLevel: 'Delete level', deletePlan: 'Delete plan', confirmAgain: 'Click again to confirm',
       startFromZones: 'Quick start from Homey zones', startBlank: 'Start blank', startNote: 'Your zones become levels and rooms with their devices in them, ready to drag into place. Then you set up the look of the house.',
@@ -73,7 +73,7 @@
       gas: 'Gas', gasToday: 'Gas today',
       houseForm: 'Shape of the house', formSimple: 'Simple block', formPlan: 'Follows the floor plan', formNote: 'The walls follow the rooms you drew, storey by storey, with extensions and all. The roof lies on the biggest rectangular part; the other parts get a flat roof. Windows are placed evenly and are not your real windows. Choose the front of the plan below.', facing: 'The front faces', dormer: 'Dormer at the back', extension: 'Extension', back: 'At the back', side: 'At the side', carport: 'Carport',
       houseParts: 'On and around the house', showAuto: 'Automatic', showOn: 'Always', showOff: 'Never', panels: 'Number of panels (0: as many as fit)',
-      batteryPlace: 'Battery stands', underCarport: 'Under the carport', againstWall: 'Against the wall', heatpumpPlace: 'Heat pump stands', besideHouse: 'Beside the house', onFlatRoof: 'On the flat roof',noHouse3d: 'This browser cannot show the house in 3D.',
+      batteryPlace: 'Battery stands', underCarport: 'Under the carport', againstWall: 'Against the wall', heatpumpPlace: 'Heat pump stands', besideHouse: 'Beside the house', onFlatRoof: 'On the flat roof', outbuildings: 'Garage and shed', outbuildingsNote: 'A level called Garage, Shed, Schuur or Tuinhuis stands as a building of its own in the garden of the 3D house. Tap it there to open it.', atBack: 'At the back of the garden',noHouse3d: 'This browser cannot show the house in 3D.',
       facade: 'Facade', brick: 'Red brick', darkbrick: 'Dark brick', yellowbrick: 'Yellow brick', plaster: 'White plaster', darkplaster: 'Dark plaster',
       roofColor: 'Roof tiles', anthracite: 'Anthracite', red: 'Red', black: 'Black', white: 'White', frames: 'Window frames', doorColor: 'Front door',
       solarLayout: 'Place of the panels', solarSunny: 'On the sunny side of the roof', solarBoth: 'On both roof halves (such as east-west)',
@@ -83,7 +83,7 @@
     },
     nl: {
       newPlan: 'Nieuwe plattegrond', saved: 'Opgeslagen', saving: 'Opslaan…', unsaved: 'Niet opgeslagen', saveFailed: 'Opslaan mislukt',
-      level: 'Verdieping', name: 'Naam', wallHeight: 'Muurhoogte (cm)', wallThickness: 'Muurdikte (cm)', zone: 'Homey-zone', none: '— geen —',
+      level: 'Verdieping', slopeTitle: 'Schuin dak', slopeNote: 'Ligt deze verdieping onder het dak? Vink de kanten van de tekening aan waar het dak naar beneden komt. In 3D zijn de muren daar zo hoog als het knieschot en lopen ze schuin op met het dak; kamers in het midden houden hun volle hoogte.', slopeTop: 'Boven', slopeBottom: 'Onder', slopeLeft: 'Links', slopeRight: 'Rechts', kneeWall: 'Knieschot (cm)', slopePitch: 'Helling (°)', slopeHouse: 'Zoals het dak van het huis', name: 'Naam', wallHeight: 'Muurhoogte (cm)', wallThickness: 'Muurdikte (cm)', zone: 'Homey-zone', none: '— geen —',
       otherLevel: 'Overig', roomsFromZones: 'Kamers uit Homey', place: 'Plaatsen', allPlaced: 'Elke zone heeft al een kamer op de plattegrond.',
       plan: 'Plattegrond', deleteLevel: 'Verdieping verwijderen', deletePlan: 'Plattegrond verwijderen', confirmAgain: 'Klik nogmaals om te bevestigen',
       startFromZones: 'Snelle start vanuit Homey-zones', startBlank: 'Leeg beginnen', startNote: 'Je zones worden verdiepingen en kamers met hun apparaten erin, klaar om op hun plek te slepen. Daarna stel je het uiterlijk van het huis in.',
@@ -144,7 +144,7 @@
       tips: { 'level-add': 'Verdieping toevoegen', undo: 'Ongedaan maken (Ctrl+Z)', redo: 'Opnieuw doen (Ctrl+Y)', snap: 'Uitlijnen (met Shift tijdelijk andersom)', 'toggle-grid': 'Raster', 'toggle-furniture': 'Meubels', 'lock-layout': 'Kamers en muren vastzetten', turn: 'Draaien', 'zoom-in': 'Inzoomen', 'zoom-out': 'Uitzoomen', 'zoom-fit': 'Hele verdieping tonen' },
       houseForm: 'Vorm van het huis', formSimple: 'Eenvoudig blok', formPlan: 'Volgens de plattegrond', formNote: 'De muren volgen de kamers die je hebt getekend, per verdieping, met uitbouw en al. Het dak ligt op het grootste rechthoekige deel; de andere delen krijgen een plat dak. Ramen staan gelijkmatig verdeeld en zijn niet je echte ramen. Kies hieronder welke kant de voorkant is.', facing: 'Windrichting van de voorkant', dormer: 'Dakkapel aan de achterkant', extension: 'Aanbouw', back: 'Aan de achterkant', side: 'Aan de zijkant', carport: 'Carport',
       houseParts: 'Op en rond het huis', showAuto: 'Automatisch', showOn: 'Altijd', showOff: 'Nooit', panels: 'Aantal panelen (0: zoveel als past)',
-      batteryPlace: 'Accu staat', underCarport: 'Onder de carport', againstWall: 'Tegen de muur', heatpumpPlace: 'Warmtepomp staat', besideHouse: 'Naast het huis', onFlatRoof: 'Op het platte dak',noHouse3d: 'Deze browser kan het huis niet in 3D tonen.',
+      batteryPlace: 'Accu staat', underCarport: 'Onder de carport', againstWall: 'Tegen de muur', heatpumpPlace: 'Warmtepomp staat', besideHouse: 'Naast het huis', onFlatRoof: 'Op het platte dak', outbuildings: 'Garage en schuur', outbuildingsNote: 'Een verdieping met de naam Garage, Schuur, Tuinhuis of Berging staat als eigen gebouwtje in de tuin van het 3D-huis. Tik erop om hem te openen.', atBack: 'Achter in de tuin',noHouse3d: 'Deze browser kan het huis niet in 3D tonen.',
       facade: 'Gevel', brick: 'Rode baksteen', darkbrick: 'Donkere baksteen', yellowbrick: 'Gele baksteen', plaster: 'Wit stucwerk', darkplaster: 'Donker stucwerk',
       roofColor: 'Dakpannen', anthracite: 'Antraciet', red: 'Rood', black: 'Zwart', white: 'Wit', frames: 'Kozijnen', doorColor: 'Voordeur',
       solarLayout: 'Plaats van de panelen', solarSunny: 'Op de zonnigste dakhelft', solarBoth: 'Op beide dakhelften (zoals oost-west)',
@@ -1398,6 +1398,7 @@
       ${field(T.zone, `<select data-path="level.zoneId" data-rerender="1">${options(zoneList, lv.zoneId, T.none)}</select>`)}
       <div class="ed-two">${field(T.wallHeight, input('level.wallHeight', lv.wallHeight, 'number'))}${field(T.wallThickness, input('level.wallThickness', lv.wallThickness, 'number'))}</div>
       <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="align-all">⇹ ${T.alignAll}</button></div>
+      ${slopeSection(lv)}
       <h3>${T.roomsFromZones}</h3>
       ${free.length ? `<div class="ed-list">${free.map((z) => `<div class="ed-list-row"><span>${esc(z.name)}</span><button type="button" class="ed-btn small" data-action="place-zone" data-zone="${esc(z.id)}">${T.place}</button></div>`).join('')}</div>` : `<p class="ed-note">${T.allPlaced}</p>`}
       <h3>${T.plan}</h3>
@@ -1409,6 +1410,28 @@
       <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="backup-export">⬇ ${T.backupExport}</button><button type="button" class="ed-btn" data-action="backup-import">⬆ ${T.backupImport}</button></div>
       ${backupCopies()}
       <p class="ed-note" id="backup-result"></p>`;
+  }
+
+  // A sloping roof over the level: the sides of the drawing where it comes down, the knee wall and the pitch.
+  function slopeSection(lv) {
+    const sides = (lv.slope && lv.slope.sides) || [];
+    const names = { top: T.slopeTop, bottom: T.slopeBottom, left: T.slopeLeft, right: T.slopeRight };
+    const s = core.slopeOf(lv);
+    return `<h3>${T.slopeTitle}</h3><p class="ed-note">${T.slopeNote}</p>
+      <div class="ed-two">${core.SLOPE_SIDES.map((k) => `<label class="ed-check"><input type="checkbox" data-slope-side="${k}"${sides.indexOf(k) >= 0 ? ' checked' : ''}>${names[k]}</label>`).join('')}</div>
+      ${s ? `<div class="ed-two">${field(T.kneeWall, input('level.slope.knee', s.knee, 'number'))}${field(T.slopePitch, input('level.slope.pitch', s.pitch, 'number'))}</div>` : ''}
+      ${window.HouseCore && window.HouseCore.settings(S.plan).roof !== 'flat' ? `<div class="ed-row-btns"><button type="button" class="ed-btn" data-action="slope-house">⌂ ${T.slopeHouse}</button></div>` : ''}`;
+  }
+
+  // The sides of the drawing under the slopes of the house's roof: a gable roof along the front slopes at the front
+  // and the back, one from front to back at the sides, a hip roof all round.
+  function slopeFromHouse() {
+    const h = window.HouseCore.settings(S.plan);
+    const opposite = { top: 'bottom', bottom: 'top', left: 'right', right: 'left' };
+    const front = h.front; const side = front === 'top' || front === 'bottom' ? 'left' : 'top';
+    const sides = h.roof === 'hip' ? core.SLOPE_SIDES.slice() : h.ridge === 'width' ? [front, opposite[front]] : [side, opposite[side]];
+    const lv = level();
+    lv.slope = { sides, knee: (lv.slope && lv.slope.knee) || 100, pitch: h.pitch };
   }
 
   function roomPanel(room) {
@@ -1679,7 +1702,10 @@
       const walls = core.levelWalls(lv);
       for (const o of d.openings) {
         let best = null;
+        const along = [Math.cos(o.angle), Math.sin(o.angle)];
         for (const w of walls) {
+          // only a wall in the direction of the opening: near a corner another wall may be closer
+          if (Math.abs(G.cross(G.norm(G.sub(w.b, w.a)), along)) > 0.26) continue;
           const pr = G.projectOnSegment([o.x, o.y], w.a, w.b);
           if (pr.d <= Math.max(30, lv.wallThickness * 2) && (!best || pr.d < best.d)) best = { w, ...pr };
         }
@@ -1822,6 +1848,8 @@
       ${h.roof === 'gable' && h.ridge === 'width' ? `<label class="ed-check"><input type="checkbox" data-house="dormer" data-bool="1"${h.dormer ? ' checked' : ''}>${T.dormer}</label>` : ''}
       ${h.form === 'plan' ? '' : field(T.extension, sel('extension', h.extension, [['none', T.none], ['back', T.back], ['side', T.side]]))}
       ${h.type !== 'terraced' ? field(T.carport, sel('carport', h.carport, [['none', T.none], ['left', T.left], ['right', T.right]])) : ''}
+      <h3>${T.outbuildings}</h3><p class="ed-note">${T.outbuildingsNote}</p>
+      ${S.plan.levels.filter((l) => H.outbuildingKind(l.name)).map((l) => field(l.name, sel(`outbuildings.${l.id}`, h.outbuildings[l.id] || 'auto', [['auto', T.showAuto], ['side', T.besideHouse], ['back', T.atBack], ['off', T.showOff]]))).join('')}
       <h3>${T.houseParts}</h3>
       ${field(T.partSolar, show('solar'))}
       ${h.objects.solar.show !== 'off' ? field(T.panels, `<input type="number" data-house="objects.solar.panels" data-num="1" min="0" max="60" step="1" value="${h.objects.solar.panels}">`) : ''}
@@ -2044,6 +2072,7 @@
       case 'room-align': commit(() => alignToWalls(selectedObject(), true)); break;
       case 'wall-align': commit(() => alignToWalls(selectedObject(), false)); break;
       case 'align-all': commit(alignAll); break;
+      case 'slope-house': commit(slopeFromHouse); break;
       case 'toggle-lock': commit(() => { const o = selectedObject(); if (o.locked) delete o.locked; else o.locked = true; }); break;
       case 'rot-left': case 'rot-right': {
         const it = selectedObject();
@@ -2143,6 +2172,16 @@
 
   function onPanelChange(ev) {
     const el = ev.target;
+    if (el.dataset.slopeSide) {
+      commit(() => {
+        const lv = level();
+        const set = new Set((lv.slope && lv.slope.sides) || []);
+        if (el.checked) set.add(el.dataset.slopeSide); else set.delete(el.dataset.slopeSide);
+        if (set.size) lv.slope = Object.assign({ knee: 100, pitch: 45 }, lv.slope, { sides: core.SLOPE_SIDES.filter((k) => set.has(k)) });
+        else delete lv.slope;
+      });
+      return;
+    }
     if (el.dataset.link) {
       commit(() => {
         const o = selectedObject();

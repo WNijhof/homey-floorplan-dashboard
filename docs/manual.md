@@ -31,7 +31,9 @@ The left bar holds the tools: Select, Room, Walls, Doors, Windows, Open wall, Fu
 - Drag devices to their place. For lamps you choose the kind: ceiling, pendant, wall, floor or table lamp.
 - A thermostat or air conditioner can look like a wall thermostat, a radiator valve or a fan coil unit: select it and choose under **Shown as**.
 - A switch with more buttons (in Homey for example onoff.2) shows each extra button as a device of its own in the list, with the number or name of that button after it. That way you link a lamp to the button that switches it.
-- Starting from a picture or PDF: set the scale by measuring one known length. The editor recognises walls, rooms, doors and windows. This happens in your browser; nothing is sent anywhere.
+- Starting from a picture or PDF: set the scale by measuring one known length. The editor recognises walls, rooms, doors and windows, also where walls run at an angle. This happens in your browser; nothing is sent anywhere. Check the result: curved walls are not recognised and an unclear drawing can give mistakes.
+- Sloping roof: click an empty spot beside the plan and, under **Sloping roof**, tick the sides of the drawing where the roof comes down, or choose **Like the roof of the house**. Set the height of the knee wall and the pitch. In 3D the walls then follow the slope, windows in a low knee wall get lower, and in the house view the top level lies under the roof.
+- Garage and shed: make a level called Garage, Shed, Schuur or Tuinhuis. It stands as a building of its own in the garden of the 3D house, with the size of the rooms you draw in it. Tap it to open it. Under **House**, at **Garage and shed**, choose whether it stands beside the house, at the back of the garden, or not at all. For the garden itself, make a level called Garden.
 
 Handy: Ctrl+C and Ctrl+V copy and paste, Delete removes, and Space with dragging moves the view.
 

@@ -306,7 +306,7 @@ class House3D {
   paintFloors() {
     for (const f of this.floorMeshes) {
       const on = f.levelId === this.hoverLevel;
-      for (const m of f.walls) m.material = on ? this.wallHover : m.userData.base;
+      for (const m of f.walls) m.material = on ? (m.userData.hover || this.wallHover) : m.userData.base;
     }
   }
 
@@ -325,7 +325,7 @@ class House3D {
     for (const k of HC.OBJECTS) shows[k] = HC.shows(set, k, present);
     shows.water = !!present.water; shows.gas = !!present.gas;
     const outdoor = HC.outdoorLamps(plan, devices instanceof Map ? devices : null);
-    const key = JSON.stringify([plan.id, set, shape, shows, !!dark, this.lang, outdoor, levelRooms(plan)]);
+    const key = JSON.stringify([plan.id, set, shape, shows, !!dark, this.lang, outdoor, levelRooms(plan), HC.outbuildings(plan)]);
     if (key !== this.key) {
       const first = !this.key;
       this.key = key;
@@ -389,6 +389,10 @@ class House3D {
     const cs = carport === 'left' || (carport === 'none' && set.type === 'semi' && set.neighbour === 'right') ? -1 : 1;
     this.carportSide = cs < 0 ? 'left' : 'right';
     this.carportCenter = null;
+    // Garages and sheds, and how far the garden reaches for them
+    this.yard = HC.yard(this.plan);
+    // Whether a spot of the garden (a tree, a garden light) is free of them, with some room around
+    this.free = (x, z, room) => !this.yard.buildings.some((b) => Math.abs(x - b.x) < b.w / 2 + room && Math.abs(z - b.z) < b.d / 2 + room);
 
     // Sunlight from the south, wherever the front of the house looks.
     const dir = (compass) => { const a = THREE.MathUtils.degToRad(compass - set.facing); return new THREE.Vector3(-Math.sin(a), 0, Math.cos(a)); };
@@ -404,6 +408,7 @@ class House3D {
     const body = shape.form ? shape.form.main : { x: 0 };
     this.buildNeighbours(t, set, shape, W, D);
     if (carport !== 'none') this.buildCarport(t, W, D, cs);
+    this.buildOutbuildings();
 
     // Where the power of the house comes in: the meter cupboard at the front corner, on the side away from the carport.
     const { x: mx, z: mz } = this.frontSpot(shape, -cs * (W / 2 - 0.9), 0.4);
@@ -508,9 +513,14 @@ class House3D {
       const a = W / 2 + 0.2; const b = W / 2 + 4.0;
       paved(cs > 0 ? a : -b, D / 2 - 6.6, cs > 0 ? b : -a, D / 2 + 5);
     }
+    // A driveway up to the door of a garage beside the house, a path to a shed at the back
+    for (const g of this.yard.buildings) {
+      if (g.place === 'side') { if (carport === 'none' && !this.shows.car) paved(g.x - g.w / 2, g.z + g.d / 2, g.x + g.w / 2, D / 2 + 5); } // else the driveway is there
+      else paved(g.x - 0.5, g.z + g.d / 2, g.x + 0.5, -D / 2 - 3.2);
+    }
     // Hedges along the plot and a few trees and shrubs
     // Beside a neighbour the plot ends at the party wall: a hedge between the back gardens only
-    const back = -D / 2 - 7; const side = W / 2 + 6.5;
+    const back = this.yard.back; const side = this.yard.side;
     const built = (s) => this.set.type === 'terraced' || (this.set.type === 'semi' && this.set.neighbour === (s < 0 ? 'left' : 'right'));
     const left = built(-1) ? -W / 2 : -side; const right = built(1) ? W / 2 : side;
     this.root.add(LOOK.hedge([left, back], [right, back], 1.3, M));
@@ -519,6 +529,7 @@ class House3D {
     else if (carport === 'none' || cs < 0) this.root.add(LOOK.hedge([right, back], [right, D / 2 + 3], 1.2, M));
     else this.root.add(LOOK.hedge([right, back], [right, D / 2 - 7], 1.2, M));
     for (const [x, z, s, seed] of [[-W / 2 - 4, -D / 2 - 4.5, 1.15, 1], [W / 2 + 4.5, -D / 2 - 5, 0.95, 2], [-W / 2 - 4.5, D / 2 + 1.5, 0.8, 3]]) {
+      if (!this.free(x, z, 1.4)) continue; // a garage or shed stands here
       const tr = LOOK.tree(s, M, seed);
       tr.position.set(x, 0, z);
       this.root.add(tr);
@@ -569,7 +580,7 @@ class House3D {
     }
     if (this.outdoor.garden.length) {
       const g = group('garden', { kind: 'lamp', id: 'garden' });
-      for (const [x, z] of [[-W / 2 - 3.4, -D / 2 - 4], [W / 2 + 3.6, -D / 2 - 4.4], [-W / 2 - 3.6, D / 2 + 1.2], [-W / 2 - 0.3, -D / 2 - 3.4], [W / 2 + 0.3, -D / 2 - 3.4]]) bollard(g, x, z);
+      for (const [x, z] of [[-W / 2 - 3.4, -D / 2 - 4], [W / 2 + 3.6, -D / 2 - 4.4], [-W / 2 - 3.6, D / 2 + 1.2], [-W / 2 - 0.3, -D / 2 - 3.4], [W / 2 + 0.3, -D / 2 - 3.4]]) if (this.free(x, z, 0.3)) bollard(g, x, z);
     }
     if (this.outdoor.door.length) this.lights.door = { door: true, pick: { kind: 'lamp', id: 'door' } };
   }
@@ -889,6 +900,68 @@ class House3D {
       g.position.x = s * W;
       g.traverse((o) => { if (o.isMesh) o.castShadow = false; });
       this.root.add(g);
+    }
+  }
+
+  // Garages and sheds (levels of their own): a garage in the facade of the house with a flat roof and a
+  // sectional door, a shed in wood with a pitched roof. Each faces the house or the street, and a tap opens its level.
+  buildOutbuildings() {
+    const M = this.M;
+    for (const b of this.yard.buildings) {
+      const g = new THREE.Group();
+      g.userData.pick = { kind: 'level', id: b.levelId };
+      const garage = b.kind === 'garage';
+      const wallMat = garage ? M.wall : M.wood;
+      const size = garage ? M.tx.wallSize : [1.2, 1.2];
+      const hover = garage ? null : (() => { const m = M.wood.clone(); m.emissive = new THREE.Color('#2e5bff'); m.emissiveIntensity = 0.22; return m; })();
+      const x0 = b.x - b.w / 2; const x1 = b.x + b.w / 2; const z0 = b.z - b.d / 2; const z1 = b.z + b.d / 2; const h = b.height;
+      const walls = [
+        LOOK.poly([[x0, 0, z1], [x1, 0, z1], [x1, h, z1], [x0, h, z1]], wallMat, size),
+        LOOK.poly([[x1, 0, z0], [x0, 0, z0], [x0, h, z0], [x1, h, z0]], wallMat, size),
+        LOOK.poly([[x1, 0, z1], [x1, 0, z0], [x1, h, z0], [x1, h, z1]], wallMat, size),
+        LOOK.poly([[x0, 0, z0], [x0, 0, z1], [x0, h, z1], [x0, h, z0]], wallMat, size),
+      ];
+      for (const w of walls) { w.userData.base = wallMat; if (hover) w.userData.hover = hover; g.add(w); }
+      if (garage) {
+        g.add(LOOK.box(b.w + 0.04, 0.3, b.d + 0.04, M.plinth, b.x, 0, b.z));
+        g.add(LOOK.box(b.w + 0.25, 0.25, b.d + 0.25, M.trim, b.x, h, b.z));
+        // a sectional door with its panels
+        const dw = Math.min(b.w - 0.5, 2.6); const dh = Math.min(2.15, h - 0.3);
+        const door = new THREE.MeshStandardMaterial({ color: this.theme.night ? '#9a9c9f' : '#dcdedf', roughness: 0.5, metalness: 0.2 });
+        g.add(LOOK.box(dw + 0.12, dh + 0.06, 0.05, M.frame, b.x, 0, z1 + 0.01));
+        g.add(LOOK.box(dw, dh, 0.06, door, b.x, 0, z1 + 0.03));
+        for (let k = 1; k < 4; k++) g.add(LOOK.box(dw, 0.025, 0.07, M.frame, b.x, (dh / 4) * k, z1 + 0.03));
+      } else {
+        // a pitched roof with its ridge from side to side, wooden gable ends
+        const rise = Math.min(1.1, (b.d / 2) * Math.tan(THREE.MathUtils.degToRad(28)));
+        const ov = 0.2; const drop = ov * (rise / (b.d / 2));
+        const roof = M.roof;
+        g.add(LOOK.poly([[x0 - ov, h - drop, z1 + ov], [x1 + ov, h - drop, z1 + ov], [x1 + ov, h + rise, b.z], [x0 - ov, h + rise, b.z]], roof, LOOK.TILE_SIZE));
+        g.add(LOOK.poly([[x1 + ov, h - drop, z0 - ov], [x0 - ov, h - drop, z0 - ov], [x0 - ov, h + rise, b.z], [x1 + ov, h + rise, b.z]], roof, LOOK.TILE_SIZE));
+        for (const gable of [LOOK.poly([[x1, h, z1], [x1, h, z0], [x1, h + rise, b.z]], M.wood, size), LOOK.poly([[x0, h, z0], [x0, h, z1], [x0, h + rise, b.z]], M.wood, size)]) { gable.userData.base = M.wood; gable.userData.hover = hover; walls.push(gable); g.add(gable); }
+        // a door and a small window at the front
+        const dw = Math.min(0.9, b.w * 0.4);
+        g.add(LOOK.box(dw + 0.1, Math.min(2, h - 0.15) + 0.05, 0.05, M.trim, b.x - b.w * 0.18, 0, z1 + 0.01));
+        g.add(LOOK.box(dw, Math.min(2, h - 0.15), 0.06, new THREE.MeshStandardMaterial({ color: this.theme.night ? '#3d4a3f' : '#5f7563', roughness: 0.7 }), b.x - b.w * 0.18, 0, z1 + 0.03));
+        if (b.w >= 2) {
+          const win = LOOK.windowPart(0.6, 0.5, { frame: M.trim, glass: M.glass(), sill: M.sill, reveal: M.reveal });
+          win.group.position.set(b.x + b.w * 0.25, Math.min(1.5, h - 0.5), z1 + 0.005);
+          g.add(win.group);
+        }
+      }
+      // its name, to tap like a storey
+      const tag = document.createElement('div');
+      tag.className = 'h3-floor';
+      tag.dataset.house = 'level';
+      tag.dataset.id = b.levelId || '';
+      tag.textContent = `${b.name || ''} ›`;
+      const label = new CSS2DObject(tag);
+      label.position.set(b.x, h + (garage ? 0.5 : 1.4), b.z);
+      label.center.set(0.5, 1);
+      g.add(label);
+      this.tags.push(tag);
+      this.root.add(g);
+      this.floorMeshes.push({ levelId: b.levelId, walls });
     }
   }
 

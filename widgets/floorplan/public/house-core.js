@@ -47,7 +47,13 @@
     objects.solar.layout = pick(o.solar && o.solar.layout, ['sunny', 'both'], 'sunny'); // both: on both roof halves, such as east and west
     objects.battery.place = pick(o.battery && o.battery.place, BATTERY_PLACES, 'carport');
     objects.heatpump.place = pick(o.heatpump && o.heatpump.place, ['ground', 'roof'], 'ground'); // roof: lying flat on a flat roof
+    // Where a garage or shed (a level of its own) stands: beside the house, at the back of the garden, or not shown
+    const outbuildings = {};
+    if (h.outbuildings && typeof h.outbuildings === 'object') {
+      for (const [id, place] of Object.entries(h.outbuildings)) if (OUT_PLACES.indexOf(place) > 0) outbuildings[id] = place;
+    }
     return {
+      outbuildings,
       type: pick(h.type, TYPES, 'detached'),
       neighbour: pick(h.neighbour, SIDES, 'left'), // the side of the other half of a semi-detached house
       roof: pick(h.roof, ROOFS, 'gable'),
@@ -74,7 +80,13 @@
 
   // Levels that are not storeys of the house.
   const OUTSIDE = /^(tuin|garden|buiten|outside|outdoor|terras|terrace|oprit|driveway)\b/i;
-  const BESIDE = /^(overig|other|misc|kelder|basement|cellar|schuur|shed|garage)\b/i; // on the plan, not a storey of the house
+  const BESIDE = /^(overig|other|misc|kelder|basement|cellar|schuur|shed|garage|tuinhuis|tuinhuisje|blokhut|berging|summerhouse|garden ?house|workshop|werkplaats)\b/i; // on the plan, not a storey of the house
+  // Levels that stand as a building of their own in the garden
+  const OUTBUILDINGS = {
+    garage: /^(garage)\b/i,
+    shed: /^(schuur|shed|tuinhuis|tuinhuisje|blokhut|berging|summerhouse|garden ?house|workshop|werkplaats)\b/i,
+  };
+  const OUT_PLACES = ['auto', 'side', 'back', 'off'];
   const ATTIC = /(zolder|attic|vliering|loft)/i;
 
   function levelBox(level) {
@@ -277,7 +289,10 @@
   function shape(plan) {
     const levels = (plan && plan.levels) || [];
     const storeys = levels.filter((l) => !OUTSIDE.test(l.name || '') && !BESIDE.test(l.name || ''));
-    const attic = storeys.length > 1 && ATTIC.test(storeys[storeys.length - 1].name || '') ? storeys[storeys.length - 1] : null;
+    // the top storey is under the roof when it is called so, or has a sloping roof in the editor
+    const top = storeys[storeys.length - 1];
+    const underRoof = top && (ATTIC.test(top.name || '') || !!(top.slope && Array.isArray(top.slope.sides) && top.slope.sides.length));
+    const attic = storeys.length > 1 && underRoof ? top : null;
     const floors = attic ? storeys.slice(0, -1) : storeys;
     let w = 0; let d = 0;
     for (const l of floors.length ? floors : storeys) {
@@ -306,6 +321,86 @@
       eaves: base,
       attic: attic ? { levelId: attic.id, name: attic.name } : null,
     };
+  }
+
+  /** The side of the house with the carport or driveway: carport ('none', 'left', 'right') and cs (-1 left, 1 right). */
+  function freeSide(set) {
+    let carport = set.carport;
+    if (set.type === 'semi' && carport === set.neighbour) carport = carport === 'left' ? 'right' : 'left';
+    if (set.type === 'terraced') carport = 'none';
+    const cs = carport === 'left' || (carport === 'none' && set.type === 'semi' && set.neighbour === 'right') ? -1 : 1;
+    return { carport, cs };
+  }
+
+  /** 'garage' or 'shed' for a level that stands as a building of its own, from its name; else null. */
+  function outbuildingKind(name) {
+    return OUTBUILDINGS.garage.test(name || '') ? 'garage' : OUTBUILDINGS.shed.test(name || '') ? 'shed' : null;
+  }
+
+  /**
+   * The garages and sheds of the plan: levels named garage, schuur, shed, tuinhuis and the like. Each is a small building
+   * with the size of its rooms (a garage with its short side to the front, for the door) and the height of its walls.
+   */
+  function outbuildings(plan) {
+    const set = settings(plan);
+    const out = [];
+    for (const l of (plan && plan.levels) || []) {
+      const name = l.name || '';
+      const kind = outbuildingKind(name);
+      if (!kind) continue;
+      const place = set.outbuildings[l.id] || 'auto';
+      if (place === 'off') continue;
+      const b = levelBox(l);
+      const long = b ? Math.max(b.w, b.d) : kind === 'garage' ? 6 : 2.5;
+      const short = b ? Math.min(b.w, b.d) : kind === 'garage' ? 3.2 : 2;
+      const w = clamp(kind === 'garage' ? short : long, 1.5, 12, 3);
+      const d = clamp(kind === 'garage' ? long : short, 1.5, 12, 3);
+      const height = kind === 'garage' ? clamp((l.wallHeight || 260) / 100, 2.2, 3.5, 2.6) : clamp((l.wallHeight || 230) / 100, 1.9, 3, 2.3);
+      out.push({ levelId: l.id, name, kind, place, w: Math.round(w * 100) / 100, d: Math.round(d * 100) / 100, height });
+    }
+    return out;
+  }
+
+  /**
+   * Where the garages and sheds stand around the house, and how far the garden reaches for them.
+   * A garage stands beside the house on the free side, set back (behind the carport when there is one); a shed, or
+   * what does not fit there, stands at the back of the garden, all facing the house.
+   * Returns { buildings: [{ ...outbuilding, x, z }], back (z of the back hedge), side (half width of the garden) }.
+   */
+  function yard(plan) {
+    const set = settings(plan);
+    const sh = shape(plan);
+    const W = sh.width; const D = sh.depth;
+    const { carport, cs } = freeSide(set);
+    const built = (s) => set.type === 'terraced' || (set.type === 'semi' && set.neighbour === (s < 0 ? 'left' : 'right'));
+    let side = W / 2 + 6.5;
+    const buildings = [];
+    const rear = [];
+    let besides = false;
+    for (const b of outbuildings(plan)) {
+      let place = b.place === 'auto' ? (b.kind === 'garage' ? 'side' : 'back') : b.place;
+      if (place === 'side' && (built(cs) || besides)) place = 'back';
+      if (place === 'side') {
+        besides = true;
+        const gap = carport !== 'none' ? 0.2 : 0.8;
+        const z = (carport !== 'none' ? D / 2 - 6.8 : D / 2 - 4.4) - b.d / 2; // set back: a car fits on the drive in front
+        buildings.push(Object.assign({}, b, { place, x: cs * (W / 2 + gap + b.w / 2), z }));
+        side = Math.max(side, W / 2 + gap + b.w + 1.2);
+      } else rear.push(Object.assign({}, b, { place }));
+    }
+    // The back row starts in the corner on the driveway side, which the view looks at; the terrace stays free,
+    // and so does a garage beside the house that reaches far back
+    const deepest = rear.reduce((m, b) => Math.max(m, b.d), 0);
+    const garageEnd = buildings.reduce((m, b) => Math.min(m, b.z - b.d / 2), Infinity);
+    const back = Math.min(-D / 2 - 7, -D / 2 - 3.4 - 0.8 - deepest - 0.6, garageEnd - 0.6 - deepest - 0.6);
+    const row = rear.reduce((s, b) => s + b.w + 0.8, 0.4);
+    if (!built(-cs)) side = Math.max(side, row - (built(cs) ? W / 2 : side));
+    let at = (built(cs) ? W / 2 : side) - 0.6; // distance from the middle, on the driveway side
+    for (const b of rear) {
+      buildings.push(Object.assign({}, b, { x: cs * (at - b.w / 2), z: back + 0.6 + b.d / 2 }));
+      at -= b.w + 0.8;
+    }
+    return { buildings, back, side };
   }
 
   /** Whether an object is on the house: chosen on or off, or (auto) when its kind of device is found. */
@@ -569,6 +664,14 @@
       const s = side === 'left' ? -1 : 1;
       boxFaces(s * W - W / 2, s * W + W / 2, 0, E, -D / 2, D / 2, t.neighbour, t.neighbour, { opacity: 0.6 });
     }
+    // Garages and sheds, each to tap like a storey
+    for (const b of yard(plan).buildings) {
+      const pick = { pick: 'level', id: b.levelId, levelName: b.name };
+      const x0 = b.x - b.w / 2; const x1 = b.x + b.w / 2; const z0 = b.z - b.d / 2; const z1 = b.z + b.d / 2;
+      boxFaces(x0, x1, 0, b.height, z0, z1, t.wall, t.side, pick);
+      const dw = Math.min(b.w - 0.4, b.kind === 'garage' ? 2.6 : 0.9);
+      face([[b.x - dw / 2, 0, z1 + 0.01], [b.x + dw / 2, 0, z1 + 0.01], [b.x + dw / 2, Math.min(2.1, b.height - 0.2), z1 + 0.01], [b.x - dw / 2, Math.min(2.1, b.height - 0.2), z1 + 0.01]], t.door, [b.x, 1, b.z], { flat: true, pick });
+    }
     // The storeys, with windows on the two sides in view
     const lit = o.lit || new Set();
     sh.floors.forEach((f, i) => {
@@ -720,5 +823,5 @@
     return { svg: ground + parts.join('') + tags.join('') + cards.svg, viewBox: vb };
   }
 
-  return { settings, shape, shows, sunnySide, solarSides, sunPosition, isNight, outdoorLamps, roomBehind, weatherKind, drawing, photoView, OBJECTS, TYPES, ROOFS, PLACES };
+  return { settings, shape, shows, sunnySide, solarSides, sunPosition, isNight, outdoorLamps, roomBehind, weatherKind, drawing, photoView, freeSide, outbuildingKind, outbuildings, yard, OBJECTS, TYPES, ROOFS, PLACES, OUT_PLACES };
 }));

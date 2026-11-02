@@ -31,7 +31,9 @@ In de linkerbalk staan de gereedschappen: Selecteren, Kamer, Muren, Deuren, Rame
 - Apparaten sleep je naar hun plek. Bij lampen kies je de soort: plafond-, hang-, wand-, staande of tafellamp.
 - Een thermostaat of airco kan er als wandthermostaat, radiatorknop of fancoil uitzien: selecteer hem en kies onder **Weergave**.
 - Een schakelaar met meer knoppen (in Homey bijvoorbeeld onoff.2) staat per extra knop als eigen apparaat in de lijst, met het nummer of de naam van die knop erachter. Zo koppel je een lamp aan de knop die hem schakelt.
-- Begin je met een afbeelding of pdf, zet dan de schaal door één bekende lengte te meten. De editor herkent muren, kamers, deuren en ramen. Dat gebeurt in je browser; er wordt niets verstuurd.
+- Begin je met een afbeelding of pdf, zet dan de schaal door één bekende lengte te meten. De editor herkent muren, kamers, deuren en ramen, ook bij muren die schuin lopen. Dat gebeurt in je browser; er wordt niets verstuurd. Controleer het resultaat: gebogen muren worden niet herkend en een onduidelijke tekening kan fouten geven.
+- Schuin dak: klik naast de plattegrond op een leeg stuk en vink bij **Schuin dak** de kanten van de tekening aan waar het dak naar beneden komt, of kies **Zoals het dak van het huis**. Stel de hoogte van het knieschot en de helling in. In 3D lopen de muren dan schuin mee, ramen in een laag knieschot worden lager, en in het huisaanzicht ligt de bovenste verdieping onder het dak.
+- Garage en schuur: maak een verdieping met de naam Garage, Schuur, Tuinhuis of Berging. Die staat dan als eigen gebouwtje in de tuin van het 3D-huis, met de maat van de kamers die je erin tekent. Tik erop om hem te openen. Onder **Huis** kies je bij **Garage en schuur** of hij naast het huis, achter in de tuin of niet staat. Voor de tuin zelf maak je een verdieping met de naam Tuin.
 
 Handig: Ctrl+C en Ctrl+V kopiëren en plakken, Delete verwijdert, en Spatie met slepen verschuift het beeld.
 

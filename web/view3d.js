@@ -515,56 +515,102 @@ class View3D {
     const hs = window.HouseCore ? window.HouseCore.settings(plan) : { facade: 'brick', roofColor: 'anthracite' };
     const facade = LOOK.textures(this.renderer, hs.facade, hs.roofColor, t.night);
     const levelWalls = core.levelWalls(level);
+    // Under a sloping roof the tops of the walls follow the ceiling; a wall then goes in parts, each with a straight top.
+    const sloped = !!core.slopeOf(level);
+    const roofBox = sloped ? core.slopeBox(level) : null;
+    // A window or door in a low knee wall fits under the roof: lower, or (no room left) not there at all
+    const openings = !sloped ? level.openings : level.openings.map((o) => {
+      if (o.type !== 'window' && o.type !== 'door') return o;
+      const u = [Math.cos(o.angle || 0), Math.sin(o.angle || 0)]; const half = (o.width || 90) / 2;
+      const room = core.wallTop(level, core.geom.sub([o.x, o.y], core.geom.mul(u, half)), core.geom.add([o.x, o.y], core.geom.mul(u, half)), level.wallThickness || 12, roofBox)
+        .reduce((m, p) => Math.min(m, p[1]), Infinity) - 10;
+      if (o.type === 'door') {
+        const h = o.height || core.DEFAULTS.doorHeight;
+        return h <= room ? o : room >= 150 ? Object.assign({}, o, { height: room }) : null;
+      }
+      const top = o.top || core.DEFAULTS.windowTop;
+      if (top <= room) return o;
+      const sill = Math.min(o.sill != null ? o.sill : core.DEFAULTS.windowSill, room - 40);
+      return room - sill >= 30 && sill >= 0 ? Object.assign({}, o, { top: room, sill }) : null;
+    }).filter(Boolean);
     for (const wall of levelWalls) {
-      for (const piece of core.wallPieces(wall, level.openings, level, true)) {
+      for (const piece of core.wallPieces(wall, openings, level, true)) {
         const u = core.geom.norm(core.geom.sub(piece.b, piece.a));
         const ext0 = piece.capA ? wall.t / 2 : 0; const ext1 = piece.capB ? wall.t / 2 : 0;
-        const a = core.geom.sub(piece.a, core.geom.mul(u, ext0));
-        const bb = core.geom.add(piece.b, core.geom.mul(u, ext1));
-        const len = core.geom.dist(a, bb) * CM;
-        const hgt = (piece.z1 - piece.z0) * CM;
-        if (len < 0.005 || hgt < 0.005) continue;
-        // Own materials per piece, so each can fade on its own when the camera moves.
-        const own = mats.map((m) => m.clone());
-        // Which side is outside the house, for the facade and the cut-away of walls in front of the camera.
-        const mid = core.geom.mul(core.geom.add(a, bb), 0.5);
+        const pa = core.geom.sub(piece.a, core.geom.mul(u, ext0));
+        const pb = core.geom.add(piece.b, core.geom.mul(u, ext1));
         const n = [-u[1], u[0]];
+        // Which side is outside the house, for the facade and the cut-away of walls in front of the camera.
         const outside = core.wallOutside(piece.a, piece.b, wall.t, level, levelWalls);
-        if (outside) {
-          const brick = new THREE.MeshStandardMaterial({ map: facade.wall.clone(), roughness: 0.92, color: t.night ? '#8f8f8f' : '#ffffff' });
-          brick.map.needsUpdate = true;
-          brick.map.repeat.set(len / facade.wallSize[0], hgt / facade.wallSize[1]);
-          brick.map.offset.set(((a[0] + a[1]) * CM) / facade.wallSize[0] % 1, (piece.z0 * CM) / facade.wallSize[1] % 1);
-          own[outside > 0 ? 4 : 5] = brick;
-        }
-        const mesh = new THREE.Mesh(new THREE.BoxGeometry(len, hgt, wall.t * CM), own);
-        mesh.position.set(mid[0] * CM, piece.z0 * CM + hgt / 2, mid[1] * CM);
-        mesh.rotation.y = -Math.atan2(u[1], u[0]);
-        mesh.castShadow = true; mesh.receiveShadow = true;
-        mesh.userData.wall = true;
-        // a soft dark edge on the floor beside the wall, and skirting boards on both sides at floor level;
-        // they stay when the wall is lowered for the view
-        if (piece.z0 <= 1 && len > 0.2) {
-          for (const side of [1, -1]) {
-            if (side === outside) continue;
-            const edge = LOOK.floorEdge(len, 0.34, t.night ? 0.3 : 0.16);
-            edge.position.set((mid[0] + n[0] * side * (wall.t / 2 + 17)) * CM, 0.006, (mid[1] + n[1] * side * (wall.t / 2 + 17)) * CM);
-            edge.rotation.z = Math.atan2(u[1], u[0]) + (side > 0 ? Math.PI : 0);
-            this.root.add(edge);
+        const parts = [];
+        if (!sloped) parts.push({ a: pa, b: pb, t0: piece.z1, t1: piece.z1 });
+        else {
+          const top = core.wallTop(level, pa, pb, wall.t, roofBox);
+          for (let i = 0; i + 1 < top.length; i++) {
+            let [s0, h0] = top[i]; let [s1, h1] = top[i + 1];
+            h0 = Math.min(piece.z1, h0); h1 = Math.min(piece.z1, h1);
+            const low = piece.z0 + 1;
+            if (h0 < low && h1 < low) continue; // above the roof
+            // cut off where the roof comes below the bottom of the piece (a lintel by the eaves)
+            if (h0 < low) { s0 += ((low - h0) / (h1 - h0)) * (s1 - s0); h0 = low; }
+            if (h1 < low) { s1 = s0 + ((low - h0) / (h1 - h0)) * (s1 - s0); h1 = low; }
+            parts.push({ a: core.geom.add(pa, core.geom.mul(u, s0)), b: core.geom.add(pa, core.geom.mul(u, s1)), t0: h0, t1: h1 });
           }
-          const skirt = new THREE.Mesh(new THREE.BoxGeometry(len - 0.02, 0.07, wall.t * CM + 0.024), skirtMat);
-          skirt.position.set(mid[0] * CM, 0.035, mid[1] * CM);
-          skirt.rotation.y = mesh.rotation.y;
-          skirt.receiveShadow = true;
-          this.root.add(skirt);
         }
-        this.root.add(mesh);
-        this.walls.push({ mesh, mats: own, z0: piece.z0 * CM, h: hgt, nx: n[0] * outside, nz: n[1] * outside, exterior: outside !== 0, cur: hgt, target: hgt, alpha: 1, alphaTarget: 1 });
+        for (const part of parts) {
+          const a = part.a; const bb = part.b;
+          const len = core.geom.dist(a, bb) * CM;
+          const hgt = (Math.max(part.t0, part.t1) - piece.z0) * CM;
+          if (len < 0.005 || hgt < 0.005) continue;
+          // Own materials per piece, so each can fade on its own when the camera moves.
+          const own = mats.map((m) => m.clone());
+          const mid = core.geom.mul(core.geom.add(a, bb), 0.5);
+          if (outside) {
+            const brick = new THREE.MeshStandardMaterial({ map: facade.wall.clone(), roughness: 0.92, color: t.night ? '#8f8f8f' : '#ffffff' });
+            brick.map.needsUpdate = true;
+            brick.map.repeat.set(len / facade.wallSize[0], hgt / facade.wallSize[1]);
+            brick.map.offset.set(((a[0] + a[1]) * CM) / facade.wallSize[0] % 1, (piece.z0 * CM) / facade.wallSize[1] % 1);
+            own[outside > 0 ? 4 : 5] = brick;
+          }
+          const geo = new THREE.BoxGeometry(len, hgt, wall.t * CM);
+          if (part.t0 !== part.t1) {
+            // a sloping top: the top corners at each end go down to the ceiling there
+            const pos = geo.attributes.position;
+            for (let i = 0; i < pos.count; i++) {
+              if (pos.getY(i) <= 0) continue;
+              pos.setY(i, ((pos.getX(i) < 0 ? part.t0 : part.t1) - piece.z0) * CM - hgt / 2);
+            }
+            geo.computeVertexNormals();
+          }
+          const mesh = new THREE.Mesh(geo, own);
+          mesh.position.set(mid[0] * CM, piece.z0 * CM + hgt / 2, mid[1] * CM);
+          mesh.rotation.y = -Math.atan2(u[1], u[0]);
+          mesh.castShadow = true; mesh.receiveShadow = true;
+          mesh.userData.wall = true;
+          // a soft dark edge on the floor beside the wall, and skirting boards on both sides at floor level;
+          // they stay when the wall is lowered for the view
+          if (piece.z0 <= 1 && len > 0.2) {
+            for (const side of [1, -1]) {
+              if (side === outside) continue;
+              const edge = LOOK.floorEdge(len, 0.34, t.night ? 0.3 : 0.16);
+              edge.position.set((mid[0] + n[0] * side * (wall.t / 2 + 17)) * CM, 0.006, (mid[1] + n[1] * side * (wall.t / 2 + 17)) * CM);
+              edge.rotation.z = Math.atan2(u[1], u[0]) + (side > 0 ? Math.PI : 0);
+              this.root.add(edge);
+            }
+            const skirt = new THREE.Mesh(new THREE.BoxGeometry(len - 0.02, 0.07, wall.t * CM + 0.024), skirtMat);
+            skirt.position.set(mid[0] * CM, 0.035, mid[1] * CM);
+            skirt.rotation.y = mesh.rotation.y;
+            skirt.receiveShadow = true;
+            this.root.add(skirt);
+          }
+          this.root.add(mesh);
+          this.walls.push({ mesh, mats: own, z0: piece.z0 * CM, h: hgt, nx: n[0] * outside, nz: n[1] * outside, exterior: outside !== 0, cur: hgt, target: hgt, alpha: 1, alphaTarget: 1 });
+        }
       }
     }
 
     // Doors, windows and their blinds.
-    for (const o of level.openings) this.buildOpening(o, t);
+    for (const o of openings) this.buildOpening(o, t);
 
     // Furniture and lamps.
     for (const item of level.items) {

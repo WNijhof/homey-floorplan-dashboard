@@ -290,3 +290,43 @@ test('the heat pump stands beside the house, or lies on a flat roof', () => {
   assert.strictEqual(house.settings({ house: { objects: { heatpump: { place: 'roof' } } } }).objects.heatpump.place, 'roof');
   assert.strictEqual(house.settings({ house: { objects: { heatpump: { place: 'attic' } } } }).objects.heatpump.place, 'ground');
 });
+
+test('a garage and a shed stand in the garden, not on top of the house or each other', () => {
+  const rect = (x0, y0, x1, y1) => [{ id: `r${x0}${y0}`, name: 'R', points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] }];
+  const plan = {
+    levels: [
+      { id: 'g', name: 'Begane grond', wallHeight: 260, rooms: rect(0, 0, 1000, 900) },
+      { id: 'up', name: 'Verdieping', wallHeight: 260, rooms: rect(0, 0, 1000, 900) },
+      { id: 'gar', name: 'Garage', wallHeight: 250, rooms: rect(0, 0, 600, 300) },
+      { id: 'sh', name: 'Schuur', rooms: rect(0, 0, 300, 250) },
+      { id: 'th', name: 'Tuinhuis', rooms: rect(0, 0, 400, 300) },
+    ],
+    house: { type: 'detached', carport: 'none' },
+  };
+  const sh = house.shape(plan);
+  assert.deepStrictEqual(sh.floors.map((f) => f.levelId), ['g', 'up'], 'outbuildings are no storeys');
+  const { buildings, back, side } = house.yard(plan);
+  assert.deepStrictEqual(buildings.map((b) => [b.levelId, b.kind, b.place]), [['gar', 'garage', 'side'], ['sh', 'shed', 'back'], ['th', 'shed', 'back']]);
+  const gar = buildings[0];
+  assert.ok(gar.w < gar.d, 'the garage door is on its short side');
+  assert.strictEqual(Math.sign(gar.x), house.freeSide(house.settings(plan)).cs, 'on the free side');
+  const W = sh.width; const D = sh.depth;
+  const boxes = buildings.map((b) => [b.x - b.w / 2, b.z - b.d / 2, b.x + b.w / 2, b.z + b.d / 2]).concat([[-W / 2, -D / 2, W / 2, D / 2]]);
+  for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+      const [a, b] = [boxes[i], boxes[j]];
+      assert.ok(a[2] <= b[0] || b[2] <= a[0] || a[3] <= b[1] || b[3] <= a[1], `${i} and ${j} overlap`);
+    }
+  }
+  for (const b of buildings) {
+    assert.ok(b.z - b.d / 2 > back && Math.abs(b.x) + b.w / 2 < side, `${b.levelId} inside the garden`);
+    if (b.place === 'back') assert.ok(b.z + b.d / 2 < -D / 2 - 3.4, `${b.levelId} leaves the terrace free`);
+  }
+  // Chosen places: not shown, or at the back; a row of houses has no free side
+  plan.house.outbuildings = { sh: 'off', gar: 'back', bogus: 'moon' };
+  assert.deepStrictEqual(house.settings(plan).outbuildings, { sh: 'off', gar: 'back' });
+  assert.deepStrictEqual(house.yard(plan).buildings.map((b) => [b.levelId, b.place]), [['gar', 'back'], ['th', 'back']]);
+  plan.house = { type: 'terraced' };
+  assert.ok(house.yard(plan).buildings.every((b) => b.place === 'back'));
+  assert.ok(house.drawing(plan, {}).svg.includes('data-id="gar"'), 'the drawing has the garage to tap');
+});

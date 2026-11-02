@@ -1,4 +1,8 @@
 {
+  "0.2.7": {
+    "en": "Picture and PDF recognition now also handles walls at an angle, with their doors and windows. New: a sloping roof per level, with low knee walls and sloping walls in 3D, and a garage or shed as a building of its own in the garden of the 3D house.",
+    "nl": "De herkenning van afbeeldingen en pdf's kan nu ook schuine muren aan, met hun deuren en ramen. Nieuw: een schuin dak per verdieping, met lage knieschotten en schuine muren in 3D, en een garage of schuur als eigen gebouwtje in de tuin van het 3D-huis."
+  },
   "0.2.6": {
     "en": "Rooms without a name no longer show an empty label, and a room's name can be kept off the plan. Under the gear you choose which camera shows in the side column, or none.",
     "nl": "Kamers zonder naam tonen geen leeg label meer, en de naam van een kamer kan van de plattegrond af. Onder het tandwiel kies je welke camera in de zijkolom staat, of geen."

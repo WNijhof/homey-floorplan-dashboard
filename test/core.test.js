@@ -231,3 +231,26 @@ test('walls drawn without rooms know their outside, whichever way they were draw
   const u = core.geom.norm(core.geom.sub(edge.b, edge.a));
   assert.ok(core.geom.pointInPolygon(core.geom.add(core.geom.mul(core.geom.add(edge.a, edge.b), 0.5), [u[1] * s * 50, -u[0] * s * 50]), box), 'the other side is the room');
 });
+
+test('a sloping roof: the ceiling starts at the knee wall and rises to the full height', () => {
+  const level = core.newLevel('Zolder');
+  level.wallHeight = 260;
+  level.rooms = [{ id: 'a', name: 'A', points: [[0, 0], [800, 0], [800, 600], [0, 600]] }];
+  assert.strictEqual(core.slopeOf(level), null);
+  assert.strictEqual(core.ceilingAt(level, [400, 300]), 260, 'flat without a slope');
+  level.slope = { sides: ['top', 'bottom', 'up'], knee: 100, pitch: 45 };
+  assert.deepStrictEqual(core.slopeOf(level).sides, ['top', 'bottom']);
+  assert.ok(Math.abs(core.ceilingAt(level, [400, 0]) - 100) < 0.01, 'the knee wall at the eaves');
+  assert.ok(Math.abs(core.ceilingAt(level, [400, 50]) - 150) < 0.01, 'rising with the pitch');
+  assert.strictEqual(core.ceilingAt(level, [400, 300]), 260, 'full height in the middle');
+  assert.ok(Math.abs(core.ceilingAt(level, [400, 600]) - 100) < 0.01, 'the other side too');
+  // The outer wall at the top is a knee wall; a wall across the slope rises and then stays level
+  const knee = core.wallTop(level, [0, 0], [800, 0], 20);
+  assert.ok(knee.every(([, h]) => Math.abs(h - 100) < 12), JSON.stringify(knee));
+  const across = core.wallTop(level, [0, 0], [0, 600], 20);
+  assert.ok(across.length >= 3 && across.length <= 6, JSON.stringify(across));
+  assert.ok(Math.abs(across[0][1] - 100) < 12 && across.some(([, h]) => h === 260));
+  // In the house view a top storey with a sloping roof is the space under the roof
+  const plan = { levels: [{ id: 'g', name: 'Begane grond', rooms: level.rooms }, Object.assign({}, level, { id: 'z', name: 'Tweede' })] };
+  assert.strictEqual(require('../lib/shared/house-core').shape(plan).attic.levelId, 'z');
+});
