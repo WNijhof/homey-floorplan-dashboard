@@ -56,6 +56,43 @@ function fitModel(model, entry, w, d, h) {
 /* --------------------------------------------------------------- helpers */
 
 const tmpColor = new THREE.Color();
+
+// A piece in the colour chosen in the editor: the material that covers most of it (the fabric of a sofa, the wood of a
+// table) gets exactly that colour, without its texture; legs, metal and glass keep theirs.
+function recolor(obj, color) {
+  const size = new Map();
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    const n = o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count;
+    for (const m of [].concat(o.material)) size.set(m, (size.get(m) || 0) + n / [].concat(o.material).length);
+  });
+  let main = null;
+  for (const [m, n] of size) if (!main || n > size.get(main)) main = m;
+  if (!main) return;
+  const own = main.clone();
+  own.map = null;
+  own.color.set(color);
+  own.needsUpdate = true;
+  obj.traverse((o) => {
+    if (!o.isMesh) return;
+    o.material = Array.isArray(o.material) ? o.material.map((m) => (m === main ? own : m)) : (o.material === main ? own : o.material);
+  });
+}
+
+// A round table drawn in code, so it is really round: a top, a column and a foot.
+function roundTable(item, color) {
+  const g = new THREE.Group();
+  const w = (item.w || 110) * CM; const d = (item.d || 110) * CM; const h = (item.h || 76) * CM;
+  const wood = mat(color, { roughness: 0.6 });
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.5, 0.5, 0.04, 64), wood);
+  top.scale.set(w, 1, d); top.position.y = h - 0.02;
+  const column = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, h - 0.06, 24), wood);
+  column.position.y = (h - 0.04) / 2;
+  const foot = new THREE.Mesh(new THREE.CylinderGeometry(Math.min(w, d) * 0.28, Math.min(w, d) * 0.3, 0.03, 48), wood);
+  foot.position.y = 0.015;
+  for (const m of [top, column, foot]) { m.castShadow = true; m.receiveShadow = true; g.add(m); }
+  return g;
+}
 function mat(color, opts) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0, ...(opts || {}) });
 }
@@ -197,6 +234,14 @@ function fixtureMesh(kind, item, wallHeight, theme) {
     const screen = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.8, h * 0.8), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
     screen.position.set(0, h / 2, d / 2 + 0.001); g.add(screen);
     g.userData.display = { canvas, tex };
+  } else if (kind === 'tv') {
+    // A flat TV on the wall: a thin dark frame with a screen that lights up when the TV is on (View3D.drawDisplay).
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), dark);
+    frame.position.set(0, h / 2, 0); frame.castShadow = true; g.add(frame);
+    const glass = new THREE.MeshStandardMaterial({ color: '#0b0d10', emissive: '#000000', roughness: 0.25, metalness: 0.2 });
+    const screen = new THREE.Mesh(new THREE.PlaneGeometry(w * 0.96, h * 0.92), glass);
+    screen.position.set(0, h / 2, d / 2 + 0.001); g.add(screen);
+    g.userData.display = { tv: glass };
   } else if (kind === 'trv') {
     // A radiator valve: a knob sticking out from the radiator, with a dark ring at the front.
     const knob = new THREE.Mesh(new THREE.CylinderGeometry(w / 2, w / 2, d, 24), white);
@@ -511,6 +556,11 @@ class View3D {
     const skirtMat = mat(t.night ? '#cfcfcc' : '#ffffff', { roughness: 0.6 });
     const capMat = mat(t.wallTop, { roughness: 0.9 });
     const mats = [wallMat, wallMat, capMat, wallMat, wallMat, wallMat];
+    // A free wall can be a fence or a glass balustrade
+    const styled = {
+      fence: mat(t.night ? '#6e5a48' : '#9a7350', { roughness: 0.8 }),
+      glass: new THREE.MeshStandardMaterial({ color: '#cfe3ee', roughness: 0.08, metalness: 0.1 }),
+    };
     // The outside of outer walls in the facade of the house view (brick or plaster)
     const hs = window.HouseCore ? window.HouseCore.settings(plan) : { facade: 'brick', roofColor: 'anthracite' };
     const facade = LOOK.textures(this.renderer, hs.facade, hs.roofColor, t.night);
@@ -563,9 +613,9 @@ class View3D {
           const hgt = (Math.max(part.t0, part.t1) - piece.z0) * CM;
           if (len < 0.005 || hgt < 0.005) continue;
           // Own materials per piece, so each can fade on its own when the camera moves.
-          const own = mats.map((m) => m.clone());
+          const own = styled[wall.style] ? mats.map(() => styled[wall.style].clone()) : mats.map((m) => m.clone());
           const mid = core.geom.mul(core.geom.add(a, bb), 0.5);
-          if (outside) {
+          if (outside && !styled[wall.style]) {
             const brick = new THREE.MeshStandardMaterial({ map: facade.wall.clone(), roughness: 0.92, color: t.night ? '#8f8f8f' : '#ffffff' });
             brick.map.needsUpdate = true;
             brick.map.repeat.set(len / facade.wallSize[0], hgt / facade.wallSize[1]);
@@ -604,7 +654,7 @@ class View3D {
             this.root.add(skirt);
           }
           this.root.add(mesh);
-          this.walls.push({ mesh, mats: own, z0: piece.z0 * CM, h: hgt, nx: n[0] * outside, nz: n[1] * outside, exterior: outside !== 0, cur: hgt, target: hgt, alpha: 1, alphaTarget: 1 });
+          this.walls.push({ mesh, mats: own, z0: piece.z0 * CM, h: hgt, nx: n[0] * outside, nz: n[1] * outside, exterior: outside !== 0, cur: hgt, target: hgt, alpha: 1, alphaTarget: 1, see: wall.style === 'glass' ? 0.35 : 1 });
         }
       }
     }
@@ -728,10 +778,12 @@ class View3D {
       tag.position.set(item.x * CM, ((item.z || 0) + (item.h || 50)) * CM + 0.05, item.y * CM);
       this.root.add(tag);
     }
-    if (entry && entry.file) {
+    if (entry && entry.parts === 'table_round') {
+      holder.add(roundTable(item, item.color || (entry.colors && entry.colors[0]) || '#edbc7c'));
+    } else if (entry && entry.file) {
       loadModel(entry.file).then((model) => {
         const fitted = fitModel(model, entry, item.w, item.d, item.h);
-        if (item.color) fitted.traverse((o) => { if (o.isMesh) { o.material = o.material.clone(); o.material.color.lerp(tmpColor.set(item.color), 0.6); } });
+        if (item.color) recolor(fitted, item.color);
         holder.add(fitted);
         this.request();
       }).catch(() => holder.add(this.partsMesh(item, t)));
@@ -842,6 +894,14 @@ class View3D {
   // The display of a thermostat: room temperature, and the set temperature below it.
   drawDisplay(disp) {
     const dev = this.devices.get(disp.item.deviceId);
+    if (disp.tv) {
+      const on = core.isOn(dev);
+      if (disp.key === on) return;
+      disp.key = on;
+      disp.tv.emissive.set(on ? '#7fa6dc' : '#000000');
+      disp.tv.emissiveIntensity = on ? 0.85 : 0;
+      return;
+    }
     const c = (dev && dev.caps) || {};
     const temp = typeof c.measure_temperature === 'number' ? `${c.measure_temperature.toFixed(1)}°` : '--';
     const target = typeof c.target_temperature === 'number' ? `→ ${c.target_temperature}°` : '';
@@ -1188,8 +1248,7 @@ class View3D {
       entry.blind.position.y = entry.top - (span * closed) / 2;
     }
     if (entry.pivot) {
-      const contact = linked.find((d) => 'alarm_contact' in d.caps);
-      const open = contact ? contact.caps.alarm_contact === true : false;
+      const open = core.openState(linked) === true;
       entry.pivot.rotation.y = open ? ((entry.o.swing || 1) * ((entry.o.hinge || 1) > 0 ? -1 : 1)) * Math.PI / 2 * 0.95 : 0;
     }
   }
@@ -1383,10 +1442,10 @@ class View3D {
       w.mesh.scale.y = Math.max(0.001, w.cur / w.h);
       w.mesh.position.y = w.z0 + w.cur / 2;
       w.mesh.visible = w.alpha > 0.01;
-      const fading = w.alpha < 0.99;
+      const fading = w.alpha * (w.see || 1) < 0.99;
       for (const m of w.mats) {
         if (m.transparent !== fading) { m.transparent = fading; m.needsUpdate = true; }
-        m.opacity = w.alpha;
+        m.opacity = w.alpha * (w.see || 1);
         m.depthWrite = !fading;
       }
     }

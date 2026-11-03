@@ -19,16 +19,18 @@ Eerst kijken kan zonder installeren: [de demo](https://wnijhof.github.io/homey-f
 In de linkerbalk staan de gereedschappen: Selecteren, Kamer, Muren, Deuren, Ramen, Open muur, Meubels, Apparaten, Meten, Afbeelding, Agenda en Huis.
 
 - Kamers: sleep een rechthoek. Sleep de hoeken om de vorm aan te passen. Voor een L-vorm trek je aan een blauwe plus op de rand, of je kiest **Maak L-vorm**. Met Alt-klik op een hoek haal je die weg. Een kamer zonder naam krijgt geen label; wil je de naam van een kamer niet op de plattegrond, zoals bij een inbouwkast, haal dan het vinkje **Naam tonen op de plattegrond** weg.
-- Deuren en ramen plaats je op een muur.
+- Deuren en ramen plaats je op een muur. Bij een raam stel je de onderkant en bovenkant in (voor een hoog raam of een openslaande deur), bij een deur de hoogte. Koppel een contactsensor, of een schakelaar (ook een virtuele), dan staat de deur of het raam open zolang die aan staat.
+- Halfhoge muur, hek of balkon: teken een losse muur met **Muren**, vul een hoogte in en kies bij **Gemaakt van** muur, hek of glas.
 - Open keuken of doorgang: kies **Open muur** en klik op de muur tussen twee kamers. Kies de breedte of **Hele muur open**. Beide kamers houden hun eigen naam en temperatuur.
 - Gebogen muur: selecteer een losse muur en kies een van de buigknoppen. Een kamerrand buig je door met de blauwe plussen hoeken toe te voegen.
 - Volgorde van verdiepingen: klik naast de plattegrond op een leeg stuk en kies **Verdieping lager** of **Verdieping hoger**.
 - Meerdere spots op één schakelaar: selecteer het apparaat en kies **Dit apparaat nog een keer plaatsen**, of kopieer en plak het.
-- Vorm van het 3D-huis: kies onder **Huis** bij **Vorm van het huis** tussen **Eenvoudig blok** en **Volgens de plattegrond**. Bij de werkelijke vorm volgen de muren je kamers, met uitbouw en al. Verdiepingen komen vanzelf op elkaar te staan, ook als je een verdieping in de editor hebt verschoven. Kies daarbij welke kant de voorkant is. Het dak ligt op het grootste rechthoekige deel, de andere delen krijgen een plat dak, en de ramen zijn gelijkmatig verdeeld.
-- Meubels komen uit een catalogus. Bij een muur draaien ze vanzelf met hun achterkant ernaartoe; met de draaiknoppen zet je ze goed.
+- Vorm van het 3D-huis: kies onder **Huis** bij **Vorm van het huis** tussen **Eenvoudig blok** en **Volgens de plattegrond**. Bij de werkelijke vorm volgen de muren je kamers, met uitbouw en al. Verdiepingen komen vanzelf op elkaar te staan, ook als je een verdieping in de editor hebt verschoven. Kies daarbij welke kant de voorkant is. Het dak ligt op het grootste rechthoekige deel en de andere delen krijgen een plat dak. De deuren en ramen in de buitenmuren van je plattegrond staan op dezelfde plek in de gevel; zonder getekende ramen worden ze gelijkmatig verdeeld.
+- Meubels komen uit een catalogus. Een kleur die je kiest krijgt het hoofddeel van het meubel, zoals de stof van een bank of het blad van een tafel. Een tv aan de muur (zonder voet) staat bij Media als **Tv aan de muur**. Bij een muur draaien ze vanzelf met hun achterkant ernaartoe; met de draaiknoppen zet je ze goed.
 - Trap: selecteer een kwartslagtrap of wenteltrap en kies **Trap spiegelen** om de bocht de andere kant op te laten lopen.
 - Speakers: selecteer een speaker en kies onder **Weergave** een box. Die staat dan als model op de plattegrond en in 3D.
 - Apparaten sleep je naar hun plek. Bij lampen kies je de soort: plafond-, hang-, wand-, staande of tafellamp.
+- Een tv uit Homey hangt als platte tv aan de muur; het scherm licht op als hij aan staat, en met een tik zet je hem aan of uit.
 - Een thermostaat of airco kan er als wandthermostaat, radiatorknop of fancoil uitzien: selecteer hem en kies onder **Weergave**.
 - Een schakelaar met meer knoppen (in Homey bijvoorbeeld onoff.2) staat per extra knop als eigen apparaat in de lijst, met het nummer of de naam van die knop erachter. Zo koppel je een lamp aan de knop die hem schakelt.
 - Begin je met een afbeelding of pdf, zet dan de schaal door één bekende lengte te meten. De editor herkent muren, kamers, deuren en ramen, ook bij muren die schuin lopen. Dat gebeurt in je browser; er wordt niets verstuurd. Controleer het resultaat: gebogen muren worden niet herkend en een onduidelijke tekening kan fouten geven.
@@ -41,7 +43,7 @@ Handig: Ctrl+C en Ctrl+V kopiëren en plakken, Delete verwijdert, en Spatie met 
 
 Onder **Huis** stel je in hoe je huis er van buiten uitziet.
 
-- Soort woning: vrijstaand, twee-onder-een-kap of tussenwoning.
+- Soort woning: vrijstaand, twee-onder-een-kap, hoekwoning, tussenwoning of appartement. Bij een appartement kies je op welke verdieping het ligt en hoeveel verdiepingen het blok erboven heeft; het staat dan in een blok met buren aan beide kanten en een plat dak.
 - Dak, nokrichting, hellingshoek en de richting van de voorgevel. Die richting is nodig voor de zon en de zonneverwachting.
 - Gevel: donker stucwerk, wit stucwerk of baksteen.
 - Rond het huis: tuin, pad en oprit, of niets voor een rustig beeld.

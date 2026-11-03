@@ -383,10 +383,10 @@ class House3D {
     const W = shape.width; const D = shape.depth;
     // The carport goes on the free side of a semi-detached house.
     let carport = set.carport;
-    if (set.type === 'semi' && carport === set.neighbour) carport = carport === 'left' ? 'right' : 'left';
-    if (set.type === 'terraced') carport = 'none';
+    if (set.oneSide && carport === set.neighbour) carport = carport === 'left' ? 'right' : 'left';
+    if (set.between) carport = 'none';
     // the free side of the house: the carport, or else the driveway, and the side the camera looks at
-    const cs = carport === 'left' || (carport === 'none' && set.type === 'semi' && set.neighbour === 'right') ? -1 : 1;
+    const cs = carport === 'left' || (carport === 'none' && set.oneSide && set.neighbour === 'right') ? -1 : 1;
     this.carportSide = cs < 0 ? 'left' : 'right';
     this.carportCenter = null;
     // Garages and sheds, and how far the garden reaches for them
@@ -506,7 +506,7 @@ class House3D {
     paved(-W / 2 - 0.6, -D / 2 - 0.6, -W / 2, D / 2);
     paved(W / 2, -D / 2 - 0.6, W / 2 + 0.6, D / 2);
     paved(-W / 2 - 0.6, -D / 2 - 3.2, W / 2 + 0.6, -D / 2); // terrace at the back
-    if (this.set.type === 'terraced') {
+    if (this.set.between) {
       // no side to drive along: the car stands in front of the house
       if (this.shows.car) paved(cs > 0 ? W / 2 - 3.2 : -W / 2 + 0.2, D / 2 + 0.6, cs > 0 ? W / 2 - 0.2 : -W / 2 + 3.2, D / 2 + 6);
     } else if (carport !== 'none' || this.shows.car) {
@@ -521,7 +521,7 @@ class House3D {
     // Hedges along the plot and a few trees and shrubs
     // Beside a neighbour the plot ends at the party wall: a hedge between the back gardens only
     const back = this.yard.back; const side = this.yard.side;
-    const built = (s) => this.set.type === 'terraced' || (this.set.type === 'semi' && this.set.neighbour === (s < 0 ? 'left' : 'right'));
+    const built = (s) => this.set.between || (this.set.oneSide && this.set.neighbour === (s < 0 ? 'left' : 'right'));
     const left = built(-1) ? -W / 2 : -side; const right = built(1) ? W / 2 : side;
     this.root.add(LOOK.hedge([left, back], [right, back], 1.3, M));
     this.root.add(LOOK.hedge([left, back], [left, built(-1) ? -D / 2 : D / 2 + 3], 1.2, M));
@@ -642,9 +642,9 @@ class House3D {
       for (const w of walls) { w.userData.base = M.wall; fg.add(w); }
       const blocks = shell ? shell.rects : [{ x: 0, z: 0, w: W, d: D }];
       for (const b of blocks) {
-        if (i === 0) fg.add(LOOK.box(b.w + 0.04, 0.35, b.d + 0.04, M.plinth, b.x, 0, b.z));
+        if (i === 0) fg.add(LOOK.box(b.w + 0.04, 0.35, b.d + 0.04, M.plinth, b.x, 0, b.z)); // on the ground, also under a block of flats
         // floor slab line between storeys
-        else fg.add(LOOK.box(b.w + 0.03, 0.06, b.d + 0.03, M.sill, b.x, y0 - 0.03, b.z));
+        if (i > 0 || shape.lift) fg.add(LOOK.box(b.w + 0.03, 0.06, b.d + 0.03, M.sill, b.x, y0 - 0.03, b.z));
       }
       const level = (this.plan.levels || []).find((l) => l.id === f.levelId);
       // Each window belongs to the room behind it, and at night its light falls out: a glow on the wall, a pool below
@@ -655,17 +655,19 @@ class House3D {
       };
       const winH = i === 0 ? 1.55 : 1.4;
       const winY = y0 + (i === 0 ? 0.75 : 0.9) + winH / 2;
-      const add = (w, x, z, ry) => {
+      const add = (w, x, z, ry, real) => {
         const own = windowOf(x, z);
         const { glass, haloMat, poolMat } = own;
-        const win = LOOK.windowPart(w, winH, { frame: M.frame, glass, sill: M.sill, reveal: M.reveal });
-        win.group.position.set(x, winY, z);
+        const wh = real ? real.top - real.sill : winH;
+        const wy = real ? y0 + (real.sill + real.top) / 2 : winY;
+        const win = LOOK.windowPart(w, wh, { frame: M.frame, glass, sill: M.sill, reveal: M.reveal }, real && real.door ? { door: true } : undefined);
+        win.group.position.set(x, wy, z);
         win.group.rotation.y = ry;
         fg.add(win.group);
         if (!t.night) return;
         const nx = Math.sin(ry); const nz = Math.cos(ry);
-        const halo = new THREE.Mesh(new THREE.PlaneGeometry(w * 2.6, winH * 2.3), haloMat);
-        halo.position.set(x + nx * 0.03, winY, z + nz * 0.03);
+        const halo = new THREE.Mesh(new THREE.PlaneGeometry(w * 2.6, wh * 2.3), haloMat);
+        halo.position.set(x + nx * 0.03, wy, z + nz * 0.03);
         halo.rotation.y = ry;
         halo.renderOrder = 2;
         halo.userData.light = true;
@@ -675,8 +677,15 @@ class House3D {
           this.root.add(pool);
         }
       };
-      // Along the real walls: windows evenly over each stretch, none on a stub or where the door is
-      for (const r of shell ? shell.runs : []) {
+      // The doors and windows drawn in the floor plan, where they are; the front door stays the front door
+      const real = shell && shell.openings.length ? shell.openings : null;
+      for (const o of real || []) {
+        if (i === 0 && o.n[1] === 1 && Math.abs(o.z - entry.z) < 0.05 && Math.abs(o.x - entry.x) < 0.5 + o.w / 2) continue;
+        if (y0 + o.top > y1 - 0.05) o.top = y1 - y0 - 0.15; // never through the floor above
+        add(o.w, o.x + o.n[0] * 0.005, o.z + o.n[1] * 0.005, Math.atan2(o.n[0], o.n[1]), o);
+      }
+      // Else along the real walls: windows evenly over each stretch, none on a stub or where the door is
+      for (const r of shell && !real ? shell.runs : []) {
         const len = Math.abs(r.b[0] - r.a[0]) + Math.abs(r.b[1] - r.a[1]);
         const wide = r.n[0] === 0;
         if (len < 1.6) continue;
@@ -749,7 +758,14 @@ class House3D {
       this.floorGroups.push({ levelId: f.levelId, group: fg });
     });
     this.windows = lamps;
-    const eaves = shape.eaves;
+    // A flat: the storeys of the block below and above it; the roof goes on top of the block
+    if (shape.lift) g.add(this.blockStoreys(0, shape.lift, W, D, true));
+    if (shape.above) {
+      const up = this.blockStoreys(shape.eaves, shape.eaves + shape.above, W, D, false);
+      g.add(up);
+      this.liftWith.push(up);
+    }
+    const eaves = shape.eaves + (shape.above || 0);
     if (!form && set.extension !== 'none') {
       const back = set.extension === 'back';
       const ew = back ? W * 0.6 : 3.2; const ed = back ? 3.2 : D * 0.7;
@@ -865,19 +881,22 @@ class House3D {
   }
 
   buildNeighbours(t, set, shape, W, D) {
-    const sides = set.type === 'semi' ? [set.neighbour] : set.type === 'terraced' ? ['left', 'right'] : [];
+    const sides = set.oneSide ? [set.neighbour] : set.between ? ['left', 'right'] : [];
     const wall = this.M.wall.clone();
     wall.map = this.M.tx.wall.clone(); wall.map.needsUpdate = true;
-    wall.map.repeat.set(W / this.M.tx.wallSize[0], shape.eaves / this.M.tx.wallSize[1]);
+    const top = shape.eaves + (shape.above || 0);
+    wall.map.repeat.set(W / this.M.tx.wallSize[0], top / this.M.tx.wallSize[1]);
     wall.color.set(this.theme.night ? '#6a6a6a' : '#b8b8b8');
     const material = this.M.roof.clone();
     material.color.set(this.theme.night ? '#6a6a6a' : '#b8b8b8');
     const gable = this.M.wall.clone();
     gable.color.copy(wall.color);
-    for (const side of sides) {
-      const s = side === 'left' ? -1 : 1;
+    // A corner house ends a row: two houses on that side
+    const spots = sides.flatMap((side) => (set.type === 'corner' ? [1, 2] : [1]).map((k) => [side, k]));
+    for (const [side, k] of spots) {
+      const s = (side === 'left' ? -1 : 1) * k;
       const g = new THREE.Group();
-      g.add(LOOK.box(W, shape.eaves, D, wall, 0, 0, 0));
+      g.add(LOOK.box(W, top, D, wall, 0, 0, 0));
       if (set.roof !== 'flat') {
         const turned = set.ridge === 'depth';
         const L = turned ? D : W; const S = turned ? W : D;
@@ -893,7 +912,7 @@ class House3D {
           [[[L / 2, 0, S / 2], [L / 2, 0, -S / 2], [r, rise, 0]], set.roof === 'hip' ? material : gable],
         ];
         for (const [pts, m] of faces) roof.add(LOOK.poly(pts, m, m === gable ? this.M.tx.wallSize : LOOK.TILE_SIZE));
-        roof.position.y = shape.eaves;
+        roof.position.y = top;
         if (turned) roof.rotation.y = Math.PI / 2;
         g.add(roof);
       }
@@ -901,6 +920,34 @@ class House3D {
       g.traverse((o) => { if (o.isMesh) o.castShadow = false; });
       this.root.add(g);
     }
+  }
+
+  // Storeys of a block of flats that are not the own flat: walls in the same facade with a row of windows each, front
+  // and back; with the entrance of the block at the bottom (ground) when that is part of it.
+  blockStoreys(y0, y1, W, D, ground) {
+    const M = this.M;
+    const g = new THREE.Group();
+    const size = M.tx.wallSize;
+    g.add(LOOK.poly([[-W / 2, y0, D / 2], [W / 2, y0, D / 2], [W / 2, y1, D / 2], [-W / 2, y1, D / 2]], M.wall, size));
+    g.add(LOOK.poly([[W / 2, y0, -D / 2], [-W / 2, y0, -D / 2], [-W / 2, y1, -D / 2], [W / 2, y1, -D / 2]], M.wall, size));
+    g.add(LOOK.poly([[W / 2, y0, D / 2], [W / 2, y0, -D / 2], [W / 2, y1, -D / 2], [W / 2, y1, D / 2]], M.wall, size));
+    g.add(LOOK.poly([[-W / 2, y0, -D / 2], [-W / 2, y0, D / 2], [-W / 2, y1, D / 2], [-W / 2, y1, -D / 2]], M.wall, size));
+    const glass = M.glass();
+    const cols = Math.max(2, Math.round(W / 2.6));
+    for (let y = y0; y + 2.5 <= y1 + 0.01; y += 3) {
+      g.add(LOOK.box(W + 0.03, 0.06, D + 0.03, M.sill, 0, y - 0.03, 0));
+      for (let c = 0; c < cols; c++) {
+        const x = -W / 2 + (W / cols) * (c + 0.5);
+        for (const [z, ry] of [[D / 2 + 0.005, 0], [-D / 2 - 0.005, Math.PI]]) {
+          if (ground && y === y0 && ry === 0 && Math.abs(x) < 1.0) continue; // the entrance of the block
+          const win = LOOK.windowPart(1.25, 1.4, { frame: M.frame, glass, sill: M.sill, reveal: M.reveal });
+          win.group.position.set(x, y + 0.9 + 0.7, z);
+          win.group.rotation.y = ry;
+          g.add(win.group);
+        }
+      }
+    }
+    return g;
   }
 
   // Garages and sheds (levels of their own): a garage in the facade of the house with a flat roof and a
@@ -1003,7 +1050,7 @@ class House3D {
     const atGutter = panels.localToWorld(new THREE.Vector3(0, 0.09, 0.02));
     const wall = this.onWall(atGutter);
     const front = Math.abs(wall.z) >= D / 2;
-    const corner = new THREE.Vector3(front ? Math.sign(meter.x) * (W / 2 - 0.3) : wall.x, shape.eaves - 0.12, front ? wall.z : Math.sign(meter.z) * (D / 2 - 0.3));
+    const corner = new THREE.Vector3(front ? Math.sign(meter.x) * (W / 2 - 0.3) : wall.x, shape.eaves + (shape.above || 0) - 0.12, front ? wall.z : Math.sign(meter.z) * (D / 2 - 0.3));
     this.addFlow('solar', [onRoof, atGutter, new THREE.Vector3(corner.x, atGutter.y, front ? atGutter.z : corner.z), corner, ...this.cableRoute(corner, meter)]);
   }
 
@@ -1117,7 +1164,7 @@ class House3D {
     // in view: without a carport on the free side, which the camera looks at
     const side = underCarport || carport === 'none' ? cs : -cs;
     // In a row of houses the sides are party walls: on the back wall, at its corner
-    const terraced = set.type === 'terraced';
+    const terraced = set.between;
     // on a free piece of wall between two windows, also for its cable
     const sideCols = Math.max(1, Math.round(D / 3.4));
     const wall = terraced ? this.wallSpot(this.shape, 0, -1, side * (W / 2 - 0.5), 0.5)
@@ -1153,7 +1200,7 @@ class House3D {
   }
 
   buildCar(t, W, D, cs, carport, meter) {
-    const terraced = this.set.type === 'terraced';
+    const terraced = this.set.between;
     const c = terraced ? new THREE.Vector3(cs * (W / 2 - 1.95), 0, D / 2 + 3.2)
       : this.carportCenter || new THREE.Vector3(cs * (W / 2 + 2.0), 0, D / 2 - 1.2); // forward on the drive: the battery stays in view
     // The wall between the last window and the front corner: the charger never hangs over a window

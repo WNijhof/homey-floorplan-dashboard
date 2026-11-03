@@ -1,4 +1,8 @@
 {
+  "0.2.8": {
+    "en": "New house types: corner house and flat (apartment), on the storey you choose in a block. With the house in the shape of the floor plan, its doors and windows sit in the facade where you drew them. Window and door heights can be set, a free wall can be lower, a fence or glass for a balcony, a door can open with a (virtual) switch, and a TV from Homey hangs on the wall and lights up when on. Furniture takes the exact colour you choose and a round table is really round.",
+    "nl": "Nieuwe woningtypes: hoekwoning en appartement, op de verdieping die je kiest in een blok. Met het huis in de vorm van de plattegrond staan de deuren en ramen in de gevel waar je ze tekende. De hoogte van ramen en deuren is in te stellen, een losse muur kan lager, een hek of glas voor een balkon zijn, een deur kan open met een (virtuele) schakelaar, en een tv uit Homey hangt aan de muur en licht op als hij aan staat. Meubels krijgen precies de kleur die je kiest en een ronde tafel is echt rond."
+  },
   "0.2.7": {
     "en": "Picture and PDF recognition now also handles walls at an angle, with their doors and windows. New: a sloping roof per level, with low knee walls and sloping walls in 3D, and a garage or shed as a building of its own in the garden of the 3D house.",
     "nl": "De herkenning van afbeeldingen en pdf's kan nu ook schuine muren aan, met hun deuren en ramen. Nieuw: een schuin dak per verdieping, met lage knieschotten en schuine muren in 3D, en een garage of schuur als eigen gebouwtje in de tuin van het 3D-huis."

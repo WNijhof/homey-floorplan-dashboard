@@ -10,7 +10,7 @@
 }(typeof self !== 'undefined' ? self : this, () => {
   'use strict';
 
-  const TYPES = ['detached', 'semi', 'terraced'];
+  const TYPES = ['detached', 'semi', 'corner', 'terraced', 'flat'];
   const ROOFS = ['gable', 'hip', 'flat'];
   const SIDES = ['left', 'right'];
   const OBJECTS = ['solar', 'grid', 'battery', 'car', 'heatpump', 'airco', 'boiler'];
@@ -52,11 +52,19 @@
     if (h.outbuildings && typeof h.outbuildings === 'object') {
       for (const [id, place] of Object.entries(h.outbuildings)) if (OUT_PLACES.indexOf(place) > 0) outbuildings[id] = place;
     }
+    const type = pick(h.type, TYPES, 'detached');
+    const flat = type === 'flat';
     return {
       outbuildings,
-      type: pick(h.type, TYPES, 'detached'),
-      neighbour: pick(h.neighbour, SIDES, 'left'), // the side of the other half of a semi-detached house
-      roof: pick(h.roof, ROOFS, 'gable'),
+      type,
+      // one neighbour beside it (semi-detached, corner house) or one on both sides (terraced, a flat in a block)
+      oneSide: type === 'semi' || type === 'corner',
+      between: type === 'terraced' || flat,
+      // a flat: the storey its lowest floor is on (0 is the ground floor) and the storeys of the block above it
+      flatFloor: flat ? Math.round(clamp(h.flatFloor, 0, 30, 0)) : 0,
+      flatAbove: flat ? Math.round(clamp(h.flatAbove, 0, 30, 1)) : 0,
+      neighbour: pick(h.neighbour, SIDES, 'left'), // the side of the other half of a semi-detached house, or of the row a corner house ends
+      roof: flat ? 'flat' : pick(h.roof, ROOFS, 'gable'), // a block of flats has a flat roof
       ridge: pick(h.ridge, ['width', 'depth'], 'width'), // the ridge along the front (width) or front to back
       pitch: clamp(h.pitch, 15, 55, 40),
       facing: clamp(h.facing, 0, 359, 180), // compass direction the front looks at: 180 is south
@@ -217,8 +225,10 @@
     return a0 <= b0 + slack && a1 >= b1 - slack ? 0 : (b0 + b1 - a0 - a1) / 2;
   }
 
+  // Returns how far each storey moved, [dx, dy] in cm.
   function stackStoreys(polys) {
     let below = null;
+    const moved = polys.map(() => [0, 0]);
     polys.forEach((rooms, i) => {
       if (!rooms.length) return;
       const pts = rooms.flat();
@@ -229,17 +239,19 @@
         const dy = settleOn(box.y0, box.y1, below.y0, below.y1);
         if (dx || dy) {
           polys[i] = rooms.map((ps) => ps.map((p) => [p[0] + dx, p[1] + dy]));
+          moved[i] = [dx, dy];
           box = { x0: box.x0 + dx, x1: box.x1 + dx, y0: box.y0 + dy, y1: box.y1 + dy };
         }
       }
       below = box;
     });
+    return moved;
   }
 
   function planForm(floors, front) {
     const turn = { bottom: (p) => [p[0], p[1]], top: (p) => [-p[0], -p[1]], left: (p) => [p[1], -p[0]], right: (p) => [-p[1], p[0]] }[front];
     const polys = floors.map((l) => (l.rooms || []).filter((r) => (r.points || []).length >= 3).map((r) => r.points.map(turn)));
-    stackStoreys(polys);
+    const moved = stackStoreys(polys);
     const all = polys.flat(2);
     if (!all.length) return null;
     const cols = gridLines(all.map((p) => p[0]));
@@ -278,6 +290,31 @@
           roofs: maskRects(open).map(box),
           runs: maskRuns(mask).map((run) => ({ a: [X(run.a[0]), Z(run.a[1])], b: [X(run.b[0]), Z(run.b[1])], n: run.n })),
         };
+      }).map((f, i) => {
+        // The doors and windows of the floor plan that sit in an outer wall, on that wall of the house
+        f.openings = [];
+        for (const o of (floors[i] && floors[i].openings) || []) {
+          if (o.type !== 'window' && o.type !== 'door') continue;
+          const p = turn([o.x, o.y]);
+          const x = (p[0] + moved[i][0] - cx) / 100; const z = (p[1] + moved[i][1] - cz) / 100;
+          let best = null;
+          for (const r of f.runs) {
+            const along = r.n[0] === 0;
+            const off = along ? Math.abs(z - r.a[1]) : Math.abs(x - r.a[0]);
+            const lo = along ? Math.min(r.a[0], r.b[0]) : Math.min(r.a[1], r.b[1]);
+            const hi = along ? Math.max(r.a[0], r.b[0]) : Math.max(r.a[1], r.b[1]);
+            const at = along ? x : z;
+            if (off > 0.45 || at < lo - 0.1 || at > hi + 0.1) continue;
+            if (!best || off < best.off) best = { off, x: along ? x : r.a[0], z: along ? r.a[1] : z, n: r.n };
+          }
+          if (!best) continue;
+          const door = o.type === 'door';
+          const sill = door ? 0 : (o.sill != null ? o.sill : 90) / 100;
+          const top = (door ? o.height || 210 : o.top || 210) / 100;
+          if (top - sill < 0.3) continue;
+          f.openings.push({ door, x: best.x, z: best.z, n: best.n, w: Math.max(0.4, Math.min(6, (o.width || 90) / 100)), sill, top });
+        }
+        return f;
       }),
     };
   }
@@ -302,23 +339,28 @@
     if (!w) { w = 9; d = 9; }
     // The view shows the wider side at the front.
     if (d > w * 1.4) { const t = w; w = d; d = t; }
-    let base = 0;
+    const set = settings(plan);
+    // A flat stands on the storeys of the block below it, and has more storeys above it
+    const lift = set.flatFloor * 3;
+    const above = set.flatAbove * 3;
+    let base = lift;
     const out = (floors.length ? floors : [{ id: null, name: '', wallHeight: 260 }]).map((l) => {
       const height = clamp((l.wallHeight || 260) / 100, 2.2, 4, 2.6) + 0.3; // with the floor between storeys
       const f = { levelId: l.id, name: l.name, base, height };
       base += height;
       return f;
     });
-    const set = settings(plan);
     const form = set.form === 'plan' && floors.length ? planForm(floors, set.front) : null;
     if (form && form.w <= 40 && form.d <= 40) {
-      return { width: form.w, depth: form.d, floors: out, eaves: base, attic: attic ? { levelId: attic.id, name: attic.name } : null, form };
+      return { width: form.w, depth: form.d, floors: out, eaves: base, lift, above, attic: attic ? { levelId: attic.id, name: attic.name } : null, form };
     }
     return {
       width: clamp(w, 5, 18, 9),
       depth: clamp(d, 5, 14, 9),
       floors: out,
       eaves: base,
+      lift,
+      above,
       attic: attic ? { levelId: attic.id, name: attic.name } : null,
     };
   }
@@ -326,9 +368,9 @@
   /** The side of the house with the carport or driveway: carport ('none', 'left', 'right') and cs (-1 left, 1 right). */
   function freeSide(set) {
     let carport = set.carport;
-    if (set.type === 'semi' && carport === set.neighbour) carport = carport === 'left' ? 'right' : 'left';
-    if (set.type === 'terraced') carport = 'none';
-    const cs = carport === 'left' || (carport === 'none' && set.type === 'semi' && set.neighbour === 'right') ? -1 : 1;
+    if (set.oneSide && carport === set.neighbour) carport = carport === 'left' ? 'right' : 'left';
+    if (set.between) carport = 'none';
+    const cs = carport === 'left' || (carport === 'none' && set.oneSide && set.neighbour === 'right') ? -1 : 1;
     return { carport, cs };
   }
 
@@ -372,7 +414,7 @@
     const sh = shape(plan);
     const W = sh.width; const D = sh.depth;
     const { carport, cs } = freeSide(set);
-    const built = (s) => set.type === 'terraced' || (set.type === 'semi' && set.neighbour === (s < 0 ? 'left' : 'right'));
+    const built = (s) => set.between || (set.oneSide && set.neighbour === (s < 0 ? 'left' : 'right'));
     let side = W / 2 + 6.5;
     const buildings = [];
     const rear = [];
@@ -640,12 +682,14 @@
     const T = o.texts || {};
     const e = o.energy || {};
     const present = e.present || {};
-    const W = sh.width; const D = sh.depth; const E = sh.eaves;
+    const W = sh.width; const D = sh.depth;
+    // E: where the roof starts; for a flat that is the top of the block, above the storeys of the flat
+    const E = sh.eaves + (sh.above || 0);
     let carport = set.carport;
-    if (set.type === 'semi' && carport === set.neighbour) carport = carport === 'left' ? 'right' : 'left';
-    if (set.type === 'terraced') carport = 'none';
+    if (set.oneSide && carport === set.neighbour) carport = carport === 'left' ? 'right' : 'left';
+    if (set.between) carport = 'none';
     // Seen from the carport side: mirror x when the carport is on the left
-    const sx = carport === 'left' || (carport === 'none' && set.type === 'semi' && set.neighbour === 'right') ? -1 : 1;
+    const sx = carport === 'left' || (carport === 'none' && set.oneSide && set.neighbour === 'right') ? -1 : 1;
     const view = [sx, 1.2, 1];
     const faces = [];
     const face = (pts, fill, center, extra) => faces.push(Object.assign({ pts, fill, center }, extra || {}));
@@ -659,11 +703,16 @@
     };
 
     // Neighbours as plain blocks
-    const sides = set.type === 'semi' ? [set.neighbour] : set.type === 'terraced' ? ['left', 'right'] : [];
+    const sides = set.oneSide ? [set.neighbour] : set.between ? ['left', 'right'] : [];
     for (const side of sides) {
       const s = side === 'left' ? -1 : 1;
       boxFaces(s * W - W / 2, s * W + W / 2, 0, E, -D / 2, D / 2, t.neighbour, t.neighbour, { opacity: 0.6 });
+      // the row a corner house ends goes on
+      if (set.type === 'corner') boxFaces(s * 2 * W - W / 2, s * 2 * W + W / 2, 0, E, -D / 2, D / 2, t.neighbour, t.neighbour, { opacity: 0.45 });
     }
+    // A flat: the storeys of the block below and above it, in the same walls
+    if (sh.lift) boxFaces(-W / 2, W / 2, 0, sh.lift, -D / 2, D / 2, t.neighbour, t.neighbour);
+    if (sh.above) boxFaces(-W / 2, W / 2, sh.eaves, E, -D / 2, D / 2, t.neighbour, t.neighbour);
     // Garages and sheds, each to tap like a storey
     for (const b of yard(plan).buildings) {
       const pick = { pick: 'level', id: b.levelId, levelName: b.name };

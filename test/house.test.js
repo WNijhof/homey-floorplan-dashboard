@@ -330,3 +330,40 @@ test('a garage and a shed stand in the garden, not on top of the house or each o
   assert.ok(house.yard(plan).buildings.every((b) => b.place === 'back'));
   assert.ok(house.drawing(plan, {}).svg.includes('data-id="gar"'), 'the drawing has the garage to tap');
 });
+
+test('a corner house has one neighbour side, a flat stands in a block with storeys below and above', () => {
+  const rooms = [{ id: 'r', points: [[0, 0], [900, 0], [900, 800], [0, 800]] }];
+  const plan = { levels: [{ id: 'g', name: 'Begane grond', rooms }], house: { type: 'corner', neighbour: 'right', carport: 'right' } };
+  let s = house.settings(plan);
+  assert.ok(s.oneSide && !s.between);
+  assert.deepStrictEqual(house.freeSide(s), { carport: 'left', cs: -1 }, 'the carport goes on the free side');
+  assert.ok(house.drawing(plan, {}).svg.length > 0);
+  plan.house = { type: 'flat', flatFloor: 3, flatAbove: 2, roof: 'gable', carport: 'left' };
+  s = house.settings(plan);
+  assert.ok(s.between && s.roof === 'flat' && s.flatFloor === 3 && s.flatAbove === 2);
+  assert.strictEqual(house.freeSide(s).carport, 'none');
+  const sh = house.shape(plan);
+  assert.strictEqual(sh.lift, 9);
+  assert.strictEqual(sh.above, 6);
+  assert.strictEqual(sh.floors[0].base, 9, 'the flat starts on the third storey');
+  assert.ok(house.drawing(plan, {}).svg.includes('data-house="level"'));
+  // other types keep the flat fields at zero
+  plan.house = { type: 'detached', flatFloor: 4 };
+  assert.strictEqual(house.shape(plan).lift, 0);
+});
+
+test('with the form of the floor plan, its outer doors and windows sit in the walls of the house', () => {
+  const rooms = [{ id: 'r', points: [[0, 0], [1000, 0], [1000, 800], [0, 800]] }];
+  const openings = [
+    { id: 'w1', type: 'window', x: 300, y: 800, width: 200, sill: 40, top: 220 }, // front wall
+    { id: 'd1', type: 'door', x: 1000, y: 400, width: 90 }, // right side
+    { id: 'in', type: 'door', x: 500, y: 400, width: 80 }, // inside: not on the facade
+  ];
+  const plan = { levels: [{ id: 'g', name: 'Begane grond', rooms, openings }], house: { form: 'plan' } };
+  const f = house.shape(plan).form.floors[0];
+  assert.strictEqual(f.openings.length, 2);
+  const w = f.openings.find((o) => !o.door);
+  assert.deepStrictEqual([w.x, w.z, w.n, w.w, w.sill, w.top], [-2, 4, [0, 1], 2, 0.4, 2.2]);
+  const d = f.openings.find((o) => o.door);
+  assert.deepStrictEqual([d.x, d.z, d.n], [5, 0, [1, 0]]);
+});

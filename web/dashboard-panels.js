@@ -31,7 +31,8 @@
   var core = window.FloorplanCore;
   var esc = function (s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); };
   var DAYS = ['mon', 'tue', 'wed', 'thu', 'fri', 'sat', 'sun'];
-  var IDLE_VACUUM = /^(docked|charging|stopped|idle|paused)$/;
+  // Only a state that really means cleaning shows the chip; an unknown or error state of some device does not
+  var BUSY_VACUUM = /^(cleaning|spot_cleaning)$/;
   var state = { open: null, listTab: 'shopping', lists: null, advice: [], people: [], variables: [], html: {} };
 
   function devices() {
@@ -351,7 +352,7 @@
       if (a && a.state !== 'disarmed') out.push({ cls: 'warn', icon: '🛡', text: a.state === 'armed' ? T.alarmOn : T.alarmPartial, x: 'alarm' });
       vacuums().forEach(function (d) {
         var s = d.caps.vacuumcleaner_state;
-        if (s ? !IDLE_VACUUM.test(s) : d.caps.onoff === true) out.push({ icon: '🧹', text: T.vacuumBusy, x: 'vacuum' });
+        if (s ? BUSY_VACUUM.test(s) : d.caps.onoff === true) out.push({ icon: '🧹', text: T.vacuumBusy, x: 'vacuum' });
       });
       state.advice.slice(0, 2).forEach(function (i) {
         out.push({ cls: i.id === 'dear' ? 'warn' : i.id === 'cheapAt' ? '' : 'good', icon: i.id === 'sunTomorrow' ? '☀' : '⚡', text: adviceText(i), energy: true });

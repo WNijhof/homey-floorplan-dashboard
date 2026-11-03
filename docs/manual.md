@@ -19,16 +19,18 @@ You can look around without installing anything: [the demo](https://wnijhof.gith
 The left bar holds the tools: Select, Room, Walls, Doors, Windows, Open wall, Furniture, Devices, Measure, Picture, Calendar and House.
 
 - Rooms: drag a rectangle. Drag the corners to change the shape. For an L-shape, pull a blue plus on the edge, or choose **Make L-shaped**. Alt-click a corner to remove it. A room without a name gets no label; to keep a room's name off the plan, such as for a built-in cupboard, untick **Show the name on the plan**.
-- Doors and windows go on a wall.
-- Furniture comes from a catalogue. Near a wall it turns its back to the wall by itself; use the turn buttons to adjust it.
+- Doors and windows go on a wall. For a window you set its bottom and top (for a tall window or a French door), for a door its height. Link a contact sensor, or a switch (a virtual one too), and the door or window shows open while it is on.
+- Half-high wall, fence or balcony: draw a free wall with **Walls**, fill in a height and choose wall, fence or glass at **Made of**.
+- Furniture comes from a catalogue. A colour you choose goes on the main part of the piece, such as the fabric of a sofa or the top of a table. A TV on the wall (without a stand) is under Media as **Wall TV**. Near a wall it turns its back to the wall by itself; use the turn buttons to adjust it.
 - Stairs: select quarter-turn or spiral stairs and choose **Mirror the stairs** to make the turn go the other way.
 - Speakers: select a speaker and choose a box under **Shown as**. It then stands as a model on the plan and in 3D.
 - Open kitchen or passage: choose **Open wall** and click the wall between two rooms. Choose the width or **Open the whole wall**. Both rooms keep their own name and temperature.
 - Curved wall: select a free wall and choose one of the curve buttons. To curve a room edge, add corners with the blue plusses.
 - Order of the levels: click an empty spot beside the plan and choose **Move level down** or **Move level up**.
 - Several spots on one switch: select the device and choose **Place this device again**, or copy and paste it.
-- Shape of the 3D house: under **House**, choose **Simple block** or **Follows the floor plan** at **Shape of the house**. With the real shape the walls follow your rooms, extensions included. Storeys stand on each other by themselves, also when you moved a level in the editor. Choose which side is the front as well. The roof lies on the biggest rectangular part, the other parts get a flat roof, and the windows are spread evenly.
+- Shape of the 3D house: under **House**, choose **Simple block** or **Follows the floor plan** at **Shape of the house**. With the real shape the walls follow your rooms, extensions included. Storeys stand on each other by themselves, also when you moved a level in the editor. Choose which side is the front as well. The roof lies on the biggest rectangular part, the other parts get a flat roof. The doors and windows in the outer walls of your floor plan sit at the same place in the facade; without drawn windows they are spread evenly.
 - Drag devices to their place. For lamps you choose the kind: ceiling, pendant, wall, floor or table lamp.
+- A TV from Homey hangs on the wall as a flat TV; its screen lights up when it is on, and a tap turns it on or off.
 - A thermostat or air conditioner can look like a wall thermostat, a radiator valve or a fan coil unit: select it and choose under **Shown as**.
 - A switch with more buttons (in Homey for example onoff.2) shows each extra button as a device of its own in the list, with the number or name of that button after it. That way you link a lamp to the button that switches it.
 - Starting from a picture or PDF: set the scale by measuring one known length. The editor recognises walls, rooms, doors and windows, also where walls run at an angle. This happens in your browser; nothing is sent anywhere. Check the result: curved walls are not recognised and an unclear drawing can give mistakes.
@@ -41,7 +43,7 @@ Handy: Ctrl+C and Ctrl+V copy and paste, Delete removes, and Space with dragging
 
 Under **House** you set how your home looks from outside.
 
-- Type: detached, semi-detached or terraced.
+- Type: detached, semi-detached, corner house, terraced or flat (apartment). For a flat you choose the storey it is on and how many storeys the block has above it; it then stands in a block with neighbours on both sides and a flat roof.
 - Roof, ridge direction, pitch and the direction of the front. That direction is used for the sun and the solar forecast.
 - Facade: dark plaster, white plaster or brick.
 - Around the house: garden, path and driveway, or nothing for a calm view.

@@ -50,3 +50,10 @@ test('a fan coil unit is a climate model, and there is a dishwasher', () => {
   const parts = core.furnitureParts({ type: 'own-dishwasher', w: 60, d: 60, h: 85 });
   assert.ok(parts.length === 2 && parts.some((p) => p.tone === 'dark'));
 });
+
+test('a TV from Homey hangs on the wall as a flat TV, which is also in the catalogue', () => {
+  const tv = MODELS.get(MODELS.DEFAULT_TV);
+  assert.ok(tv && tv.fixture === 'tv' && tv.mount === 'wall');
+  assert.deepStrictEqual(MODELS.tvs().map((m) => m.id), ['fx-tv']);
+  assert.strictEqual(core.deviceFixture({}, { id: 't', cls: 'tv', caps: { onoff: false } }).id, 'fx-tv');
+});

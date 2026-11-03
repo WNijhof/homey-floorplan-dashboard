@@ -22,7 +22,7 @@
       device: 'Device', shape: 'Shape', auto: 'Automatic', mount: 'Sits', ceiling: 'Ceiling', wall: 'Wall', floor: 'Floor',
       reach: 'Light reach (cm)', showValue: 'Show value beside it', label: 'Label',
       furniture: 'Furniture', width: 'Width', depth: 'Depth', height: 'Height', elevation: 'Above the floor', rotation: 'Rotation (°)', colour: 'Colour',
-      door: 'Door', window: 'Window', passage: 'Open wall', passageNote: 'Click on a wall to open it up, such as between an open kitchen and the living room. Both rooms stay rooms of their own, with their own name and temperature. Choose the width in the panel or open the whole wall.', wholeWall: 'Open the whole wall', type: 'Type', flipSwing: 'Flip swing', flipHinge: 'Flip hinge', shows: 'Shows (linked devices)', noLinkable: 'No contact sensors, locks or covers found.',
+      door: 'Door', window: 'Window', passage: 'Open wall', passageNote: 'Click on a wall to open it up, such as between an open kitchen and the living room. Both rooms stay rooms of their own, with their own name and temperature. Choose the width in the panel or open the whole wall.', wholeWall: 'Open the whole wall', type: 'Type', flipSwing: 'Flip swing', flipHinge: 'Flip hinge', shows: 'Shows (linked devices)', noLinkable: 'No contact sensors, locks, covers or switches found.', switchNote: 'A switch, a virtual one too, shows the door or window open while it is on.', sillHeight: 'Bottom of the window (cm)', topHeight: 'Top of the window (cm)', doorHeight: 'Height (cm)', freeWallHeight: 'Height (cm, empty: up to the ceiling)', wallStyle: 'Made of', styleWall: 'Wall', styleFence: 'Fence', styleGlass: 'Glass (balcony)', lowWallNote: 'A lower wall, a fence or a glass balustrade, for a balcony or a half-high wall.',
       freeWall: 'Wall', bendLeft: 'Curve one way', bendRight: 'Curve the other way', bendNote: 'A curved wall is made of short straight pieces. Undo takes it back.', placeAgain: 'Place this device again', placeAgainNote: 'Handy for several spots on one switch: every copy switches the same device.', levelLower: 'Move level down', levelHigher: 'Move level up', length: 'Length (cm)', thickness: 'Thickness (cm)',
       catalogue: 'Pieces near a wall turn to face it (Shift: place freely). R rotates 15°.',
       devices: 'Devices', search: 'Search devices', placeAll: 'Place all', unplaced: 'Not on the plan yet', elsewhere: 'Elsewhere',
@@ -68,7 +68,7 @@
       photo: 'Own photo', photoNote: 'Use a photo of your house instead of the 3D house. It stays in your Homey and is never part of a problem report.', photoPick: 'Choose a photo', photoReplace: 'Other photo', photoRemove: 'Remove photo',
       photoAreas: 'Draw what can be tapped', photoAreasNote: 'Choose a part and click its corners on the photo. Click the first corner again, or press Enter, to finish; Esc stops.', drawArea: 'Draw', redrawArea: 'Again', drawingArea: 'Drawing…', partHouse: 'The whole house',
       house: 'The house from outside', houseNote: 'The dashboard opens on the whole house. It is the same house for everyone, set up to look like yours: tap a storey to go inside. Parts such as solar panels or a car appear when Homey has such a device (Automatic).',
-      houseType: 'House', detached: 'Detached', semi: 'Semi-detached', terraced: 'Terraced', neighbourSide: 'Neighbours on the', left: 'Left', right: 'Right',
+      houseType: 'House', detached: 'Detached', semi: 'Semi-detached', terraced: 'Terraced', corner: 'Corner house', flatHome: 'Flat (apartment)', flatFloor: 'Storey of the flat (0 = ground floor)', flatAbove: 'Storeys of the block above it', flatNote: 'The flat stands in a block with neighbours on both sides and a flat roof on top.', neighbourSide: 'Neighbours on the', left: 'Left', right: 'Right',
       roof: 'Roof', gable: 'Gable roof', hip: 'Hip roof', flat: 'Flat roof', ridge: 'Ridge', ridgeWidth: 'Along the front', ridgeDepth: 'Front to back', pitch: 'Roof pitch (°)',
       gas: 'Gas', gasToday: 'Gas today',
       houseForm: 'Shape of the house', formSimple: 'Simple block', formPlan: 'Follows the floor plan', formNote: 'The walls follow the rooms you drew, storey by storey, with extensions and all. The roof lies on the biggest rectangular part; the other parts get a flat roof. Windows are placed evenly and are not your real windows. Choose the front of the plan below.', facing: 'The front faces', dormer: 'Dormer at the back', extension: 'Extension', back: 'At the back', side: 'At the side', carport: 'Carport',
@@ -92,7 +92,7 @@
       device: 'Apparaat', shape: 'Vorm', auto: 'Automatisch', mount: 'Zit', ceiling: 'Plafond', wall: 'Muur', floor: 'Vloer',
       reach: 'Bereik van het licht (cm)', showValue: 'Waarde ernaast tonen', label: 'Label',
       furniture: 'Meubels', width: 'Breedte', depth: 'Diepte', height: 'Hoogte', elevation: 'Boven de vloer', rotation: 'Draaiing (°)', colour: 'Kleur',
-      door: 'Deur', window: 'Raam', passage: 'Open muur', passageNote: 'Klik op een muur om hem open te maken, zoals tussen een open keuken en de woonkamer. Beide kamers blijven eigen kamers, met hun eigen naam en temperatuur. Kies de breedte in het paneel of maak de hele muur open.', wholeWall: 'Hele muur open', type: 'Soort', flipSwing: 'Draairichting omkeren', flipHinge: 'Scharnier omkeren', shows: 'Toont (gekoppelde apparaten)', noLinkable: 'Geen contactsensoren, sloten of zonwering gevonden.',
+      door: 'Deur', window: 'Raam', passage: 'Open muur', passageNote: 'Klik op een muur om hem open te maken, zoals tussen een open keuken en de woonkamer. Beide kamers blijven eigen kamers, met hun eigen naam en temperatuur. Kies de breedte in het paneel of maak de hele muur open.', wholeWall: 'Hele muur open', type: 'Soort', flipSwing: 'Draairichting omkeren', flipHinge: 'Scharnier omkeren', shows: 'Toont (gekoppelde apparaten)', noLinkable: 'Geen contactsensoren, sloten, zonwering of schakelaars gevonden.', switchNote: 'Een schakelaar, ook een virtuele, toont de deur of het raam open zolang hij aan staat.', sillHeight: 'Onderkant raam (cm)', topHeight: 'Bovenkant raam (cm)', doorHeight: 'Hoogte (cm)', freeWallHeight: 'Hoogte (cm, leeg: tot het plafond)', wallStyle: 'Gemaakt van', styleWall: 'Muur', styleFence: 'Hek', styleGlass: 'Glas (balkon)', lowWallNote: 'Een lagere muur, een hek of een glazen balustrade, voor een balkon of een halfhoge muur.',
       freeWall: 'Muur', bendLeft: 'Buig de ene kant op', bendRight: 'Buig de andere kant op', bendNote: 'Een gebogen muur bestaat uit korte rechte stukjes. Met Ongedaan maken draai je het terug.', placeAgain: 'Dit apparaat nog een keer plaatsen', placeAgainNote: 'Handig voor meerdere spots op één schakelaar: elke kopie schakelt hetzelfde apparaat.', levelLower: 'Verdieping lager', levelHigher: 'Verdieping hoger', length: 'Lengte (cm)', thickness: 'Dikte (cm)',
       catalogue: 'Bij een muur draait het er vanzelf naartoe (Shift: vrij plaatsen). R draait 15°.',
       devices: 'Apparaten', search: 'Apparaat zoeken', placeAll: 'Alles plaatsen', unplaced: 'Nog niet op de plattegrond', elsewhere: 'Elders',
@@ -138,7 +138,7 @@
       photo: 'Eigen foto', photoNote: 'Gebruik een foto van je huis in plaats van het 3D-huis. Hij blijft in je Homey en gaat nooit mee in een probleemrapport.', photoPick: 'Foto kiezen', photoReplace: 'Andere foto', photoRemove: 'Foto verwijderen',
       photoAreas: 'Teken waar je op kunt tikken', photoAreasNote: 'Kies een onderdeel en klik de hoeken aan op de foto. Klik de eerste hoek nog eens, of druk op Enter, om af te ronden; Esc stopt.', drawArea: 'Tekenen', redrawArea: 'Opnieuw', drawingArea: 'Bezig…', partHouse: 'Het hele huis',
       house: 'Het huis van buiten', houseNote: "Het dashboard opent op het hele huis. Het is voor iedereen hetzelfde huis, zo ingesteld dat het op het jouwe lijkt: tik op een verdieping om naar binnen te gaan. Onderdelen zoals zonnepanelen of een auto verschijnen als Homey zo'n apparaat heeft (Automatisch).",
-      houseType: 'Woning', detached: 'Vrijstaand', semi: 'Twee-onder-een-kap', terraced: 'Tussenwoning', neighbourSide: 'Buren aan de', left: 'Linkerkant', right: 'Rechterkant',
+      houseType: 'Woning', detached: 'Vrijstaand', semi: 'Twee-onder-een-kap', terraced: 'Tussenwoning', corner: 'Hoekwoning', flatHome: 'Appartement (flat)', flatFloor: 'Verdieping van het appartement (0 = begane grond)', flatAbove: 'Verdiepingen van het blok erboven', flatNote: 'Het appartement staat in een blok met buren aan beide kanten en een plat dak erop.', neighbourSide: 'Buren aan de', left: 'Linkerkant', right: 'Rechterkant',
       roof: 'Dak', gable: 'Zadeldak', hip: 'Schilddak', flat: 'Plat dak', ridge: 'Nok', ridgeWidth: 'Langs de voorkant', ridgeDepth: 'Van voor naar achter', pitch: 'Dakhelling (°)',
       gas: 'Gas', gasToday: 'Gas vandaag',
       tips: { 'level-add': 'Verdieping toevoegen', undo: 'Ongedaan maken (Ctrl+Z)', redo: 'Opnieuw doen (Ctrl+Y)', snap: 'Uitlijnen (met Shift tijdelijk andersom)', 'toggle-grid': 'Raster', 'toggle-furniture': 'Meubels', 'lock-layout': 'Kamers en muren vastzetten', turn: 'Draaien', 'zoom-in': 'Inzoomen', 'zoom-out': 'Uitzoomen', 'zoom-fit': 'Hele verdieping tonen' },
@@ -1467,7 +1467,8 @@
     const mounts = [{ id: 'ceiling', name: T.ceiling }, { id: 'wall', name: T.wall }, { id: 'floor', name: T.floor }];
     const isLight = core.isLampItem(item, dev);
     const isSpeaker = !isLight && dev && core.deviceKind(dev) === 'speaker';
-    const climate = !isLight && dev && (core.deviceKind(dev) === 'thermostat' || isSpeaker) ? core.deviceFixture(item, dev) : undefined;
+    const isTv = !isLight && dev && core.deviceKind(dev) === 'tv';
+    const climate = !isLight && dev && (core.deviceKind(dev) === 'thermostat' || isSpeaker || isTv) ? core.deviceFixture(item, dev) : undefined;
     // Anything that switches (a group of lamps, a plug with a lamp on it) can be shown as a lamp.
     const switchable = dev && ('onoff' in dev.caps || 'dim' in dev.caps);
     const lampToggle = !isLight && switchable
@@ -1479,7 +1480,7 @@
     const badgeTile = `<button type="button" class="ed-tile${climate === null ? ' on' : ''}" data-action="pick-fixture" data-type="none"><svg viewBox="0 0 100 75"><circle cx="50" cy="37" r="16" fill="var(--ed-accent)"/><circle cx="50" cy="37" r="6" fill="#fff"/></svg><span>${T.badgeOnly}</span></button>`;
     const fixtures = isLight
       ? `<h3>${T.lampType}</h3><div class="ed-grid">${MODELS.lights().map(tile).join('')}</div>`
-      : climate !== undefined ? `<h3>${T.model}</h3><div class="ed-grid">${(isSpeaker ? MODELS.speakers() : MODELS.climate()).map(tile).join('')}${badgeTile}</div>` : '';
+      : climate !== undefined ? `<h3>${T.model}</h3><div class="ed-grid">${(isSpeaker ? MODELS.speakers() : isTv ? MODELS.tvs() : MODELS.climate()).map(tile).join('')}${badgeTile}</div>` : '';
     const sizes = fixture
       ? `<div class="ed-three">${field(T.width, input('sel.w', item.w || fixture.w, 'number'))}${field(T.depth, input('sel.d', item.d || fixture.d, 'number'))}${field(fixture.fixture === 'pendant' ? T.drop : T.height, input('sel.h', item.h || fixture.h, 'number'))}</div>
       ${fixture.mount !== 'ceiling' ? field(fixture.mount === 'surface' ? T.standsOn : T.elevation, input('sel.z', item.z != null ? item.z : fixture.z, 'number')) : ''}
@@ -1516,8 +1517,10 @@
   }
 
   function openingPanel(o) {
-    const linkable = [...S.devices.values()].filter((d) => ['alarm_contact', 'locked', 'windowcoverings_set', 'windowcoverings_state'].some((c) => c in d.caps))
-      .sort((a, b) => a.name.localeCompare(b.name));
+    // contact sensors, locks, covers, and switches that are no lamp (a virtual switch for a door without a sensor)
+    const sensorish = (d) => ['alarm_contact', 'locked', 'windowcoverings_set', 'windowcoverings_state'].some((c) => c in d.caps);
+    const linkable = [...S.devices.values()].filter((d) => sensorish(d) || ('onoff' in d.caps && core.deviceKind(d) !== 'light' && core.deviceKind(d) !== 'tv'))
+      .sort((a, b) => (sensorish(b) - sensorish(a)) || a.name.localeCompare(b.name));
     const list = linkable.length
       ? linkable.map((d) => `<label class="ed-check"><input type="checkbox" data-link="${esc(d.id)}"${(o.devices || []).includes(d.id) ? ' checked' : ''}>${esc(d.name)} <span class="ed-note" style="margin:0">${esc(zoneName(d.zone))}</span></label>`).join('')
       : `<p class="ed-note">${T.noLinkable}</p>`;
@@ -1532,8 +1535,9 @@
     return `<h2>${o.type === 'door' ? T.door : T.window}</h2>
       ${field(T.type, `<select data-path="sel.type" data-rerender="1">${options(kinds, o.type)}</select>`)}
       ${field(T.width, input('sel.width', Math.round(o.width), 'number'))}
+      ${o.type === 'window' ? `<div class="ed-two">${field(T.sillHeight, input('sel.sill', o.sill != null ? o.sill : core.DEFAULTS.windowSill, 'number'))}${field(T.topHeight, input('sel.top', o.top || core.DEFAULTS.windowTop, 'number'))}</div>` : field(T.doorHeight, input('sel.height', o.height || core.DEFAULTS.doorHeight, 'number'))}
       ${o.type === 'door' ? `<div class="ed-row-btns"><button type="button" class="ed-btn" data-action="flip-swing">${T.flipSwing}</button><button type="button" class="ed-btn" data-action="flip-hinge">${T.flipHinge}</button></div>` : `<div class="ed-row-btns"><button type="button" class="ed-btn" data-action="flip-blind">${T.flipSwing}</button></div>`}
-      <h3>${T.shows}</h3>${list}
+      <h3>${T.shows}</h3>${list}<p class="ed-note">${T.switchNote}</p>
       <div class="ed-row-btns">${deleteBtn('sel')}</div>`;
   }
 
@@ -1544,6 +1548,7 @@
     return `<h2>${T.freeWall}</h2>
       ${field(T.length, `<input type="number" data-action-input="wall-length" value="${Math.round(G.dist(w.a, w.b))}">`)}
       ${field(T.thickness, input('sel.t', w.t || level().wallThickness, 'number'))}
+      <div class="ed-two">${field(T.freeWallHeight, input('sel.height', w.height || '', 'number'))}${field(T.wallStyle, `<select data-path="sel.style">${options([{ id: 'fence', name: T.styleFence }, { id: 'glass', name: T.styleGlass }], w.style, T.styleWall)}</select>`)}</div><p class="ed-note">${T.lowWallNote}</p>
       <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="wall-h">↔ ${T.horizontal}</button><button type="button" class="ed-btn" data-action="wall-v">↕ ${T.vertical}</button></div>
       <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="wall-align">⇹ ${T.align}</button></div>
       <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="wall-bend" data-side="1">⌒ ${T.bendLeft}</button><button type="button" class="ed-btn" data-action="wall-bend" data-side="-1">⌣ ${T.bendRight}</button></div><p class="ed-note">${T.bendNote}</p>
@@ -1563,6 +1568,7 @@
       strip: '<rect x="10" y="40" width="80" height="6" rx="3" fill="#ffe7a8" stroke="#e0b84f"/>',
       thermostat: '<rect x="34" y="14" width="32" height="44" rx="5" fill="#f4f3ef" stroke="#999"/><rect x="39" y="20" width="22" height="22" rx="2" fill="#1d2226"/><text x="50" y="35" font-size="9" font-weight="600" fill="#fff" text-anchor="middle">21°</text>',
       trv: '<rect x="12" y="28" width="36" height="18" rx="2" fill="#ddd" stroke="#bbb"/><circle cx="62" cy="37" r="14" fill="#f4f3ef" stroke="#999"/><circle cx="62" cy="37" r="7" fill="#2b2b2d"/>',
+      tv: '<rect x="10" y="14" width="80" height="47" rx="2" fill="#2b2b2d"/><rect x="13" y="17" width="74" height="41" fill="#4a6f9e"/>',
       fancoil: '<rect x="12" y="26" width="76" height="34" rx="3" fill="#f4f3ef" stroke="#999"/><rect x="16" y="22" width="68" height="5" rx="1" fill="#2b2b2d"/><rect x="18" y="50" width="64" height="4" fill="#2b2b2d"/>',
     };
     let body;
@@ -1832,12 +1838,13 @@
       ${photoSection(h)}
       <h3>${T.houseType}</h3>
       ${field(T.scene, sel('scene', h.scene, [['garden', T.sceneGarden], ['studio', T.sceneStudio]]))}
-      ${field(T.houseType, sel('type', h.type, [['detached', T.detached], ['semi', T.semi], ['terraced', T.terraced]]))}
-      ${h.type === 'semi' ? field(T.neighbourSide, sel('neighbour', h.neighbour, [['left', T.left], ['right', T.right]])) : ''}
+      ${field(T.houseType, sel('type', h.type, [['detached', T.detached], ['semi', T.semi], ['corner', T.corner], ['terraced', T.terraced], ['flat', T.flatHome]]))}
+      ${h.type === 'flat' ? `<p class="ed-note">${T.flatNote}</p>${field(T.flatFloor, `<input type="number" data-house="flatFloor" data-num="1" min="0" max="30" step="1" value="${h.flatFloor}">`)}${field(T.flatAbove, `<input type="number" data-house="flatAbove" data-num="1" min="0" max="30" step="1" value="${h.flatAbove}">`)}` : ''}
+      ${h.oneSide ? field(T.neighbourSide, sel('neighbour', h.neighbour, [['left', T.left], ['right', T.right]])) : ''}
       ${field(T.houseForm, sel('form', h.form, [['simple', T.formSimple], ['plan', T.formPlan]]))}
       ${h.form === 'plan' ? `<p class="ed-note">${T.formNote}</p>` : ''}
       ${field(T.front, sel('front', h.front, [['bottom', T.frontBottom], ['top', T.frontTop], ['left', T.frontLeft], ['right', T.frontRight]]))}
-      ${field(T.roof, sel('roof', h.roof, [['gable', T.gable], ['hip', T.hip], ['flat', T.flat]]))}
+      ${h.type === 'flat' ? '' : field(T.roof, sel('roof', h.roof, [['gable', T.gable], ['hip', T.hip], ['flat', T.flat]]))}
       ${h.roof !== 'flat' ? field(T.ridge, sel('ridge', h.ridge, [['width', T.ridgeWidth], ['depth', T.ridgeDepth]])) : ''}
       ${h.roof !== 'flat' ? field(T.pitch, `<input type="number" data-house="pitch" data-num="1" min="15" max="55" step="5" value="${h.pitch}">`) : ''}
       ${field(T.facing, sel('facing', facing, dirs))}
@@ -1847,7 +1854,7 @@
       ${field(T.doorColor, `<input type="color" data-house="door" value="${esc(h.door)}">`)}
       ${h.roof === 'gable' && h.ridge === 'width' ? `<label class="ed-check"><input type="checkbox" data-house="dormer" data-bool="1"${h.dormer ? ' checked' : ''}>${T.dormer}</label>` : ''}
       ${h.form === 'plan' ? '' : field(T.extension, sel('extension', h.extension, [['none', T.none], ['back', T.back], ['side', T.side]]))}
-      ${h.type !== 'terraced' ? field(T.carport, sel('carport', h.carport, [['none', T.none], ['left', T.left], ['right', T.right]])) : ''}
+      ${!h.between ? field(T.carport, sel('carport', h.carport, [['none', T.none], ['left', T.left], ['right', T.right]])) : ''}
       <h3>${T.outbuildings}</h3><p class="ed-note">${T.outbuildingsNote}</p>
       ${S.plan.levels.filter((l) => H.outbuildingKind(l.name)).map((l) => field(l.name, sel(`outbuildings.${l.id}`, h.outbuildings[l.id] || 'auto', [['auto', T.showAuto], ['side', T.besideHouse], ['back', T.atBack], ['off', T.showOff]]))).join('')}
       <h3>${T.houseParts}</h3>
@@ -1858,7 +1865,7 @@
       ${h.objects.solar.show !== 'off' ? field(T.kwp, `<input type="number" data-house="objects.solar.kwp" data-num="1" min="0" max="100" step="0.1" value="${h.objects.solar.kwp || ''}" placeholder="${esc(T.kwpAuto)}">`) : ''}
       ${field(T.partGrid, show('grid'))}
       ${field(T.partBattery, show('battery'))}
-      ${h.objects.battery.show !== 'off' && h.carport !== 'none' && h.type !== 'terraced' ? field(T.batteryPlace, sel('objects.battery.place', h.objects.battery.place, [['carport', T.underCarport], ['wall', T.againstWall]])) : ''}
+      ${h.objects.battery.show !== 'off' && h.carport !== 'none' && !h.between ? field(T.batteryPlace, sel('objects.battery.place', h.objects.battery.place, [['carport', T.underCarport], ['wall', T.againstWall]])) : ''}
       ${field(T.partCar, show('car'))}
       ${field(T.partHeatpump, show('heatpump'))}
       ${h.objects.heatpump.show !== 'off' && h.roof === 'flat' ? field(T.heatpumpPlace, sel('objects.heatpump.place', h.objects.heatpump.place, [['ground', T.besideHouse], ['roof', T.onFlatRoof]])) : ''}

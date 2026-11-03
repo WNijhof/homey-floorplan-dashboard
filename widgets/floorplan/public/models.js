@@ -171,6 +171,8 @@
   m('k:bathroomMirror', 'Spiegel', 'Mirror', 'bath', [60, 5, 80], { parts: 'box', mount: 'wall', z: 110 });
   // Audio and video
   m('k:televisionModern', 'Tv', 'TV', 'media', [145, 20, 90], { parts: 'tv', mount: 'surface', z: 50 });
+  // A flat TV on the wall, drawn in code; as a TV device from Homey its screen lights up when it is on.
+  m('fx:tv', 'Tv aan de muur', 'Wall TV', 'media', [140, 6, 82], { parts: 'tv', mount: 'wall', z: 110, fixture: 'tv' });
   m('k:televisionVintage', 'Tv, retro', 'Retro TV', 'media', [70, 50, 60], { parts: 'box', mount: 'surface', z: 50 });
   m('k:speaker', 'Speaker, staand', 'Floor speaker', 'media', [30, 30, 100], { parts: 'box' });
   m('k:speakerSmall', 'Speaker', 'Speaker', 'media', [20, 20, 30], { parts: 'box', mount: 'surface', z: 75 });
@@ -251,13 +253,16 @@
   const DEFAULT_FIXTURE = 'fx-ceiling';
   // And for a thermostat device.
   const DEFAULT_THERMOSTAT = 'fx-thermostat';
+  // And for a TV.
+  const DEFAULT_TV = 'fx-tv';
 
   return {
-    GROUPS, PACKS, DEFAULT_FIXTURE, DEFAULT_THERMOSTAT,
+    GROUPS, PACKS, DEFAULT_FIXTURE, DEFAULT_THERMOSTAT, DEFAULT_TV,
     list: () => LIST,
     get: (id) => BY_ID.get(id) || null,
     lights: () => LIST.filter((x) => x.light),
     climate: () => LIST.filter((x) => x.fixture === 'thermostat' || x.fixture === 'trv' || x.fixture === 'fancoil'),
     speakers: () => LIST.filter((x) => x.id === 'k-speaker' || x.id === 'k-speakerSmall'),
+    tvs: () => LIST.filter((x) => x.fixture === 'tv'),
   };
 }));

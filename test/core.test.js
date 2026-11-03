@@ -254,3 +254,25 @@ test('a sloping roof: the ceiling starts at the knee wall and rises to the full 
   const plan = { levels: [{ id: 'g', name: 'Begane grond', rooms: level.rooms }, Object.assign({}, level, { id: 'z', name: 'Tweede' })] };
   assert.strictEqual(require('../lib/shared/house-core').shape(plan).attic.levelId, 'z');
 });
+
+test('a door opens with its contact sensor, or else with a switch that is on', () => {
+  const contact = { id: 'c', caps: { alarm_contact: false } };
+  const sw = { id: 's', caps: { onoff: true } };
+  assert.strictEqual(core.openState([contact, sw]), false, 'the sensor wins');
+  assert.strictEqual(core.openState([sw]), true);
+  assert.strictEqual(core.openState([{ id: 's', caps: { onoff: false } }]), false);
+  assert.strictEqual(core.openState([{ id: 'l', caps: { locked: true, onoff: true } }]), null, 'a lock is no switch');
+  assert.strictEqual(core.openState([]), null);
+});
+
+test('a free wall can be lower than the storey, and be a fence or glass', () => {
+  const level = core.newLevel('Balkon');
+  level.walls = [{ id: 'w', a: [0, 0], b: [300, 0], height: 100, style: 'glass' }, { id: 'v', a: [0, 100], b: [300, 100], height: 900, style: 'brick' }];
+  const walls = core.levelWalls(level);
+  const low = walls.find((w) => w.id === 'w');
+  assert.strictEqual(low.style, 'glass');
+  assert.ok(core.wallPieces(low, [], level, true).every((p) => p.z1 === 100));
+  const high = walls.find((w) => w.id === 'v');
+  assert.strictEqual(high.style, undefined, 'unknown styles are a plain wall');
+  assert.ok(core.wallPieces(high, [], level, true).every((p) => p.z1 === level.wallHeight), 'never above the ceiling');
+});
