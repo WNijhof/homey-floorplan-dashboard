@@ -46,7 +46,7 @@
   function watts(w) { return w >= 1000 ? (w / 1000).toLocaleString(lang, { maximumFractionDigits: 1 }) + ' kW' : w + ' W'; }
   var guest = function () { return !!HomeyWeb.Homey.getSettings().guest; };
   var alarmDevices = function () { return find(function (d) { return 'homealarm_state' in d.caps; }); };
-  var vacuums = function () { return find(function (d) { return d.cls === 'vacuumcleaner' || 'vacuumcleaner_state' in d.caps; }); };
+  var vacuums = function () { return find(core.isVacuum); };
   // (a speaker's picture is its album cover, not a camera)
   var cameras = function () { return find(function (d) { return !!d.camera && !('speaker_playing' in d.caps); }); };
 

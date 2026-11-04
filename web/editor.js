@@ -17,7 +17,7 @@
       otherLevel: 'Other', roomsFromZones: 'Rooms from Homey', place: 'Place', allPlaced: 'Every zone already has a room on the plan.',
       plan: 'Plan', deleteLevel: 'Delete level', deletePlan: 'Delete plan', confirmAgain: 'Click again to confirm',
       startFromZones: 'Quick start from Homey zones', startBlank: 'Start blank', startNote: 'Your zones become levels and rooms with their devices in them, ready to drag into place. Then you set up the look of the house.',
-      room: 'Room', floorColour: 'Floor colour', themeColour: 'Theme colour', tempFrom: 'Temperature from', humFrom: 'Humidity from', showRoomLabel: 'Show the name on the plan', climate: 'Thermostat',
+      room: 'Room', floorColour: 'Floor colour', themeColour: 'Theme colour', tempFrom: 'Temperature from', humFrom: 'Humidity from', showRoomLabel: 'Show the name on the plan', roomWalls: 'Walls around this room', roomWallsNote: 'Off for one part of an open space (living room, dining room and kitchen as one), or when you draw the walls yourself.', climate: 'Thermostat',
       zoneAverage: 'Average of the zone', area: 'Area', delete: 'Delete',
       device: 'Device', shape: 'Shape', auto: 'Automatic', mount: 'Sits', ceiling: 'Ceiling', wall: 'Wall', floor: 'Floor',
       reach: 'Light reach (cm)', showValue: 'Show value beside it', label: 'Label',
@@ -75,7 +75,7 @@
       houseParts: 'On and around the house', showAuto: 'Automatic', showOn: 'Always', showOff: 'Never', panels: 'Number of panels (0: as many as fit)',
       batteryPlace: 'Battery stands', underCarport: 'Under the carport', againstWall: 'Against the wall', heatpumpPlace: 'Heat pump stands', besideHouse: 'Beside the house', onFlatRoof: 'On the flat roof', outbuildings: 'Garage and shed', outbuildingsNote: 'A level called Garage, Shed, Schuur or Tuinhuis stands as a building of its own in the garden of the 3D house. Tap it there to open it.', atBack: 'At the back of the garden',noHouse3d: 'This browser cannot show the house in 3D.',
       facade: 'Facade', brick: 'Red brick', darkbrick: 'Dark brick', yellowbrick: 'Yellow brick', plaster: 'White plaster', darkplaster: 'Dark plaster',
-      roofColor: 'Roof tiles', anthracite: 'Anthracite', red: 'Red', black: 'Black', white: 'White', frames: 'Window frames', doorColor: 'Front door',
+      roofColor: 'Roof tiles', anthracite: 'Anthracite', red: 'Red', black: 'Black', white: 'White', frames: 'Window frames', doorColor: 'Front door', doorAt: 'Place of the front door', doorAuto: 'Door drawn in the front wall', doorLeft: 'Left', doorLeftMid: 'Left of the middle', doorMiddle: 'Middle', doorRightMid: 'Right of the middle', doorRight: 'Right',
       solarLayout: 'Place of the panels', solarSunny: 'On the sunny side of the roof', solarBoth: 'On both roof halves (such as east-west)',
       kwp: 'Peak power for the forecast (kWp)', kwpAuto: 'from the panels (0.42 kWp each)',
       partSolar: 'Solar panels', partGrid: 'Grid connection', partBattery: 'Home battery', partCar: 'Car and charger', partHeatpump: 'Heat pump', partAirco: 'Air conditioner',
@@ -87,7 +87,7 @@
       otherLevel: 'Overig', roomsFromZones: 'Kamers uit Homey', place: 'Plaatsen', allPlaced: 'Elke zone heeft al een kamer op de plattegrond.',
       plan: 'Plattegrond', deleteLevel: 'Verdieping verwijderen', deletePlan: 'Plattegrond verwijderen', confirmAgain: 'Klik nogmaals om te bevestigen',
       startFromZones: 'Snelle start vanuit Homey-zones', startBlank: 'Leeg beginnen', startNote: 'Je zones worden verdiepingen en kamers met hun apparaten erin, klaar om op hun plek te slepen. Daarna stel je het uiterlijk van het huis in.',
-      room: 'Kamer', floorColour: 'Vloerkleur', themeColour: 'Themakleur', tempFrom: 'Temperatuur van', humFrom: 'Luchtvochtigheid van', showRoomLabel: 'Naam tonen op de plattegrond', climate: 'Thermostaat',
+      room: 'Kamer', floorColour: 'Vloerkleur', themeColour: 'Themakleur', tempFrom: 'Temperatuur van', humFrom: 'Luchtvochtigheid van', showRoomLabel: 'Naam tonen op de plattegrond', roomWalls: 'Muren om deze kamer', roomWallsNote: 'Zet uit voor een deel van een open ruimte (woonkamer, eetkamer en keuken als één geheel), of als je de muren zelf tekent.', climate: 'Thermostaat',
       zoneAverage: 'Gemiddelde van de zone', area: 'Oppervlakte', delete: 'Verwijderen',
       device: 'Apparaat', shape: 'Vorm', auto: 'Automatisch', mount: 'Zit', ceiling: 'Plafond', wall: 'Muur', floor: 'Vloer',
       reach: 'Bereik van het licht (cm)', showValue: 'Waarde ernaast tonen', label: 'Label',
@@ -146,7 +146,7 @@
       houseParts: 'Op en rond het huis', showAuto: 'Automatisch', showOn: 'Altijd', showOff: 'Nooit', panels: 'Aantal panelen (0: zoveel als past)',
       batteryPlace: 'Accu staat', underCarport: 'Onder de carport', againstWall: 'Tegen de muur', heatpumpPlace: 'Warmtepomp staat', besideHouse: 'Naast het huis', onFlatRoof: 'Op het platte dak', outbuildings: 'Garage en schuur', outbuildingsNote: 'Een verdieping met de naam Garage, Schuur, Tuinhuis of Berging staat als eigen gebouwtje in de tuin van het 3D-huis. Tik erop om hem te openen.', atBack: 'Achter in de tuin',noHouse3d: 'Deze browser kan het huis niet in 3D tonen.',
       facade: 'Gevel', brick: 'Rode baksteen', darkbrick: 'Donkere baksteen', yellowbrick: 'Gele baksteen', plaster: 'Wit stucwerk', darkplaster: 'Donker stucwerk',
-      roofColor: 'Dakpannen', anthracite: 'Antraciet', red: 'Rood', black: 'Zwart', white: 'Wit', frames: 'Kozijnen', doorColor: 'Voordeur',
+      roofColor: 'Dakpannen', anthracite: 'Antraciet', red: 'Rood', black: 'Zwart', white: 'Wit', frames: 'Kozijnen', doorColor: 'Voordeur', doorAt: 'Plek van de voordeur', doorAuto: 'Deur getekend in de voorgevel', doorLeft: 'Links', doorLeftMid: 'Links van het midden', doorMiddle: 'Midden', doorRightMid: 'Rechts van het midden', doorRight: 'Rechts',
       solarLayout: 'Plaats van de panelen', solarSunny: 'Op de zonnigste dakhelft', solarBoth: 'Op beide dakhelften (zoals oost-west)',
       kwp: 'Piekvermogen voor de verwachting (kWp)', kwpAuto: 'uit de panelen (0,42 kWp per stuk)',
       partSolar: 'Zonnepanelen', partGrid: 'Netaansluiting', partBattery: 'Thuisaccu', partCar: 'Auto en laadpaal', partHeatpump: 'Warmtepomp', partAirco: 'Airco',
@@ -1443,6 +1443,8 @@
     return `<h2>${T.room}</h2>
       ${field(T.name, input('sel.name', room.name))}
       <label class="ed-check"><input type="checkbox" data-path="sel.showLabel" data-bool="1"${room.showLabel !== false ? ' checked' : ''}>${T.showRoomLabel}</label>
+      <label class="ed-check"><input type="checkbox" data-path="sel.walls" data-bool="1"${room.walls !== false ? ' checked' : ''}>${T.roomWalls}</label>
+      <p class="ed-note">${T.roomWallsNote}</p>
       ${field(T.zone, `<select data-path="sel.zoneId" data-rerender="1">${options(zoneList, room.zoneId, T.none)}</select>`)}
       <p class="ed-note">${T.area}: ${area.toFixed(1)} m²</p>
       ${lockRow(room)}
@@ -1852,6 +1854,7 @@
       ${field(T.roofColor, sel('roofColor', h.roofColor, [['anthracite', T.anthracite], ['red', T.red], ['black', T.black]]))}
       ${field(T.frames, sel('frames', h.frames, [['anthracite', T.anthracite], ['white', T.white]]))}
       ${field(T.doorColor, `<input type="color" data-house="door" value="${esc(h.door)}">`)}
+      ${field(T.doorAt, sel('doorAt', h.doorAt, [['auto', T.doorAuto], ['left', T.doorLeft], ['leftmid', T.doorLeftMid], ['middle', T.doorMiddle], ['rightmid', T.doorRightMid], ['right', T.doorRight]]))}
       ${h.roof === 'gable' && h.ridge === 'width' ? `<label class="ed-check"><input type="checkbox" data-house="dormer" data-bool="1"${h.dormer ? ' checked' : ''}>${T.dormer}</label>` : ''}
       ${h.form === 'plan' ? '' : field(T.extension, sel('extension', h.extension, [['none', T.none], ['back', T.back], ['side', T.side]]))}
       ${!h.between ? field(T.carport, sel('carport', h.carport, [['none', T.none], ['left', T.left], ['right', T.right]])) : ''}

@@ -276,3 +276,27 @@ test('a free wall can be lower than the storey, and be a fence or glass', () => 
   assert.strictEqual(high.style, undefined, 'unknown styles are a plain wall');
   assert.ok(core.wallPieces(high, [], level, true).every((p) => p.z1 === level.wallHeight), 'never above the ceiling');
 });
+
+test('a virtual device with the vacuum class is no robot vacuum', () => {
+  const DeviceHub = require('../lib/DeviceHub');
+  const dev = (driverId, cls, capabilities) => DeviceHub.compactDevice({ id: 'x', name: 'x', zone: 'z', class: cls, driverId, capabilities, capabilitiesObj: {} });
+  const flag = dev('homey:app:nl.qluster-it.DeviceCapabilities:avd', 'vacuumcleaner', ['onoff']);
+  assert.strictEqual(flag.virtual, true);
+  assert.strictEqual(core.isVacuum(flag), false);
+  assert.strictEqual(core.isVacuum(dev('homey:app:com.xiaomi-miio:vacuum', 'vacuumcleaner', ['onoff'])), true);
+  assert.strictEqual(core.isVacuum(dev('homey:app:com.roborock:s7', 'other', ['vacuumcleaner_state'])), true);
+  assert.strictEqual(core.isVacuum(dev('homey:virtualdriver:switch', 'vacuumcleaner', ['onoff'])), false);
+});
+
+test('a room without walls of its own leaves only the walls of its neighbours', () => {
+  const level = core.newLevel('L');
+  const living = { id: 'a', name: 'Woonkamer', points: rect(0, 0, 400, 300) };
+  const kitchen = { id: 'b', name: 'Keuken', points: rect(400, 0, 300, 300), walls: false };
+  level.rooms = [living, kitchen];
+  const walls = core.levelWalls(level);
+  assert.strictEqual(walls.length, 4, 'the living room keeps its four walls, the shared one too');
+  living.walls = false;
+  assert.strictEqual(core.levelWalls(level).length, 0);
+  level.walls = [{ id: 'w1', a: [0, 0], b: [700, 0], t: 25 }];
+  assert.deepStrictEqual(core.levelWalls(level).map((w) => w.id), ['w1']);
+});

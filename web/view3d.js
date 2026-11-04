@@ -59,12 +59,30 @@ const tmpColor = new THREE.Color();
 
 // A piece in the colour chosen in the editor: the material that covers most of it (the fabric of a sofa, the wood of a
 // table) gets exactly that colour, without its texture; legs, metal and glass keep theirs.
+// The material that covers the largest surface wins (not the one with the most points: a kitchen unit's few
+// big wooden fronts outweigh the many small points of its handles and sink).
 function recolor(obj, color) {
   const size = new Map();
+  obj.updateMatrixWorld(true);
+  const A = new THREE.Vector3(); const B = new THREE.Vector3(); const C = new THREE.Vector3();
   obj.traverse((o) => {
     if (!o.isMesh) return;
-    const n = o.geometry.index ? o.geometry.index.count : o.geometry.attributes.position.count;
-    for (const m of [].concat(o.material)) size.set(m, (size.get(m) || 0) + n / [].concat(o.material).length);
+    const geo = o.geometry; const pos = geo.attributes.position; const idx = geo.index;
+    const mats = [].concat(o.material);
+    const total = idx ? idx.count : pos.count;
+    const groups = geo.groups.length ? geo.groups : [{ start: 0, count: total, materialIndex: 0 }];
+    for (const g of groups) {
+      const m = mats[g.materialIndex] || mats[0];
+      let area = 0;
+      for (let k = g.start; k + 2 < Math.min(total, g.start + g.count); k += 3) {
+        const at = (j) => (idx ? idx.getX(k + j) : k + j);
+        A.fromBufferAttribute(pos, at(0)).applyMatrix4(o.matrixWorld);
+        B.fromBufferAttribute(pos, at(1)).applyMatrix4(o.matrixWorld);
+        C.fromBufferAttribute(pos, at(2)).applyMatrix4(o.matrixWorld);
+        area += B.sub(A).cross(C.sub(A)).length() / 2;
+      }
+      size.set(m, (size.get(m) || 0) + area);
+    }
   });
   let main = null;
   for (const [m, n] of size) if (!main || n > size.get(main)) main = m;

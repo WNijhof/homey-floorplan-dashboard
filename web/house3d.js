@@ -373,6 +373,7 @@ class House3D {
     this.set = set;
     this.shape = shape;
     this.shows = shows;
+    this.entry = this.entrySpot(set, shape);
     this.hemi.color.set(t.hemiSky); this.hemi.groundColor.set(t.hemiGround); this.hemi.intensity = t.hemi;
     this.sun.intensity = t.sun;
     this.sun.color.set(t.sunColor || '#fff4e0');
@@ -501,7 +502,8 @@ class House3D {
       this.root.add(m);
     };
     // A path to the front door, a strip of pavers around the house, the driveway to the carport
-    paved(-0.8, D / 2, 0.8, D / 2 + 5);
+    const ex = this.entry ? this.entry.x : 0;
+    paved(ex - 0.8, D / 2, ex + 0.8, D / 2 + 5);
     paved(-W / 2 - 0.6, D / 2, W / 2 + 0.6, D / 2 + 0.6);
     paved(-W / 2 - 0.6, -D / 2 - 0.6, -W / 2, D / 2);
     paved(W / 2, -D / 2 - 0.6, W / 2 + 0.6, D / 2);
@@ -570,7 +572,8 @@ class House3D {
     const zs = [D / 2 + 1.6, D / 2 + 3.3, D / 2 + 5];
     if (this.outdoor.path.length) {
       const g = group('path', { kind: 'lamp', id: 'path' });
-      for (const z of zs) { bollard(g, -1.0, z); bollard(g, 1.0, z); }
+      const ex = this.entry ? this.entry.x : 0;
+      for (const z of zs) { bollard(g, ex - 1.0, z); bollard(g, ex + 1.0, z); }
     }
     if (this.outdoor.drive.length && (carport !== 'none' || this.shows.car)) {
       const g = group('drive', { kind: 'lamp', id: 'drive' });
@@ -583,6 +586,17 @@ class House3D {
       for (const [x, z] of [[-W / 2 - 3.4, -D / 2 - 4], [W / 2 + 3.6, -D / 2 - 4.4], [-W / 2 - 3.6, D / 2 + 1.2], [-W / 2 - 0.3, -D / 2 - 3.4], [W / 2 + 0.3, -D / 2 - 3.4]]) if (this.free(x, z, 0.3)) bollard(g, x, z);
     }
     if (this.outdoor.door.length) this.lights.door = { door: true, pick: { kind: 'lamp', id: 'door' } };
+  }
+
+  // Where the front door is: the door drawn in the front wall of the ground floor (the one nearest the middle),
+  // or a place chosen in the editor, or else the middle of the front.
+  entrySpot(set, shape) {
+    const W = shape.form ? shape.form.w : shape.width;
+    const at = HC.DOOR_AT[set.doorAt];
+    if (at != null) return this.frontSpot(shape, (at - 0.5) * W, 0.8);
+    const front = shape.form ? shape.form.floors[0].openings.filter((o) => o.door && o.n[0] === 0 && o.n[1] === 1) : [];
+    const drawn = front.sort((a, b) => Math.abs(a.x) - Math.abs(b.x))[0];
+    return drawn ? { x: drawn.x, z: drawn.z } : this.frontSpot(shape, 0, 0.8);
   }
 
   // A spot on the front wall nearest to x, a margin from its ends: with the real form that wall need not lie at D / 2.
@@ -627,7 +641,7 @@ class House3D {
     this.liftWith = [];
     const size = M.tx.wallSize;
     const form = shape.form;
-    const entry = this.frontSpot(shape, 0, 0.8);
+    const entry = this.entry;
     shape.floors.forEach((f, i) => {
       const fg = new THREE.Group();
       fg.userData.pick = { kind: 'level', id: f.levelId };
@@ -681,6 +695,13 @@ class House3D {
       const real = shell && shell.openings.length ? shell.openings : null;
       for (const o of real || []) {
         if (i === 0 && o.n[1] === 1 && Math.abs(o.z - entry.z) < 0.05 && Math.abs(o.x - entry.x) < 0.5 + o.w / 2) continue;
+        if (o.passage) { // an open wall: a dark opening from the ground up to the floor above, no frame or glass
+          const hole = new THREE.Mesh(new THREE.PlaneGeometry(o.w, f.height - 0.04), M.reveal);
+          hole.position.set(o.x + o.n[0] * 0.025, y0 + f.height / 2 - 0.02, o.z + o.n[1] * 0.025);
+          hole.rotation.y = Math.atan2(o.n[0], o.n[1]);
+          fg.add(hole);
+          continue;
+        }
         if (y0 + o.top > y1 - 0.05) o.top = y1 - y0 - 0.15; // never through the floor above
         add(o.w, o.x + o.n[0] * 0.005, o.z + o.n[1] * 0.005, Math.atan2(o.n[0], o.n[1]), o);
       }

@@ -367,3 +367,20 @@ test('with the form of the floor plan, its outer doors and windows sit in the wa
   const d = f.openings.find((o) => o.door);
   assert.deepStrictEqual([d.x, d.z, d.n], [5, 0, [1, 0]]);
 });
+
+test('an open wall in an outer wall is an opening from the ground up; the front door can be placed', () => {
+  const rooms = [{ id: 'r', points: [[0, 0], [1000, 0], [1000, 800], [0, 800]] }];
+  const openings = [
+    { id: 'p1', type: 'passage', x: 1000, y: 200, width: 300 }, // right side: the end of a drive-through
+    { id: 'p2', type: 'passage', x: 500, y: 400, width: 200 }, // inside: not on the facade
+  ];
+  const plan = { levels: [{ id: 'g', name: 'Begane grond', rooms, openings }], house: { form: 'plan' } };
+  const f = house.shape(plan).form.floors[0];
+  assert.strictEqual(f.openings.length, 1);
+  const p = f.openings[0];
+  assert.deepStrictEqual([p.passage, p.x, p.z, p.n, p.w, p.sill, p.door], [true, 5, -2, [1, 0], 3, 0, undefined]);
+  assert.strictEqual(house.settings(plan).doorAt, 'auto');
+  assert.strictEqual(house.settings({ house: { doorAt: 'leftmid' } }).doorAt, 'leftmid');
+  assert.strictEqual(house.settings({ house: { doorAt: 'roof' } }).doorAt, 'auto');
+  assert.strictEqual(house.DOOR_AT.left < house.DOOR_AT.right, true);
+});

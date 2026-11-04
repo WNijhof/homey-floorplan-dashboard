@@ -115,7 +115,7 @@
 
   function hasVacuum() {
     var now = window.__widgetState && window.__widgetState();
-    return !!now && Array.from(now.devices.values()).some(function (d) { return d.cls === 'vacuumcleaner' || 'vacuumcleaner_state' in d.caps; });
+    return !!now && Array.from(now.devices.values()).some(window.FloorplanCore.isVacuum);
   }
 
   // The camera on the side: one of them, or none. Without a choice the first camera shows.

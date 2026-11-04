@@ -164,3 +164,27 @@ test('a straight house with one wall at a slant and a door in it', () => {
   const dirs = r.rooms.flatMap((room) => room.points.map((p, i) => { const q = room.points[(i + 1) % room.points.length]; return Math.abs(Math.sin(2 * Math.atan2(q[1] - p[1], q[0] - p[0]))); }));
   assert.ok(dirs.some((d) => d > 0.98) && dirs.some((d) => d < 0.02), JSON.stringify(dirs));
 });
+
+// The grey drawing in colour: some rooms filled dark (a garage, a tiled bathroom), or the walls drawn red.
+function coloured(img, { fill = [], walls = null }) {
+  const { width: w, height: h, data, scale, margin } = img;
+  const rgba = new Uint8ClampedArray(w * h * 4);
+  const inRoom = (x, y, pts) => { const [x0, y0, x1, y1] = box(pts); return x > x0 + 15 && x < x1 - 15 && y > y0 + 15 && y < y1 - 15; };
+  for (let i = 0; i < w * h; i++) {
+    const v = data[i];
+    let c = [v, v, v];
+    const x = (i % w) / scale - margin; const y = Math.floor(i / w) / scale - margin;
+    if (v === 255 && fill.some((name) => inRoom(x, y, ROOMS[name]))) c = [60, 90, 150];
+    if (walls && v < 128) c = walls;
+    rgba.set([...c, 255], i * 4);
+  }
+  return { ...img, data: rgba };
+}
+
+test('rooms filled with a dark colour are rooms, not walls', () => {
+  check(run(coloured(rasterPlan({ scale: 1 }), { fill: ['utility', 'toilet', 'kitchen'] }), 1), 5);
+});
+
+test('walls drawn in red are still walls', () => {
+  check(run(coloured(rasterPlan({ scale: 1 }), { walls: [200, 30, 30] }), 1), 5);
+});

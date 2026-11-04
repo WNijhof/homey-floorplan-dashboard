@@ -37,6 +37,9 @@
   }
 
   /** plan.house with every field filled in and checked. */
+  // The place of the front door along the front, from the left as you look at it (auto: the door drawn in the plan)
+  const DOOR_AT = { auto: null, left: 0.15, leftmid: 0.33, middle: 0.5, rightmid: 0.67, right: 0.85 };
+
   function settings(plan) {
     const h = (plan && plan.house) || {};
     const o = h.objects || {};
@@ -76,6 +79,7 @@
       scene: pick(h.scene, ['garden', 'studio'], 'garden'), // in its garden, or the house alone
       roofColor: pick(h.roofColor, ['anthracite', 'red', 'black'], 'anthracite'),
       frames: pick(h.frames, ['anthracite', 'white'], 'anthracite'),
+      doorAt: pick(h.doorAt, Object.keys(DOOR_AT), 'auto'), // where the front door is along the front
       door: typeof h.door === 'string' && /^#[0-9a-f]{6}$/i.test(h.door) ? h.door : '#2f4a3a',
       objects,
       forecast: h.forecast === true, // asks Forecast.Solar, which then knows roughly where the house is
@@ -294,7 +298,7 @@
         // The doors and windows of the floor plan that sit in an outer wall, on that wall of the house
         f.openings = [];
         for (const o of (floors[i] && floors[i].openings) || []) {
-          if (o.type !== 'window' && o.type !== 'door') continue;
+          if (o.type !== 'window' && o.type !== 'door' && o.type !== 'passage') continue;
           const p = turn([o.x, o.y]);
           const x = (p[0] + moved[i][0] - cx) / 100; const z = (p[1] + moved[i][1] - cz) / 100;
           let best = null;
@@ -308,6 +312,11 @@
             if (!best || off < best.off) best = { off, x: along ? x : r.a[0], z: along ? r.a[1] : z, n: r.n };
           }
           if (!best) continue;
+          // An open wall in an outer wall (a drive-through, a carport): open from the ground up to the floor above
+          if (o.type === 'passage') {
+            f.openings.push({ passage: true, x: best.x, z: best.z, n: best.n, w: Math.max(0.4, Math.min(12, (o.width || 200) / 100)), sill: 0, top: 99 });
+            continue;
+          }
           const door = o.type === 'door';
           const sill = door ? 0 : (o.sill != null ? o.sill : 90) / 100;
           const top = (door ? o.height || 210 : o.top || 210) / 100;
@@ -872,5 +881,5 @@
     return { svg: ground + parts.join('') + tags.join('') + cards.svg, viewBox: vb };
   }
 
-  return { settings, shape, shows, sunnySide, solarSides, sunPosition, isNight, outdoorLamps, roomBehind, weatherKind, drawing, photoView, freeSide, outbuildingKind, outbuildings, yard, OBJECTS, TYPES, ROOFS, PLACES, OUT_PLACES };
+  return { settings, shape, shows, sunnySide, solarSides, sunPosition, isNight, outdoorLamps, roomBehind, weatherKind, drawing, photoView, freeSide, outbuildingKind, outbuildings, yard, OBJECTS, TYPES, ROOFS, PLACES, OUT_PLACES, DOOR_AT };
 }));
