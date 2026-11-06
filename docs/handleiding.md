@@ -48,7 +48,9 @@ Onder **Huis** stel je in hoe je huis er van buiten uitziet.
 - Dak, nokrichting, hellingshoek en de richting van de voorgevel. Die richting is nodig voor de zon en de zonneverwachting.
 - Gevel: donker stucwerk, wit stucwerk of baksteen.
 - Rond het huis: tuin, pad en oprit, of niets voor een rustig beeld.
-- Carport, dakkapel en aanbouw.
+- Carport, dakkapel en aanbouw. De dakkapel zit aan de voor- of achterkant van het dak, en is normaal, breed of zo breed als het dak. De schoorsteen kan uit.
+- Buren (twee-onder-een-kap, hoekhuis, tussenwoning, flat): hun dak, breedte, diepte en plek ten opzichte van de voorgevel stel je in, zodat ze op de echte lijken.
+- Netaansluiting en airco: de meterkast met de netaansluiting komt links of rechts aan de voorkant, en de buitenunit van de airco op de voorgevel (links of rechts) of op een zijgevel. Een zijgevel tegen een buurhuis kan niet: de unit blijft dan op de voorgevel.
 - Zonnepanelen: het aantal, en op de zonnigste dakhelft of op beide dakhelften, zoals oost-west. De zonneverwachting rekent dan met beide richtingen.
 - Liever je eigen huis? Gebruik een foto en teken waar je op kunt tikken.
 

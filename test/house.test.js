@@ -273,6 +273,52 @@ test('a dimmable socket is a lamp, a plain socket stays a socket', () => {
   assert.notStrictEqual(core.deviceKind({ cls: 'socket', caps: { onoff: true, measure_power: 90 } }), 'light');
 });
 
+test('a metering plug with a dim value and an air conditioner with a light are not lamps', () => {
+  const core = require('../lib/shared/floorplan-core');
+  // HomeWizard Energy Socket: dim is the brightness of its LED ring
+  assert.strictEqual(core.deviceKind({ cls: 'socket', caps: { onoff: true, dim: 0.5, measure_power: 90, meter_power: 12.5 } }), 'socket');
+  // A dimmer that does not meter its energy as a socket is still a lamp
+  assert.strictEqual(core.deviceKind({ cls: 'socket', caps: { onoff: true, dim: 0.5, measure_power: 12 } }), 'light');
+  // An air conditioner whose app offers a dim value for its display: a thermostat, never a lamp
+  assert.strictEqual(core.deviceKind({ cls: 'other', caps: { onoff: true, dim: 1, target_temperature: 21 } }), 'thermostat');
+  // A real lamp is untouched
+  assert.strictEqual(core.deviceKind({ cls: 'light', caps: { onoff: true, dim: 0.5, measure_power: 9, meter_power: 3 } }), 'light');
+});
+
+test('grid connection, air conditioner, dormer and neighbours get defaults and checked values', () => {
+  const d = house.settings({});
+  assert.strictEqual(d.objects.grid.place, 'auto');
+  assert.strictEqual(d.objects.airco.place, 'auto');
+  assert.strictEqual(d.dormerAt, 'back');
+  assert.strictEqual(d.dormerSize, 'normal');
+  assert.deepStrictEqual([d.neighbourW, d.neighbourD, d.neighbourShift, d.neighbourRoof], [0, 0, 0, 'same']);
+  const s = house.settings({ house: {
+    objects: { grid: { place: 'left' }, airco: { place: 'right' } },
+    dormerAt: 'front', dormerSize: 'full', neighbourW: 7.5, neighbourD: 45, neighbourShift: -2, neighbourRoof: 'flat',
+  } });
+  assert.strictEqual(s.objects.grid.place, 'left');
+  assert.strictEqual(s.objects.airco.place, 'right');
+  assert.strictEqual(s.dormerAt, 'front');
+  assert.strictEqual(s.dormerSize, 'full');
+  assert.strictEqual(s.neighbourW, 7.5);
+  assert.strictEqual(s.neighbourD, 30, 'kept to 30 m');
+  assert.strictEqual(s.neighbourShift, -2);
+  assert.strictEqual(s.neighbourRoof, 'flat');
+  const bad = house.settings({ house: { objects: { grid: { place: 'up' }, airco: { place: 'roof' } }, dormerAt: 'side', dormerSize: 'huge', neighbourW: 'wide', neighbourRoof: 'dome' } });
+  assert.strictEqual(bad.objects.grid.place, 'auto');
+  assert.strictEqual(bad.objects.airco.place, 'auto');
+  assert.strictEqual(bad.dormerAt, 'back');
+  assert.strictEqual(bad.dormerSize, 'normal');
+  assert.strictEqual(bad.neighbourW, 0);
+  assert.strictEqual(bad.neighbourRoof, 'same');
+});
+
+test('the chimney is on by default and can be switched off', () => {
+  assert.strictEqual(house.settings({}).chimney, true);
+  assert.strictEqual(house.settings({ house: { chimney: false } }).chimney, false);
+  assert.strictEqual(house.settings({ house: { chimney: 'no' } }).chimney, true, 'only a real false switches it off');
+});
+
 test('panels on both roof halves: two faces and two planes for the forecast', () => {
   const { solarPlanes } = require('../lib/EnergyDetails');
   const both = { house: { facing: 90, ridge: 'width', pitch: 35, objects: { solar: { layout: 'both', panels: 10 } } } };

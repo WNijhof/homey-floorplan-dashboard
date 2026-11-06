@@ -390,6 +390,11 @@ class House3D {
     const cs = carport === 'left' || (carport === 'none' && set.oneSide && set.neighbour === 'right') ? -1 : 1;
     this.carportSide = cs < 0 ? 'left' : 'right';
     this.carportCenter = null;
+    // The side of the front where the power comes in (the meter cupboard, the grid cabinet and the heat pump by it):
+    // away from the carport, unless the owner chose a side, for a corner house whose neighbours stand on that side
+    const gridAt = set.objects.grid.place;
+    const ms = gridAt === 'left' ? -1 : gridAt === 'right' ? 1 : -cs;
+    this.meterSide = ms;
     // Garages and sheds, and how far the garden reaches for them
     this.yard = HC.yard(this.plan);
     // Whether a spot of the garden (a tree, a garden light) is free of them, with some room around
@@ -411,15 +416,15 @@ class House3D {
     if (carport !== 'none') this.buildCarport(t, W, D, cs);
     this.buildOutbuildings();
 
-    // Where the power of the house comes in: the meter cupboard at the front corner, on the side away from the carport.
-    const { x: mx, z: mz } = this.frontSpot(shape, -cs * (W / 2 - 0.9), 0.4);
+    // Where the power of the house comes in: the meter cupboard at the front corner, on the side of the grid connection.
+    const { x: mx, z: mz } = this.frontSpot(shape, ms * (W / 2 - 0.9), 0.4);
     const meter = new THREE.Vector3(mx, 0.9, mz + 0.04);
     this.meterPoint = meter;
     const meterBox = box(0.42, 0.55, 0.06, mat('#d7dbe0'), mx, 0.62, mz + 0.02);
     this.root.add(meterBox);
 
     if (shows.solar) this.buildSolar(t, set, shape, W, D, anchors, meter);
-    if (shows.grid) this.buildGrid(t, W, D, meter, cs);
+    if (shows.grid) this.buildGrid(t, W, D, meter, ms);
     if (shows.battery) this.buildBattery(t, set, W, D, cs, carport, meter);
     if (shows.car) this.buildCar(t, W, D, cs, carport, meter);
     if (shows.heatpump) this.buildHeatpump(t, W, D, cs, meter);
@@ -538,7 +543,7 @@ class House3D {
     }
     for (const x of [-W / 2 + 0.9, -W / 2 + 2.2, W / 2 - 2.2, W / 2 - 0.9]) {
       if (Math.abs(x) < 1.3) continue;
-      if (this.shows.heatpump && !(this.set.roof === 'flat' && this.set.objects.heatpump.place === 'roof') && Math.sign(x) === -cs && Math.abs(x) < W / 2 - 1.2) continue; // the heat pump stands here
+      if (this.shows.heatpump && !(this.set.roof === 'flat' && this.set.objects.heatpump.place === 'roof') && Math.sign(x) === this.meterSide && Math.abs(x) < W / 2 - 1.2) continue; // the heat pump stands here
       const bush = new THREE.Mesh(LOOK.blob(0.42, x), M.leaves);
       bush.position.set(x, 0.32, D / 2 + 0.95); bush.scale.y = 0.75; bush.castShadow = true;
       this.root.add(bush);
@@ -871,29 +876,44 @@ class House3D {
         rg.add(LOOK.box(x1 - x0, 0.22, 0.03, M.trim, 0, -drop + lift - 0.2, z + s * 0.01));
         rg.add(LOOK.bar([x0, -drop + lift - 0.12, z + s * 0.09], [x1, -drop + lift - 0.12, z + s * 0.09], 0.07, M.zinc));
       }
-      // A chimney on the back slope
-      const cz = set.objects.solar.layout === 'both' ? 0 : -S / 4; const cx = L / 4; // both halves full of panels: on the ridge
-      const ch = LOOK.box(0.6, rise * 0.5 + 0.9, 0.6, M.wall, cx, rise * 0.5 + lift - 0.2, cz);
-      add(ch);
-      rg.add(LOOK.box(0.72, 0.08, 0.72, M.sill, cx, rise + lift + 0.7, cz));
+      // A chimney on the back slope, unless the owner switched it off
+      if (set.chimney !== false) {
+        let cz = set.objects.solar.layout === 'both' ? 0 : -S / 4; const cx = L / 4; // both halves full of panels: on the ridge
+        // A dormer nearly as wide as the roof takes the back (or front) slope: the chimney goes to the other one
+        if (set.dormer && set.dormerSize === 'full' && !turned && cz !== 0) cz = set.dormerAt === 'front' ? -S / 4 : S / 4;
+        const ch = LOOK.box(0.6, rise * 0.5 + 0.9, 0.6, M.wall, cx, rise * 0.5 + lift - 0.2, cz);
+        add(ch);
+        rg.add(LOOK.box(0.72, 0.08, 0.72, M.sill, cx, rise + lift + 0.7, cz));
+      }
       top = eaves + rise + lift;
     }
-    // A dormer on the back slope of a gable roof along the front, set back a little from the eaves
+    // A dormer on a slope of a gable roof along the front, set back a little from the eaves: normal, wide, or nearly as
+    // wide as the roof and up to near the ridge (a ridge raise). The numbers are those of the back slope (z below 0);
+    // a dormer at the front is that mirrored.
     if (set.dormer && set.roof === 'gable' && !turned) {
       const tan = Math.tan(pitch);
-      const dw = Math.min(3, L * 0.35);
+      const full = set.dormerSize === 'full';
+      const dw = full ? Math.max(1.6, L - 1.2) : Math.min(set.dormerSize === 'wide' ? 5 : 3, L * (set.dormerSize === 'wide' ? 0.6 : 0.35));
       const zf = -S / 2 + 0.6;
       const yf = 0.6 * tan + lift;
-      const dh = Math.min(1.5, (rise - yf) * 0.7);
+      const dh = full ? (rise - yf) * 0.85 : Math.min(1.5, (rise - yf) * 0.7);
       const zr = (yf + dh - rise - lift) / tan;
       if (zr > zf + 0.3) {
-        const dx = -L / 4;
-        const dormer = LOOK.box(dw, yf + dh, zr - zf, M.trim, dx, 0, (zf + zr) / 2);
+        const front = set.dormerAt === 'front';
+        const mz = (z) => (front ? -z : z);
+        const dx = full ? 0 : -L / 4;
+        const dormer = LOOK.box(dw, yf + dh, zr - zf, M.trim, dx, 0, mz((zf + zr) / 2));
         add(dormer);
         const glass = M.glass();
-        const win = LOOK.windowPart(dw * 0.7, dh * 0.75, { frame: M.frame, glass, sill: M.sill, reveal: M.reveal });
-        win.group.position.set(dx, yf + dh * 0.5, zf - 0.005); win.group.rotation.y = Math.PI;
-        rg.add(win.group, LOOK.box(dw + 0.25, 0.14, zr - zf + 0.25, new THREE.MeshStandardMaterial({ color: '#3a3d42', roughness: 0.6 }), dx, yf + dh, (zf + zr) / 2));
+        // one window, or a row of them across a wide dormer
+        const n = full ? Math.max(1, Math.round(dw / 2.4)) : 1;
+        const ww = full ? Math.min(1.6, (dw / n) * 0.7) : dw * 0.7;
+        for (let i = 0; i < n; i++) {
+          const win = LOOK.windowPart(ww, dh * 0.75, { frame: M.frame, glass, sill: M.sill, reveal: M.reveal });
+          win.group.position.set(dx - dw / 2 + (i + 0.5) * (dw / n), yf + dh * 0.5, mz(zf - 0.005)); win.group.rotation.y = front ? 0 : Math.PI;
+          rg.add(win.group);
+        }
+        rg.add(LOOK.box(dw + 0.25, 0.14, zr - zf + 0.25, new THREE.MeshStandardMaterial({ color: '#3a3d42', roughness: 0.6 }), dx, yf + dh, mz((zf + zr) / 2)));
       }
     }
     this.roofGroup = rg;
@@ -903,10 +923,14 @@ class House3D {
 
   buildNeighbours(t, set, shape, W, D) {
     const sides = set.oneSide ? [set.neighbour] : set.between ? ['left', 'right'] : [];
+    // As wide and deep as the house unless the owner gave the size of the real neighbours; the fronts stand in line,
+    // moved by the shift. The roof is the house's own unless chosen.
+    const nW = set.neighbourW || W; const nD = set.neighbourD || D;
+    const nRoof = set.neighbourRoof === 'same' ? set.roof : set.neighbourRoof;
     const wall = this.M.wall.clone();
     wall.map = this.M.tx.wall.clone(); wall.map.needsUpdate = true;
     const top = shape.eaves + (shape.above || 0);
-    wall.map.repeat.set(W / this.M.tx.wallSize[0], top / this.M.tx.wallSize[1]);
+    wall.map.repeat.set(nW / this.M.tx.wallSize[0], top / this.M.tx.wallSize[1]);
     wall.color.set(this.theme.night ? '#6a6a6a' : '#b8b8b8');
     const material = this.M.roof.clone();
     material.color.set(this.theme.night ? '#6a6a6a' : '#b8b8b8');
@@ -915,29 +939,30 @@ class House3D {
     // A corner house ends a row: two houses on that side
     const spots = sides.flatMap((side) => (set.type === 'corner' ? [1, 2] : [1]).map((k) => [side, k]));
     for (const [side, k] of spots) {
-      const s = (side === 'left' ? -1 : 1) * k;
+      const sign = side === 'left' ? -1 : 1;
       const g = new THREE.Group();
-      g.add(LOOK.box(W, top, D, wall, 0, 0, 0));
-      if (set.roof !== 'flat') {
+      g.add(LOOK.box(nW, top, nD, wall, 0, 0, 0));
+      if (nRoof !== 'flat') {
         const turned = set.ridge === 'depth';
-        const L = turned ? D : W; const S = turned ? W : D;
+        const L = turned ? nD : nW; const S = turned ? nW : nD;
         const rise = (S / 2) * Math.tan(THREE.MathUtils.degToRad(set.pitch));
-        // The same kind of roof as the house: with a hip roof the ridge is shorter
-        const r = set.roof === 'hip' ? Math.max(0, L / 2 - S / 2) : L / 2;
+        // With a hip roof the ridge is shorter
+        const r = nRoof === 'hip' ? Math.max(0, L / 2 - S / 2) : L / 2;
         const roof = new THREE.Group();
         const faces = [
           [[[-L / 2, 0, S / 2], [L / 2, 0, S / 2], [r, rise, 0], [-r, rise, 0]], material],
           [[[L / 2, 0, -S / 2], [-L / 2, 0, -S / 2], [-r, rise, 0], [r, rise, 0]], material],
           // the ends: tiles on a hip roof, brick on a gable
-          [[[-L / 2, 0, -S / 2], [-L / 2, 0, S / 2], [-r, rise, 0]], set.roof === 'hip' ? material : gable],
-          [[[L / 2, 0, S / 2], [L / 2, 0, -S / 2], [r, rise, 0]], set.roof === 'hip' ? material : gable],
+          [[[-L / 2, 0, -S / 2], [-L / 2, 0, S / 2], [-r, rise, 0]], nRoof === 'hip' ? material : gable],
+          [[[L / 2, 0, S / 2], [L / 2, 0, -S / 2], [r, rise, 0]], nRoof === 'hip' ? material : gable],
         ];
         for (const [pts, m] of faces) roof.add(LOOK.poly(pts, m, m === gable ? this.M.tx.wallSize : LOOK.TILE_SIZE));
         roof.position.y = top;
         if (turned) roof.rotation.y = Math.PI / 2;
         g.add(roof);
       }
-      g.position.x = s * W;
+      g.position.x = sign * (W / 2 + nW * (k - 0.5)); // k houses away, each nW wide; as before when nW is W
+      g.position.z = (D - nD) / 2 + set.neighbourShift; // fronts in line, then the shift
       g.traverse((o) => { if (o.isMesh) o.castShadow = false; });
       this.root.add(g);
     }
@@ -1169,8 +1194,8 @@ class House3D {
     return { panels, middle };
   }
 
-  buildGrid(t, W, D, meter, cs) {
-    const x = -cs * (W / 2 + 3);
+  buildGrid(t, W, D, meter, ms) {
+    const x = ms * (W / 2 + 3); // beside the house, on the side of the meter cupboard
     const cabinet = box(0.7, 1.15, 0.4, mat('#5f7d5a'), x, 0, D / 2 + 4.2);
     cabinet.userData.pick = { kind: 'grid' };
     this.root.add(cabinet);
@@ -1268,7 +1293,7 @@ class House3D {
   buildHeatpump(t, W, D, cs, meter) {
     if (this.set.roof === 'flat' && this.set.objects.heatpump.place === 'roof' && this.roofFrame) return this.buildHeatpumpOnRoof(t, W, D, cs, meter);
     // At the front, by the meter cupboard: far from the battery and the charger, with a cable of its own
-    const spot = this.frontSpot(this.shape, -cs * (W / 2 - 2.3), 0.6);
+    const spot = this.frontSpot(this.shape, this.meterSide * (W / 2 - 2.3), 0.6);
     const { x } = spot; const z = spot.z + 0.27;
     const g = new THREE.Group();
     g.add(box(1.05, 0.85, 0.42, mat(t.unit, { roughness: 0.5 }), 0, 0, 0));
@@ -1309,21 +1334,36 @@ class House3D {
     this.addFlow('use', [...this.cableRoute(meter, p(wall.x, 0.9, wall.z)), p(wall.x, y0 + 0.3, wall.z), p(x, y0 + 0.3, z)], 'heatpump');
   }
 
-  // The outdoor unit of the air conditioner hangs on the front wall of the upper storey, above the meter cupboard.
+  // The outdoor unit of the air conditioner hangs on a wall of the upper storey: on the front wall above the meter
+  // cupboard, or where the owner put it: at the front left or right, or on a side wall (not against a neighbour).
   buildAirco(t, W, D, cs, shape, meter) {
     const top = shape.floors.length > 1 ? shape.floors[1] : shape.floors[0];
-    const x = meter.x; const y = top.base + 0.25; const z = D / 2 + 0.2;
+    const y = top.base + 0.25;
+    const place = this.set.objects.airco.place;
+    const side = place === 'frontleft' || place === 'left' ? -1 : 1;
+    const against = (s) => this.set.between || (this.set.oneSide && this.set.neighbour === (s < 0 ? 'left' : 'right'));
+    let x = meter.x; let z = D / 2 + 0.2;
+    let turn = 0; // the unit faces +z; on a side wall it turns to face outwards
+    let card = [0, 0.2]; // the card floats beside the unit's face
+    if (place === 'frontleft' || place === 'frontright') {
+      const spot = this.frontSpot(shape, side * (W / 2 - 0.9), 0.4);
+      x = spot.x; z = spot.z + 0.2;
+    } else if ((place === 'left' || place === 'right') && !against(side)) {
+      const wall = this.wallSpot(shape, side, 0, 0, 0.8);
+      if (wall) { x = wall.x + side * 0.2; z = wall.z; turn = side * Math.PI / 2; card = [side * 0.2, 0]; }
+    }
     const g = new THREE.Group();
     g.add(box(0.8, 0.6, 0.36, mat(t.unit, { roughness: 0.5 }), 0, 0, 0));
     const f2 = this.fan(0.2, -0.12, 0.3, 0.19);
     g.add(f2.ring, f2.mesh);
     g.add(box(0.9, 0.04, 0.4, mat(t.post), 0, -0.04, 0));
     g.position.set(x, y, z);
+    g.rotation.y = turn;
     g.userData.pick = { kind: 'airco' };
     this.root.add(g);
     this.fans.push(f2);
     this.aircoFan = f2;
-    this.cards.airco = this.card('airco', null, new THREE.Vector3(x, y + 1.25, z + 0.2));
+    this.cards.airco = this.card('airco', null, new THREE.Vector3(x + card[0], y + 1.25, z + card[1]));
     const p = (px, py, pz) => new THREE.Vector3(px, py, pz);
     this.addFlow('use', this.cableRoute(meter, p(x, y + 0.05, z)), 'airco');
   }

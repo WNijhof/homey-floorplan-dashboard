@@ -48,7 +48,9 @@ Under **House** you set how your home looks from outside.
 - Roof, ridge direction, pitch and the direction of the front. That direction is used for the sun and the solar forecast.
 - Facade: dark plaster, white plaster or brick.
 - Around the house: garden, path and driveway, or nothing for a calm view.
-- Carport, dormer and extension.
+- Carport, dormer and extension. The dormer goes on the front or the back of the roof, and is normal, wide or as wide as the roof. The chimney can be switched off.
+- Neighbours (semi-detached, corner house, terraced, flat): their roof, width, depth and position in line with the front can be set, to match the real ones.
+- Grid connection and air conditioner: the meter cupboard with the grid connection goes on the left or right of the front, and the outdoor unit of the air conditioner on the front (left or right) or on a side wall. A side wall against a neighbour cannot be used: the unit then stays on the front.
 - Solar panels: the number, and on the sunny side of the roof or on both roof halves, such as east-west. The solar forecast then uses both directions.
 - Prefer your own house? Use a photo and draw what can be tapped.
 
