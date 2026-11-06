@@ -325,11 +325,13 @@ class House3D {
     for (const k of HC.OBJECTS) shows[k] = HC.shows(set, k, present);
     shows.water = !!present.water; shows.gas = !!present.gas;
     const outdoor = HC.outdoorLamps(plan, devices instanceof Map ? devices : null);
-    const key = JSON.stringify([plan.id, set, shape, shows, !!dark, this.lang, outdoor, levelRooms(plan), HC.outbuildings(plan)]);
+    const own = HC.garden(plan);
+    const key = JSON.stringify([plan.id, set, shape, shows, !!dark, this.lang, outdoor, levelRooms(plan), HC.outbuildings(plan), own]);
     if (key !== this.key) {
       const first = !this.key;
       this.key = key;
       this.outdoor = outdoor;
+      this.own = own; // the garden as drawn, or null
       this.build(set, shape, shows, dark);
       if (first) this.resetCamera();
     }
@@ -512,7 +514,8 @@ class House3D {
     paved(-W / 2 - 0.6, D / 2, W / 2 + 0.6, D / 2 + 0.6);
     paved(-W / 2 - 0.6, -D / 2 - 0.6, -W / 2, D / 2);
     paved(W / 2, -D / 2 - 0.6, W / 2 + 0.6, D / 2);
-    paved(-W / 2 - 0.6, -D / 2 - 3.2, W / 2 + 0.6, -D / 2); // terrace at the back
+    const own = this.own;
+    if (!(own && own.patches.length)) paved(-W / 2 - 0.6, -D / 2 - 3.2, W / 2 + 0.6, -D / 2); // terrace at the back, unless the garden drawn has its own
     if (this.set.between) {
       // no side to drive along: the car stands in front of the house
       if (this.shows.car) paved(cs > 0 ? W / 2 - 3.2 : -W / 2 + 0.2, D / 2 + 0.6, cs > 0 ? W / 2 - 0.2 : -W / 2 + 3.2, D / 2 + 6);
@@ -536,6 +539,7 @@ class House3D {
     else if (carport === 'none' || cs < 0) this.root.add(LOOK.hedge([right, back], [right, D / 2 + 3], 1.2, M));
     else this.root.add(LOOK.hedge([right, back], [right, D / 2 - 7], 1.2, M));
     for (const [x, z, s, seed] of [[-W / 2 - 4, -D / 2 - 4.5, 1.15, 1], [W / 2 + 4.5, -D / 2 - 5, 0.95, 2], [-W / 2 - 4.5, D / 2 + 1.5, 0.8, 3]]) {
+      if (own && own.plants.length) break; // the plants of the garden drawn take their place
       if (!this.free(x, z, 1.4)) continue; // a garage or shed stands here
       const tr = LOOK.tree(s, M, seed);
       tr.position.set(x, 0, z);
@@ -547,6 +551,49 @@ class House3D {
       const bush = new THREE.Mesh(LOOK.blob(0.42, x), M.leaves);
       bush.position.set(x, 0.32, D / 2 + 0.95); bush.scale.y = 0.75; bush.castShadow = true;
       this.root.add(bush);
+    }
+    if (own) this.buildOwnGarden(own);
+  }
+
+  // The garden as drawn on its levels (garden, terrace, driveway): patches of ground by what they are called, plants,
+  // other things as plain blocks, and fences or low walls. `own` is HouseCore.garden(plan), in metres around the house.
+  buildOwnGarden(own) {
+    const M = this.M;
+    const night = this.theme.night;
+    const soft = (day, dark) => new THREE.MeshStandardMaterial({ color: night ? dark : day, roughness: 1 });
+    const ground = { lawn: soft('#79a85a', '#3f5d34'), bed: soft('#5b4636', '#3a2d23'), gravel: soft('#b9b3a5', '#6e6a60'), paving: M.pavers };
+    ground.pond = new THREE.MeshStandardMaterial({ color: night ? '#2f5870' : '#5fa3c7', roughness: 0.25 });
+    const lift = { lawn: 0.012, paving: 0.018, gravel: 0.02, pond: 0.022, bed: 0.026 };
+    for (const p of own.patches) {
+      // the shape lies in the x-y plane, which is turned flat: its y becomes -z
+      const mesh = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(p.pts.map(([x, z]) => new THREE.Vector2(x, -z)))), p.color ? soft(p.color, p.color) : ground[p.kind]);
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.y = lift[p.kind];
+      mesh.receiveShadow = true;
+      this.root.add(mesh);
+    }
+    own.plants.forEach((p, i) => {
+      if (p.h >= 1.5) { // a tree
+        const tree = LOOK.tree(Math.max(0.3, Math.min(1.2, p.h / 4.5)), M, 10 + i);
+        tree.position.set(p.x, 0, p.z);
+        this.root.add(tree);
+      } else { // a shrub
+        const r = Math.max(p.w, p.d) / 2 + 0.1;
+        const bush = new THREE.Mesh(LOOK.blob(r, 10 + i), M.leaves);
+        bush.position.set(p.x, r * 0.75, p.z);
+        bush.scale.y = 0.8;
+        bush.castShadow = true;
+        this.root.add(bush);
+      }
+    });
+    for (const o of own.things) this.root.add(LOOK.box(o.w, o.h, o.d, soft(o.color || '#a8947c', o.color || '#7a6b5a'), o.x, o.z0, o.z));
+    for (const f of own.fences) {
+      const dx = f.b[0] - f.a[0]; const dz = f.b[1] - f.a[1];
+      const len = Math.hypot(dx, dz);
+      if (len < 0.05) continue;
+      const bar = LOOK.box(len, f.h, Math.max(0.05, f.t), f.fence ? M.wood : M.wall, (f.a[0] + f.b[0]) / 2, 0, (f.a[1] + f.b[1]) / 2);
+      bar.rotation.y = -Math.atan2(dz, dx);
+      this.root.add(bar);
     }
   }
 
@@ -728,7 +775,10 @@ class House3D {
         if (shell.roofs.length) {
           const low = new THREE.Group();
           low.userData.pick = { kind: 'level', id: f.levelId };
-          for (const b of shell.roofs) low.add(LOOK.box(b.w + 0.25, 0.25, b.d + 0.25, M.trim, b.x, y1, b.z));
+          for (const b of shell.roofs) {
+            if (set.lowRoof === 'lean') low.add(this.buildLeanRoof(b, y1, this.highSide(b, form, i), f.height, set));
+            else low.add(LOOK.box(b.w + 0.25, 0.25, b.d + 0.25, M.trim, b.x, y1, b.z));
+          }
           g.add(low);
           this.liftWith.push(low);
         }
@@ -921,6 +971,66 @@ class House3D {
     return { top, rise };
   }
 
+  // The side of a low roof b (a rectangle { x, z, w, d }) where it leans against the building above it or beside it, as a
+  // unit normal [nx, nz]; that side is the high one. Else the side that looks at the main block of the house.
+  highSide(b, form, floorIndex) {
+    const higher = [form.main, ...form.floors.slice(floorIndex + 1).flatMap((f) => f.rects)];
+    let best = null;
+    for (const [nx, nz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const edge = nx ? b.x + (nx * b.w) / 2 : b.z + (nz * b.d) / 2;
+      for (const r of higher) {
+        const near = nx ? r.x - (nx * r.w) / 2 : r.z - (nz * r.d) / 2; // the edge of r that faces b
+        if (Math.abs(edge - near) > 0.3) continue;
+        const overlap = nx ? Math.min(b.z + b.d / 2, r.z + r.d / 2) - Math.max(b.z - b.d / 2, r.z - r.d / 2) : Math.min(b.x + b.w / 2, r.x + r.w / 2) - Math.max(b.x - b.w / 2, r.x - r.w / 2);
+        if (overlap > 0.3 && (!best || overlap > best.overlap)) best = { n: [nx, nz], overlap };
+      }
+    }
+    if (best) return best.n;
+    const dx = form.main.x - b.x; const dz = form.main.z - b.z;
+    return Math.abs(dx) > Math.abs(dz) ? [Math.sign(dx) || 1, 0] : [0, Math.sign(dz) || 1];
+  }
+
+  // A lean-to roof over a low part b of the house: it falls away from the building at its high side hN, with an optional
+  // flat strip at the low end, tiles on the slope and walls under it. y1 is the top of the walls below.
+  buildLeanRoof(b, y1, hN, height, set) {
+    const M = this.M;
+    const g = new THREE.Group();
+    const n = [-hN[0], -hN[1]]; // the way it falls
+    const right = [n[1], -n[0]]; // seen from outside, from the low side
+    const along = n[0] !== 0;
+    const run = along ? b.w : b.d; const across = along ? b.d : b.w;
+    const ov = 0.12;
+    const flat = Math.min(set.lowFlat, Math.max(0, run - 0.8));
+    const yLow = y1 + 0.18;
+    const rise = Math.min((run - flat) * Math.tan(THREE.MathUtils.degToRad(set.lowPitch)), 2.4, height * 0.9);
+    // u: from the low outer edge (0) to the high edge (run); v: across, to the right seen from outside
+    const pt = (u, v, y) => [b.x + n[0] * (run / 2 - u) + right[0] * v, y, b.z + n[1] * (run / 2 - u) + right[1] * v];
+    const hw = across / 2 + ov;
+    // a face whose points are put in the order that makes it visible from the side `outward` looks at
+    const face = (pts, outward, mat, size) => {
+      const a = pts[0]; const bb = pts[1]; const c = pts[2];
+      const u = [bb[0] - a[0], bb[1] - a[1], bb[2] - a[2]]; const w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+      const nx = u[1] * w[2] - u[2] * w[1]; const ny = u[2] * w[0] - u[0] * w[2]; const nz = u[0] * w[1] - u[1] * w[0];
+      const m = LOOK.poly(nx * outward[0] + ny * outward[1] + nz * outward[2] < 0 ? [...pts].reverse() : pts, mat, size);
+      return m;
+    };
+    g.add(face([pt(flat, -hw, yLow), pt(flat, hw, yLow), pt(run, hw, yLow + rise), pt(run, -hw, yLow + rise)], [n[0] * 0.3, 1, n[1] * 0.3], M.roof, LOOK.TILE_SIZE));
+    if (flat > 0.01) {
+      const mid = pt((flat - ov) / 2, 0, y1 - 0.01); // the strip reaches ov past the low edge
+      g.add(LOOK.box(along ? flat + ov : across + 2 * ov, yLow - y1 + 0.01, along ? across + 2 * ov : flat + ov, M.trim, mid[0], mid[1], mid[2]));
+    } else {
+      const edge = pt(-0.02, 0, yLow - 0.2); // a fascia board along the low edge
+      g.add(LOOK.box(along ? 0.04 : across + 2 * ov, 0.2, along ? across + 2 * ov : 0.04, M.trim, edge[0], edge[1], edge[2]));
+    }
+    // the walls under the slope, at its two sides and at the high end
+    for (const s of [-1, 1]) {
+      const v = s * across / 2;
+      g.add(face([pt(0, v, y1), pt(run, v, y1), pt(run, v, yLow + rise), pt(flat, v, yLow), pt(0, v, yLow)], [right[0] * s, 0, right[1] * s], M.wall, M.tx.wallSize));
+    }
+    g.add(face([pt(run - 0.03, -across / 2, y1), pt(run - 0.03, across / 2, y1), pt(run - 0.03, across / 2, yLow + rise), pt(run - 0.03, -across / 2, yLow + rise)], [hN[0], 0, hN[1]], M.wall, M.tx.wallSize));
+    return g;
+  }
+
   buildNeighbours(t, set, shape, W, D) {
     const sides = set.oneSide ? [set.neighbour] : set.between ? ['left', 'right'] : [];
     // As wide and deep as the house unless the owner gave the size of the real neighbours; the fronts stand in line,
@@ -931,7 +1041,8 @@ class House3D {
     wall.map = this.M.tx.wall.clone(); wall.map.needsUpdate = true;
     const top = shape.eaves + (shape.above || 0);
     wall.map.repeat.set(nW / this.M.tx.wallSize[0], top / this.M.tx.wallSize[1]);
-    wall.color.set(this.theme.night ? '#6a6a6a' : '#b8b8b8');
+    if (set.neighbourMirror) wall.color.copy(this.M.wall.color); // the facade of the house itself
+    else wall.color.set(this.theme.night ? '#6a6a6a' : '#b8b8b8');
     const material = this.M.roof.clone();
     material.color.set(this.theme.night ? '#6a6a6a' : '#b8b8b8');
     const gable = this.M.wall.clone();
@@ -942,7 +1053,8 @@ class House3D {
       const sign = side === 'left' ? -1 : 1;
       const g = new THREE.Group();
       g.add(LOOK.box(nW, top, nD, wall, 0, 0, 0));
-      if (nRoof !== 'flat') {
+      if (set.neighbourMirror) this.neighbourDetails(g, t, set, shape, nW, nD, nRoof, top);
+      else if (nRoof !== 'flat') {
         const turned = set.ridge === 'depth';
         const L = turned ? nD : nW; const S = turned ? nW : nD;
         const rise = (S / 2) * Math.tan(THREE.MathUtils.degToRad(set.pitch));
@@ -963,9 +1075,43 @@ class House3D {
       }
       g.position.x = sign * (W / 2 + nW * (k - 0.5)); // k houses away, each nW wide; as before when nW is W
       g.position.z = (D - nD) / 2 + set.neighbourShift; // fronts in line, then the shift
-      g.traverse((o) => { if (o.isMesh) o.castShadow = false; });
+      // The first neighbour is the house mirrored in the party wall, the next one is the house again
+      if (set.neighbourMirror && k % 2 === 1) g.scale.x = -1;
+      g.traverse((o) => { if (o.isMesh) o.castShadow = false; if (o.userData.pick) delete o.userData.pick; });
       this.root.add(g);
     }
+  }
+
+  // What makes a neighbour look like the house: its front door, rows of windows at the front and the back, and its roof
+  // with a chimney and a dormer. Built as the house is, in the frame of the neighbour; the neighbour may be mirrored after.
+  neighbourDetails(g, t, set, shape, nW, nD, nRoof, top) {
+    const M = this.M;
+    const mats = { frame: M.frame, glass: M.glass(), sill: M.sill, reveal: M.reveal };
+    const doorX = Math.max(-nW / 2 + 0.8, Math.min(nW / 2 - 0.8, this.entry ? this.entry.x : 0));
+    const door = LOOK.doorPart({ frame: M.frame, glass: mats.glass, metal: M.metal }, set.door || '#2f4a3a');
+    door.position.set(doorX, 0.02, nD / 2 + 0.005);
+    g.add(door);
+    const cols = Math.max(2, Math.round(nW / 2.6));
+    shape.floors.forEach((f, i) => {
+      const winH = i === 0 ? 1.55 : 1.4;
+      const y = f.base + (i === 0 ? 0.75 : 0.9) + winH / 2;
+      for (let c = 0; c < cols; c++) {
+        const x = -nW / 2 + (nW / cols) * (c + 0.5);
+        if (!(i === 0 && Math.abs(x - doorX) < 1.0)) {
+          const front = LOOK.windowPart(1.25, winH, mats);
+          front.group.position.set(x, y, nD / 2 + 0.005);
+          g.add(front.group);
+        }
+        const back = LOOK.windowPart(1.25, winH, mats);
+        back.group.position.set(x, y, -nD / 2 - 0.005);
+        back.group.rotation.y = Math.PI;
+        g.add(back.group);
+      }
+    });
+    // buildRoof sets the roof of the house itself as a side effect: put those back
+    const keep = [this.roofGroup, this.roofInfo, this.roofFrame];
+    this.buildRoof(t, Object.assign({}, set, { roof: nRoof }), shape, nW, nD, g, top);
+    [this.roofGroup, this.roofInfo, this.roofFrame] = keep;
   }
 
   // Storeys of a block of flats that are not the own flat: walls in the same facade with a row of windows each, front

@@ -313,6 +313,56 @@ test('grid connection, air conditioner, dormer and neighbours get defaults and c
   assert.strictEqual(bad.neighbourRoof, 'same');
 });
 
+test('lower roofs, mirrored neighbours and the drawn garden get defaults and checked values', () => {
+  const d = house.settings({});
+  assert.deepStrictEqual([d.lowRoof, d.lowPitch, d.lowFlat, d.neighbourMirror, d.gardenOwn], ['flat', 20, 0, false, true]);
+  const s = house.settings({ house: { lowRoof: 'lean', lowPitch: 90, lowFlat: 1.5, neighbourMirror: true, gardenOwn: false } });
+  assert.deepStrictEqual([s.lowRoof, s.lowPitch, s.lowFlat, s.neighbourMirror, s.gardenOwn], ['lean', 45, 1.5, true, false]);
+  const bad = house.settings({ house: { lowRoof: 'dome', lowPitch: 'steep', lowFlat: 9, neighbourMirror: 'yes', gardenOwn: 0 } });
+  assert.deepStrictEqual([bad.lowRoof, bad.lowPitch, bad.lowFlat, bad.neighbourMirror, bad.gardenOwn], ['flat', 20, 3, false, true]);
+});
+
+test('the drawn garden is measured from the middle of the house, in metres, with the front at +z', () => {
+  const plan = (front, extra) => ({
+    house: Object.assign({ form: 'plan', front }, extra),
+    levels: [
+      { id: 'l0', name: 'Ground floor', rooms: [{ id: 'r1', name: 'Living room', points: [[0, 0], [1000, 0], [1000, 800], [0, 800]] }] },
+      {
+        id: 'lg', name: 'Garden',
+        rooms: [
+          { id: 'a', name: 'Terrace', points: [[100, -300], [700, -300], [700, -20], [100, -20]] },
+          { id: 'b', name: 'Lawn', points: [[-500, -900], [1500, -900], [1500, -400], [-500, -400]], color: '#88aa66' },
+          { id: 'c', name: 'Vijver', points: [[1100, -300], [1300, -300], [1200, -100]] },
+          { id: 'd', name: 'Driveway', points: [[0, 900], [100, 900]] }, // two points: not a patch
+        ],
+        items: [
+          { kind: 'furniture', type: 'plant', x: 500, y: -500, w: 100, d: 100, h: 300, rot: 0 },
+          { kind: 'furniture', type: 'box', x: 500, y: -100, w: 200, d: 100, h: 75, z: 0, rot: 90, color: '#9a6b3f' },
+          { kind: 'device', deviceId: 'x', x: 0, y: 0 },
+        ],
+        walls: [{ id: 'f', a: [0, -600], b: [1000, -600], height: 180, style: 'fence', t: 5 }],
+      },
+    ],
+  });
+  const g = house.garden(plan('bottom'));
+  assert.deepStrictEqual(g.patches.map((p) => p.kind), ['paving', 'lawn', 'pond'], 'by name, paving otherwise, no patch from two points');
+  assert.deepStrictEqual(g.patches[0].pts[0], [-4, -7], 'metres from the middle of the house, the back at -z');
+  assert.strictEqual(g.patches[1].color, '#88aa66');
+  assert.strictEqual(g.plants.length, 1);
+  assert.deepStrictEqual([g.plants[0].x, g.plants[0].z, g.plants[0].h], [0, -9, 3]);
+  assert.strictEqual(g.things.length, 1, 'a device is no thing');
+  assert.deepStrictEqual([g.things[0].w, g.things[0].d], [1, 2], 'a quarter turn swaps width and depth');
+  assert.deepStrictEqual(g.fences[0].a, [-5, -10]);
+  assert.strictEqual(g.fences[0].fence, true);
+  // The plan turned so that its top is the front: the same garden lies at the front
+  assert.deepStrictEqual(house.garden(plan('top')).patches[0].pts[0], [4, 7]);
+  // Off, or not a house in the shape of its plan: nothing
+  assert.strictEqual(house.garden(plan('bottom', { gardenOwn: false })), null);
+  assert.strictEqual(house.garden(plan('bottom', { form: 'simple' })), null);
+  const bare = plan('bottom'); bare.levels.pop();
+  assert.strictEqual(house.garden(bare), null, 'no garden level');
+});
+
 test('the chimney is on by default and can be switched off', () => {
   assert.strictEqual(house.settings({}).chimney, true);
   assert.strictEqual(house.settings({ house: { chimney: false } }).chimney, false);
