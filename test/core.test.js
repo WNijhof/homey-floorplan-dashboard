@@ -300,3 +300,9 @@ test('a room without walls of its own leaves only the walls of its neighbours', 
   level.walls = [{ id: 'w1', a: [0, 0], b: [700, 0], t: 25 }];
   assert.deepStrictEqual(core.levelWalls(level).map((w) => w.id), ['w1']);
 });
+
+test('a metering plug with a dim value is a socket, also when meter_power is not watched', () => {
+  const plug = { cls: 'socket', caps: { onoff: true, dim: 1, locked: false, measure_power: 5 } };
+  assert.strictEqual(core.deviceKind(plug), 'light', 'without the flag it still looks like a dimmable lamp');
+  assert.strictEqual(core.deviceKind(Object.assign({ metered: true }, plug)), 'socket');
+});

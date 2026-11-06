@@ -13,6 +13,12 @@
   const STRINGS = {
     en: {
       newPlan: 'New plan', saved: 'Saved', saving: 'Saving…', unsaved: 'Not saved', saveFailed: 'Save failed',
+      doorPick: 'Front door', doorPickAuto: 'In the front wall', doorPickNote: 'Choose one of the doors drawn in the outer walls of the ground floor, counted from the left (side walls from the front). The lamp above the front door goes with it.', wallFront: 'Front door', wallBack: 'Back door', wallLeft: 'Left side door', wallRight: 'Right side door',
+      nightLight: 'At night', nightDark: 'Dark', nightNormal: 'Normal', nightBright: 'Light',
+      roleTitle: 'In the 3D house', roleIs: 'This level is', byName: 'By its name', roleStorey: 'A storey of the house', roleGarden: 'The garden', roleGarage: 'A garage of its own', roleShed: 'A shed of its own', roleOther: 'Not in the 3D house (cellar, storage)',
+      roleNote: 'Only storeys stack up as floors of the 3D house. A garden, a garage or shed, or a cellar can be drawn on a level of its own without adding a floor.',
+      alignY: 'Front to back', alignX: 'Left to right', alignAuto: 'As drawn', alignFront: 'Front walls in line', alignBack: 'Back walls in line', alignLeft: 'Left walls in line', alignRight: 'Right walls in line', alignMiddle: 'In the middle',
+      alignNote: 'How this storey stands on the one below it in the 3D house, as seen from the front. For an extension at the back on the ground floor, choose Front walls in line.',
       level: 'Level', slopeTitle: 'Sloping roof', slopeNote: 'Is this level under the roof? Tick the sides of the drawing where the roof comes down. In 3D the walls there are as high as the knee wall and rise with the roof; rooms in the middle keep their full height.', slopeTop: 'Top', slopeBottom: 'Bottom', slopeLeft: 'Left', slopeRight: 'Right', kneeWall: 'Knee wall (cm)', slopePitch: 'Pitch (°)', slopeHouse: 'Like the roof of the house', name: 'Name', wallHeight: 'Wall height (cm)', wallThickness: 'Wall thickness (cm)', zone: 'Homey zone', none: '— none —',
       otherLevel: 'Other', roomsFromZones: 'Rooms from Homey', place: 'Place', allPlaced: 'Every zone already has a room on the plan.',
       plan: 'Plan', deleteLevel: 'Delete level', deletePlan: 'Delete plan', confirmAgain: 'Click again to confirm',
@@ -64,14 +70,14 @@
       variablesTitle: 'Variables on the dashboard', variablesNote: 'Logic variables to see and change there.', variablesNone: 'No Logic variables yet.', roomVacuum: 'Flow that vacuums this room',
       actionsTitle: 'Buttons on the dashboard', actionsNote: 'Moods and Flows you can start with one tap.', actionsNone: 'No moods or Flows that can be started.',
       front: 'Which side of the plan is the front', frontBottom: 'At the bottom', frontTop: 'At the top', frontLeft: 'On the left', frontRight: 'On the right',
-      outdoorLamps: 'Outdoor lamps', outdoorNote: 'Lamps with a name like garden, driveway or front door are found by themselves. They burn on the house when the real lamp is on, and tapping them switches it.', place_door: 'Beside the front door', place_path: 'Along the path', place_drive: 'Along the driveway', place_garden: 'In the garden',
+      outdoorLamps: 'Outdoor lamps', outdoorNote: 'Lamps with a name like garden, driveway or front door are found by themselves. They burn on the house when the real lamp is on, and tapping them switches it. With Shape of the house set to Follows the floor plan, a lamp you place on the garden level, or on the ground floor by an outer wall, stands there in 3D.', place_door: 'Beside the front door', place_path: 'Along the path', place_drive: 'Along the driveway', place_garden: 'In the garden',
       photo: 'Own photo', photoNote: 'Use a photo of your house instead of the 3D house. It stays in your Homey and is never part of a problem report.', photoPick: 'Choose a photo', photoReplace: 'Other photo', photoRemove: 'Remove photo',
       photoAreas: 'Draw what can be tapped', photoAreasNote: 'Choose a part and click its corners on the photo. Click the first corner again, or press Enter, to finish; Esc stops.', drawArea: 'Draw', redrawArea: 'Again', drawingArea: 'Drawing…', partHouse: 'The whole house',
       house: 'The house from outside', houseNote: 'The dashboard opens on the whole house. It is the same house for everyone, set up to look like yours: tap a storey to go inside. Parts such as solar panels or a car appear when Homey has such a device (Automatic).',
       houseType: 'House', detached: 'Detached', semi: 'Semi-detached', terraced: 'Terraced', corner: 'Corner house', flatHome: 'Flat (apartment)', flatFloor: 'Storey of the flat (0 = ground floor)', flatAbove: 'Storeys of the block above it', flatNote: 'The flat stands in a block with neighbours on both sides and a flat roof on top.', neighbourSide: 'Neighbours on the', left: 'Left', right: 'Right',
       roof: 'Roof', gable: 'Gable roof', hip: 'Hip roof', flat: 'Flat roof', ridge: 'Ridge', ridgeWidth: 'Along the front', ridgeDepth: 'Front to back', pitch: 'Roof pitch (°)',
       gas: 'Gas', gasToday: 'Gas today',
-      houseForm: 'Shape of the house', formSimple: 'Simple block', formPlan: 'Follows the floor plan', formNote: 'The walls follow the rooms you drew, storey by storey, with extensions and all. The roof lies on the biggest rectangular part; the other parts get a flat roof. Windows are placed evenly and are not your real windows. Choose the front of the plan below.', facing: 'The front faces', dormer: 'Dormer', dormerAt: 'Dormer on the', dormerBack: 'Back', dormerFront: 'Front', dormerSize: 'Dormer size', dormerNormal: 'Normal', dormerWide: 'Wide', dormerFull: 'Full width, up to the ridge', chimney: 'Chimney on the roof', neighbours: 'Neighbours', neighbourRoof: 'Roof of the neighbours', neighbourSame: 'Like the house', neighbourW: 'Width of a neighbour (m)', neighbourD: 'Depth of a neighbour (m)', neighbourShift: 'Shift towards the front (m)', neighbourLike: 'like the house', neighbourMirror: 'Neighbours look like the house, mirrored', lowRoof: 'Roof of lower parts', lowFlatRoof: 'Flat', lowLean: 'Sloping', lowPitch: 'Slope of the lower roofs (°)', lowFlat: 'Flat strip at the low end (m)', gardenOwn: 'Show the garden I drew', gardenOwnNote: 'Levels called garden, terrace or driveway: their rooms, plants, things and walls appear in the 3D house.', gridPlace: 'Grid connection on the', aircoPlace: 'Air conditioner outdoor unit', aircoAuto: 'On the front, above the meter cupboard', aircoFrontLeft: 'On the front, left', aircoFrontRight: 'On the front, right', aircoSideLeft: 'On the left side wall', aircoSideRight: 'On the right side wall', extension: 'Extension', back: 'At the back', side: 'At the side', carport: 'Carport',
+      houseForm: 'Shape of the house', formSimple: 'Simple block', formPlan: 'Follows the floor plan', formNote: 'The walls follow the rooms you drew, storey by storey, with extensions and all. The roof lies on the biggest rectangular part; the other parts get a flat roof. Windows are placed evenly and are not your real windows. Choose the front of the plan below.', facing: 'The front faces', dormer: 'Dormer', dormerAt: 'Dormer on the', dormerBack: 'Back', dormerFront: 'Front', dormerSize: 'Dormer size', dormerNormal: 'Normal', dormerWide: 'Wide', dormerFull: 'Full width, up to the ridge', dormerRidge: 'Ridge raise (higher ridge)', dormerWidth: 'Dormer width (m)', dormerShift: 'From the middle (m, + is right)', dormerBySize: 'by its size', ridgeRaise: 'Ridge higher by (m)', chimney: 'Chimney on the roof', neighbours: 'Neighbours', neighbourRoof: 'Roof of the neighbours', neighbourSame: 'Like the house', neighbourW: 'Width of a neighbour (m)', neighbourD: 'Depth of a neighbour (m)', neighbourShift: 'Shift towards the front (m)', neighbourLike: 'like the house', neighbourMirror: 'Neighbours look like the house, mirrored', lowRoof: 'Roof of lower parts', lowFlatRoof: 'Flat', lowLean: 'Sloping', lowPitch: 'Slope of the lower roofs (°)', lowFlat: 'Flat strip at the low end (m)', gardenOwn: 'Show the garden I drew', gardenOwnNote: 'Levels called garden, terrace or driveway: their rooms, plants, things and walls appear in the 3D house.', gridPlace: 'Grid connection', gridFrontLeft: 'On the front, left', gridFrontRight: 'On the front, right', gridRoom: 'By the room called Meter cupboard', aircoPlace: 'Air conditioner outdoor unit', aircoAuto: 'Where it is in the plan, else on the front', aircoFrontLeft: 'On the front, left', aircoFrontRight: 'On the front, right', aircoSideLeft: 'On the left side wall', aircoSideRight: 'On the right side wall', extension: 'Extension', back: 'At the back', side: 'At the side', carport: 'Carport',
       houseParts: 'On and around the house', showAuto: 'Automatic', showOn: 'Always', showOff: 'Never', panels: 'Number of panels (0: as many as fit)',
       batteryPlace: 'Battery stands', underCarport: 'Under the carport', againstWall: 'Against the wall', heatpumpPlace: 'Heat pump stands', besideHouse: 'Beside the house', onFlatRoof: 'On the flat roof', outbuildings: 'Garage and shed', outbuildingsNote: 'A level called Garage, Shed, Schuur or Tuinhuis stands as a building of its own in the garden of the 3D house. Tap it there to open it.', atBack: 'At the back of the garden',noHouse3d: 'This browser cannot show the house in 3D.',
       facade: 'Facade', brick: 'Red brick', darkbrick: 'Dark brick', yellowbrick: 'Yellow brick', plaster: 'White plaster', darkplaster: 'Dark plaster',
@@ -83,6 +89,12 @@
     },
     nl: {
       newPlan: 'Nieuwe plattegrond', saved: 'Opgeslagen', saving: 'Opslaan…', unsaved: 'Niet opgeslagen', saveFailed: 'Opslaan mislukt',
+      doorPick: 'Voordeur', doorPickAuto: 'In de voorgevel', doorPickNote: 'Kies een van de deuren die je in de buitenmuren van de begane grond tekende, geteld van links (zijmuren van voor naar achter). De lamp boven de voordeur gaat mee.', wallFront: 'Deur voorgevel', wallBack: 'Deur achtergevel', wallLeft: 'Deur linkerzijgevel', wallRight: 'Deur rechterzijgevel',
+      nightLight: "'s Avonds", nightDark: 'Donker', nightNormal: 'Normaal', nightBright: 'Licht',
+      roleTitle: 'In het 3D-huis', roleIs: 'Deze verdieping is', byName: 'Volgens de naam', roleStorey: 'Een verdieping van het huis', roleGarden: 'De tuin', roleGarage: 'Een losse garage', roleShed: 'Een losse schuur', roleOther: 'Niet in het 3D-huis (kelder, berging)',
+      roleNote: 'Alleen verdiepingen stapelen als lagen van het 3D-huis. Een tuin, garage, schuur of kelder kun je op een eigen verdieping tekenen zonder dat er een laag bij komt.',
+      alignY: 'Voor naar achter', alignX: 'Links naar rechts', alignAuto: 'Zoals getekend', alignFront: 'Voorgevels gelijk', alignBack: 'Achtergevels gelijk', alignLeft: 'Linkermuren gelijk', alignRight: 'Rechtermuren gelijk', alignMiddle: 'In het midden',
+      alignNote: 'Hoe deze verdieping in het 3D-huis op de verdieping eronder staat, gezien vanaf de voorkant. Heb je beneden een uitbouw aan de achterkant, kies dan Voorgevels gelijk.',
       level: 'Verdieping', slopeTitle: 'Schuin dak', slopeNote: 'Ligt deze verdieping onder het dak? Vink de kanten van de tekening aan waar het dak naar beneden komt. In 3D zijn de muren daar zo hoog als het knieschot en lopen ze schuin op met het dak; kamers in het midden houden hun volle hoogte.', slopeTop: 'Boven', slopeBottom: 'Onder', slopeLeft: 'Links', slopeRight: 'Rechts', kneeWall: 'Knieschot (cm)', slopePitch: 'Helling (°)', slopeHouse: 'Zoals het dak van het huis', name: 'Naam', wallHeight: 'Muurhoogte (cm)', wallThickness: 'Muurdikte (cm)', zone: 'Homey-zone', none: '— geen —',
       otherLevel: 'Overig', roomsFromZones: 'Kamers uit Homey', place: 'Plaatsen', allPlaced: 'Elke zone heeft al een kamer op de plattegrond.',
       plan: 'Plattegrond', deleteLevel: 'Verdieping verwijderen', deletePlan: 'Plattegrond verwijderen', confirmAgain: 'Klik nogmaals om te bevestigen',
@@ -134,7 +146,7 @@
       variablesTitle: 'Variabelen op het dashboard', variablesNote: 'Logic-variabelen om daar te zien en te wijzigen.', variablesNone: 'Nog geen Logic-variabelen.', roomVacuum: 'Flow die deze kamer stofzuigt',
       actionsTitle: 'Knoppen op het dashboard', actionsNote: 'Moods en Flows die je met één tik start.', actionsNone: 'Geen moods of Flows die je kunt starten.',
       front: 'Welke kant van de plattegrond is de voorkant', frontBottom: 'Onder', frontTop: 'Boven', frontLeft: 'Links', frontRight: 'Rechts',
-      outdoorLamps: 'Buitenlampen', outdoorNote: 'Lampen met een naam als tuin, oprit of voordeur worden vanzelf gevonden. Ze branden op het huis als de echte lamp aan is, en tikken schakelt hem.', place_door: 'Naast de voordeur', place_path: 'Langs het pad', place_drive: 'Langs de oprit', place_garden: 'In de tuin',
+      outdoorLamps: 'Buitenlampen', outdoorNote: 'Lampen met een naam als tuin, oprit of voordeur worden vanzelf gevonden. Ze branden op het huis als de echte lamp aan is, en tikken schakelt hem. Met Vorm van het huis op Volgens de plattegrond staat een lamp die je op de tuin-verdieping zet, of op de begane grond bij een buitenmuur, in 3D op die plek.', place_door: 'Naast de voordeur', place_path: 'Langs het pad', place_drive: 'Langs de oprit', place_garden: 'In de tuin',
       photo: 'Eigen foto', photoNote: 'Gebruik een foto van je huis in plaats van het 3D-huis. Hij blijft in je Homey en gaat nooit mee in een probleemrapport.', photoPick: 'Foto kiezen', photoReplace: 'Andere foto', photoRemove: 'Foto verwijderen',
       photoAreas: 'Teken waar je op kunt tikken', photoAreasNote: 'Kies een onderdeel en klik de hoeken aan op de foto. Klik de eerste hoek nog eens, of druk op Enter, om af te ronden; Esc stopt.', drawArea: 'Tekenen', redrawArea: 'Opnieuw', drawingArea: 'Bezig…', partHouse: 'Het hele huis',
       house: 'Het huis van buiten', houseNote: "Het dashboard opent op het hele huis. Het is voor iedereen hetzelfde huis, zo ingesteld dat het op het jouwe lijkt: tik op een verdieping om naar binnen te gaan. Onderdelen zoals zonnepanelen of een auto verschijnen als Homey zo'n apparaat heeft (Automatisch).",
@@ -142,7 +154,7 @@
       roof: 'Dak', gable: 'Zadeldak', hip: 'Schilddak', flat: 'Plat dak', ridge: 'Nok', ridgeWidth: 'Langs de voorkant', ridgeDepth: 'Van voor naar achter', pitch: 'Dakhelling (°)',
       gas: 'Gas', gasToday: 'Gas vandaag',
       tips: { 'level-add': 'Verdieping toevoegen', undo: 'Ongedaan maken (Ctrl+Z)', redo: 'Opnieuw doen (Ctrl+Y)', snap: 'Uitlijnen (met Shift tijdelijk andersom)', 'toggle-grid': 'Raster', 'toggle-furniture': 'Meubels', 'lock-layout': 'Kamers en muren vastzetten', turn: 'Draaien', 'zoom-in': 'Inzoomen', 'zoom-out': 'Uitzoomen', 'zoom-fit': 'Hele verdieping tonen' },
-      houseForm: 'Vorm van het huis', formSimple: 'Eenvoudig blok', formPlan: 'Volgens de plattegrond', formNote: 'De muren volgen de kamers die je hebt getekend, per verdieping, met uitbouw en al. Het dak ligt op het grootste rechthoekige deel; de andere delen krijgen een plat dak. Ramen staan gelijkmatig verdeeld en zijn niet je echte ramen. Kies hieronder welke kant de voorkant is.', facing: 'Windrichting van de voorkant', dormer: 'Dakkapel', dormerAt: 'Dakkapel aan de', dormerBack: 'Achterkant', dormerFront: 'Voorkant', dormerSize: 'Grootte dakkapel', dormerNormal: 'Normaal', dormerWide: 'Breed', dormerFull: 'Volle breedte, tot aan de nok', chimney: 'Schoorsteen op het dak', neighbours: 'Buren', neighbourRoof: 'Dak van de buren', neighbourSame: 'Zoals het huis', neighbourW: 'Breedte van een buurhuis (m)', neighbourD: 'Diepte van een buurhuis (m)', neighbourShift: 'Verschuiving naar voren (m)', neighbourLike: 'zoals het huis', neighbourMirror: 'Buren zien eruit als het huis, gespiegeld', lowRoof: 'Dak van lagere delen', lowFlatRoof: 'Plat', lowLean: 'Schuin', lowPitch: 'Helling van de lagere daken (°)', lowFlat: 'Plat stuk aan de lage kant (m)', gardenOwn: 'Toon de tuin die ik getekend heb', gardenOwnNote: 'Verdiepingen met de naam tuin, terras of oprit: hun ruimtes, planten, spullen en muren komen in het 3D-huis.', gridPlace: 'Netaansluiting aan de', aircoPlace: 'Buitenunit van de airco', aircoAuto: 'Op de voorgevel, boven de meterkast', aircoFrontLeft: 'Op de voorgevel, links', aircoFrontRight: 'Op de voorgevel, rechts', aircoSideLeft: 'Op de linker zijgevel', aircoSideRight: 'Op de rechter zijgevel', extension: 'Aanbouw', back: 'Aan de achterkant', side: 'Aan de zijkant', carport: 'Carport',
+      houseForm: 'Vorm van het huis', formSimple: 'Eenvoudig blok', formPlan: 'Volgens de plattegrond', formNote: 'De muren volgen de kamers die je hebt getekend, per verdieping, met uitbouw en al. Het dak ligt op het grootste rechthoekige deel; de andere delen krijgen een plat dak. Ramen staan gelijkmatig verdeeld en zijn niet je echte ramen. Kies hieronder welke kant de voorkant is.', facing: 'Windrichting van de voorkant', dormer: 'Dakkapel', dormerAt: 'Dakkapel aan de', dormerBack: 'Achterkant', dormerFront: 'Voorkant', dormerSize: 'Grootte dakkapel', dormerNormal: 'Normaal', dormerWide: 'Breed', dormerFull: 'Volle breedte, tot aan de nok', dormerRidge: 'Nokverhoging (hogere nok)', dormerWidth: 'Breedte dakkapel (m)', dormerShift: 'Vanaf het midden (m, + is rechts)', dormerBySize: 'volgens grootte', ridgeRaise: 'Nok hoger met (m)', chimney: 'Schoorsteen op het dak', neighbours: 'Buren', neighbourRoof: 'Dak van de buren', neighbourSame: 'Zoals het huis', neighbourW: 'Breedte van een buurhuis (m)', neighbourD: 'Diepte van een buurhuis (m)', neighbourShift: 'Verschuiving naar voren (m)', neighbourLike: 'zoals het huis', neighbourMirror: 'Buren zien eruit als het huis, gespiegeld', lowRoof: 'Dak van lagere delen', lowFlatRoof: 'Plat', lowLean: 'Schuin', lowPitch: 'Helling van de lagere daken (°)', lowFlat: 'Plat stuk aan de lage kant (m)', gardenOwn: 'Toon de tuin die ik getekend heb', gardenOwnNote: 'Verdiepingen met de naam tuin, terras of oprit: hun ruimtes, planten, spullen en muren komen in het 3D-huis.', gridPlace: 'Netaansluiting', gridFrontLeft: 'Op de voorgevel, links', gridFrontRight: 'Op de voorgevel, rechts', gridRoom: 'Bij de kamer Meterkast', aircoPlace: 'Buitenunit van de airco', aircoAuto: 'Waar de airco in de plattegrond staat, anders op de voorgevel', aircoFrontLeft: 'Op de voorgevel, links', aircoFrontRight: 'Op de voorgevel, rechts', aircoSideLeft: 'Op de linker zijgevel', aircoSideRight: 'Op de rechter zijgevel', extension: 'Aanbouw', back: 'Aan de achterkant', side: 'Aan de zijkant', carport: 'Carport',
       houseParts: 'Op en rond het huis', showAuto: 'Automatisch', showOn: 'Altijd', showOff: 'Nooit', panels: 'Aantal panelen (0: zoveel als past)',
       batteryPlace: 'Accu staat', underCarport: 'Onder de carport', againstWall: 'Tegen de muur', heatpumpPlace: 'Warmtepomp staat', besideHouse: 'Naast het huis', onFlatRoof: 'Op het platte dak', outbuildings: 'Garage en schuur', outbuildingsNote: 'Een verdieping met de naam Garage, Schuur, Tuinhuis of Berging staat als eigen gebouwtje in de tuin van het 3D-huis. Tik erop om hem te openen.', atBack: 'Achter in de tuin',noHouse3d: 'Deze browser kan het huis niet in 3D tonen.',
       facade: 'Gevel', brick: 'Rode baksteen', darkbrick: 'Donkere baksteen', yellowbrick: 'Gele baksteen', plaster: 'Wit stucwerk', darkplaster: 'Donker stucwerk',
@@ -1398,6 +1410,7 @@
       ${field(T.zone, `<select data-path="level.zoneId" data-rerender="1">${options(zoneList, lv.zoneId, T.none)}</select>`)}
       <div class="ed-two">${field(T.wallHeight, input('level.wallHeight', lv.wallHeight, 'number'))}${field(T.wallThickness, input('level.wallThickness', lv.wallThickness, 'number'))}</div>
       <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="align-all">⇹ ${T.alignAll}</button></div>
+      ${houseRoleSection(lv)}
       ${slopeSection(lv)}
       <h3>${T.roomsFromZones}</h3>
       ${free.length ? `<div class="ed-list">${free.map((z) => `<div class="ed-list-row"><span>${esc(z.name)}</span><button type="button" class="ed-btn small" data-action="place-zone" data-zone="${esc(z.id)}">${T.place}</button></div>`).join('')}</div>` : `<p class="ed-note">${T.allPlaced}</p>`}
@@ -1410,6 +1423,24 @@
       <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="backup-export">⬇ ${T.backupExport}</button><button type="button" class="ed-btn" data-action="backup-import">⬆ ${T.backupImport}</button></div>
       ${backupCopies()}
       <p class="ed-note" id="backup-result"></p>`;
+  }
+
+  // What the level is in the 3D house (a storey, the garden, a garage or shed, or nothing) and, for a storey above
+  // another, how it lines up with the one below it.
+  function houseRoleSection(lv) {
+    const H = window.HouseCore;
+    if (!H) return '';
+    const pickList = (path, value, list) => `<select data-path="${path}" data-rerender="1">${list.map(([v, name]) => `<option value="${esc(v)}"${String(v) === String(value || '') ? ' selected' : ''}>${esc(name)}</option>`).join('')}</select>`;
+    const auto = H.levelRole(Object.assign({}, lv, { role: null }));
+    const names = { storey: T.roleStorey, garden: T.roleGarden, garage: T.roleGarage, shed: T.roleShed, other: T.roleOther };
+    const role = H.levelRole(lv);
+    const storeys = S.plan.levels.filter((l) => H.levelRole(l) === 'storey');
+    const above = role === 'storey' && storeys.indexOf(lv) > 0;
+    return `<h3>${T.roleTitle}</h3>
+      ${field(T.roleIs, pickList('level.role', lv.role, [['', `${T.byName} (${names[auto]})`]].concat(['storey', 'garden', 'garage', 'shed', 'other'].map((k) => [k, names[k]]))))}
+      <p class="ed-note">${T.roleNote}</p>
+      ${above ? `<div class="ed-two">${field(T.alignY, pickList('level.alignY', lv.alignY, [['', T.alignAuto], ['front', T.alignFront], ['back', T.alignBack], ['middle', T.alignMiddle]]))}${field(T.alignX, pickList('level.alignX', lv.alignX, [['', T.alignAuto], ['left', T.alignLeft], ['right', T.alignRight], ['middle', T.alignMiddle]]))}</div>
+      <p class="ed-note">${T.alignNote}</p>` : ''}`;
   }
 
   // A sloping roof over the level: the sides of the drawing where it comes down, the knee wall and the pitch.
@@ -1827,6 +1858,22 @@
       ${h.photo ? `<h3>${T.photoAreas}</h3><p class="ed-note">${T.photoAreasNote}</p><div class="ed-list">${parts.map(([k, name]) => row(k, null, name)).join('')}${S.plan.levels.map((l) => row('level', l.id, l.name)).join('')}</div>` : ''}`;
   }
 
+  // Which drawn door of the ground floor is the front door: any door in an outer wall, also in a side wall
+  function frontDoorField(H, h, sel) {
+    if (h.form !== 'plan') return '';
+    const sh = H.shape(S.plan);
+    const doors = sh.form ? sh.form.floors[0].openings.filter((o) => o.door && o.id) : [];
+    if (doors.length < 2 && !h.doorId) return '';
+    const wallName = (n) => (n[1] === 1 ? T.wallFront : n[1] === -1 ? T.wallBack : n[0] === 1 ? T.wallRight : T.wallLeft);
+    const count = {};
+    const list = doors.slice().sort((a, b) => (b.n[1] - a.n[1]) || (a.n[0] - b.n[0]) || (a.n[0] ? b.z - a.z : a.x - b.x)).map((o) => {
+      const wall = wallName(o.n);
+      count[wall] = (count[wall] || 0) + 1;
+      return [o.id, `${wall} ${count[wall]}`];
+    });
+    return field(T.doorPick, sel('doorId', h.doorId, [['', T.doorPickAuto]].concat(list))) + `<p class="ed-note">${T.doorPickNote}</p>`;
+  }
+
   function housePanel() {
     const H = window.HouseCore;
     if (!H) return `<h2>${T.house}</h2><p class="ed-note">${T.noHouse3d}</p>`;
@@ -1840,6 +1887,7 @@
       ${photoSection(h)}
       <h3>${T.houseType}</h3>
       ${field(T.scene, sel('scene', h.scene, [['garden', T.sceneGarden], ['studio', T.sceneStudio]]))}
+      ${field(T.nightLight, sel('nightLight', h.nightLight, [['dark', T.nightDark], ['normal', T.nightNormal], ['bright', T.nightBright]]))}
       ${field(T.houseType, sel('type', h.type, [['detached', T.detached], ['semi', T.semi], ['corner', T.corner], ['terraced', T.terraced], ['flat', T.flatHome]]))}
       ${h.type === 'flat' ? `<p class="ed-note">${T.flatNote}</p>${field(T.flatFloor, `<input type="number" data-house="flatFloor" data-num="1" min="0" max="30" step="1" value="${h.flatFloor}">`)}${field(T.flatAbove, `<input type="number" data-house="flatAbove" data-num="1" min="0" max="30" step="1" value="${h.flatAbove}">`)}` : ''}
       ${h.oneSide ? field(T.neighbourSide, sel('neighbour', h.neighbour, [['left', T.left], ['right', T.right]])) : ''}
@@ -1854,9 +1902,12 @@
       ${field(T.roofColor, sel('roofColor', h.roofColor, [['anthracite', T.anthracite], ['red', T.red], ['black', T.black]]))}
       ${field(T.frames, sel('frames', h.frames, [['anthracite', T.anthracite], ['white', T.white]]))}
       ${field(T.doorColor, `<input type="color" data-house="door" value="${esc(h.door)}">`)}
-      ${field(T.doorAt, sel('doorAt', h.doorAt, [['auto', T.doorAuto], ['left', T.doorLeft], ['leftmid', T.doorLeftMid], ['middle', T.doorMiddle], ['rightmid', T.doorRightMid], ['right', T.doorRight]]))}
+      ${frontDoorField(H, h, sel)}
+      ${h.doorId ? '' : field(T.doorAt, sel('doorAt', h.doorAt, [['auto', T.doorAuto], ['left', T.doorLeft], ['leftmid', T.doorLeftMid], ['middle', T.doorMiddle], ['rightmid', T.doorRightMid], ['right', T.doorRight]]))}
       ${h.roof === 'gable' && h.ridge === 'width' ? `<label class="ed-check"><input type="checkbox" data-house="dormer" data-bool="1"${h.dormer ? ' checked' : ''}>${T.dormer}</label>` : ''}
-      ${h.roof === 'gable' && h.ridge === 'width' && h.dormer ? field(T.dormerAt, sel('dormerAt', h.dormerAt, [['back', T.dormerBack], ['front', T.dormerFront]])) + field(T.dormerSize, sel('dormerSize', h.dormerSize, [['normal', T.dormerNormal], ['wide', T.dormerWide], ['full', T.dormerFull]])) : ''}
+      ${h.roof === 'gable' && h.ridge === 'width' && h.dormer ? field(T.dormerAt, sel('dormerAt', h.dormerAt, [['back', T.dormerBack], ['front', T.dormerFront]])) + field(T.dormerSize, sel('dormerSize', h.dormerSize, [['normal', T.dormerNormal], ['wide', T.dormerWide], ['full', T.dormerFull], ['ridge', T.dormerRidge]])) : ''}
+      ${h.roof === 'gable' && h.ridge === 'width' && h.dormer && h.dormerSize !== 'ridge' ? `<div class="ed-two">${field(T.dormerWidth, `<input type="number" data-house="dormerWidth" data-num="1" min="0" max="30" step="0.1" value="${h.dormerWidth || ''}" placeholder="${esc(T.dormerBySize)}">`)}${field(T.dormerShift, `<input type="number" data-house="dormerShift" data-num="1" min="-15" max="15" step="0.1" value="${h.dormerShift != null ? h.dormerShift : ''}" placeholder="${esc(T.dormerBySize)}">`)}</div>` : ''}
+      ${h.roof === 'gable' && h.ridge === 'width' && h.dormer && h.dormerSize === 'ridge' ? field(T.ridgeRaise, `<input type="number" data-house="ridgeRaise" data-num="1" min="0.3" max="3" step="0.1" value="${h.ridgeRaise}">`) : ''}
       ${h.roof === 'gable' ? `<label class="ed-check"><input type="checkbox" data-house="chimney" data-bool="1"${h.chimney ? ' checked' : ''}>${T.chimney}</label>` : ''}
       ${h.form === 'plan' ? field(T.lowRoof, sel('lowRoof', h.lowRoof, [['flat', T.lowFlatRoof], ['lean', T.lowLean]])) : ''}
       ${h.form === 'plan' && h.lowRoof === 'lean' ? field(T.lowPitch, `<input type="number" data-house="lowPitch" data-num="1" min="5" max="45" step="5" value="${h.lowPitch}">`) + field(T.lowFlat, `<input type="number" data-house="lowFlat" data-num="1" min="0" max="3" step="0.5" value="${h.lowFlat}">`) : ''}
@@ -1869,7 +1920,7 @@
         ${field(T.neighbourShift, `<input type="number" data-house="neighbourShift" data-num="1" min="-10" max="10" step="0.5" value="${h.neighbourShift}">`)}
         <label class="ed-check"><input type="checkbox" data-house="neighbourMirror" data-bool="1"${h.neighbourMirror ? ' checked' : ''}>${T.neighbourMirror}</label>` : ''}
       <h3>${T.outbuildings}</h3><p class="ed-note">${T.outbuildingsNote}</p>
-      ${S.plan.levels.filter((l) => H.outbuildingKind(l.name)).map((l) => field(l.name, sel(`outbuildings.${l.id}`, h.outbuildings[l.id] || 'auto', [['auto', T.showAuto], ['side', T.besideHouse], ['back', T.atBack], ['off', T.showOff]]))).join('')}
+      ${S.plan.levels.filter((l) => ['garage', 'shed'].indexOf(H.levelRole(l)) >= 0).map((l) => field(l.name, sel(`outbuildings.${l.id}`, h.outbuildings[l.id] || 'auto', [['auto', T.showAuto], ['side', T.besideHouse], ['back', T.atBack], ['off', T.showOff]]))).join('')}
       <h3>${T.houseParts}</h3>
       ${field(T.partSolar, show('solar'))}
       ${h.objects.solar.show !== 'off' ? field(T.panels, `<input type="number" data-house="objects.solar.panels" data-num="1" min="0" max="60" step="1" value="${h.objects.solar.panels}">`) : ''}
@@ -1877,7 +1928,7 @@
       ${h.objects.solar.show !== 'off' ? `<label class="ed-check"><input type="checkbox" data-house="forecast" data-bool="1"${h.forecast ? ' checked' : ''}>${T.forecastOn}</label>` : ''}
       ${h.objects.solar.show !== 'off' ? field(T.kwp, `<input type="number" data-house="objects.solar.kwp" data-num="1" min="0" max="100" step="0.1" value="${h.objects.solar.kwp || ''}" placeholder="${esc(T.kwpAuto)}">`) : ''}
       ${field(T.partGrid, show('grid'))}
-      ${h.objects.grid.show !== 'off' ? field(T.gridPlace, sel('objects.grid.place', h.objects.grid.place, [['auto', T.showAuto], ['left', T.left], ['right', T.right]])) : ''}
+      ${h.objects.grid.show !== 'off' ? field(T.gridPlace, sel('objects.grid.place', h.objects.grid.place, [['auto', T.showAuto], ['left', T.gridFrontLeft], ['right', T.gridFrontRight], ['sideleft', T.aircoSideLeft], ['sideright', T.aircoSideRight], ['room', T.gridRoom]])) : ''}
       ${field(T.partBattery, show('battery'))}
       ${h.objects.battery.show !== 'off' && h.carport !== 'none' && !h.between ? field(T.batteryPlace, sel('objects.battery.place', h.objects.battery.place, [['carport', T.underCarport], ['wall', T.againstWall]])) : ''}
       ${field(T.partCar, show('car'))}
@@ -1930,7 +1981,8 @@
   // A change in the house panel goes into plan.house; nested objects are made as needed.
   function setHouse(el) {
     let value = el.dataset.bool ? el.checked : el.value;
-    if (el.dataset.num || el.dataset.house === 'facing') { value = Number(value); if (!Number.isFinite(value)) return; }
+    const cleared = el.dataset.num && el.value === ''; // an emptied number field goes back to its default
+    if (!cleared && (el.dataset.num || el.dataset.house === 'facing')) { value = Number(value); if (!Number.isFinite(value)) return; }
     // Typing a number is one step to undo
     if (el.tagName === 'SELECT' || el.dataset.bool) snapshot();
     else if (S.typingSnap !== el) { snapshot(); S.typingSnap = el; }
@@ -1938,7 +1990,7 @@
     S.plan.house = S.plan.house || {};
     let obj = S.plan.house;
     for (const k of keys.slice(0, -1)) obj = obj[k] = obj[k] || {};
-    obj[keys[keys.length - 1]] = value;
+    if (cleared) delete obj[keys[keys.length - 1]]; else obj[keys[keys.length - 1]] = value;
     changed({ panel: el.tagName === 'SELECT' || !!el.dataset.bool });
   }
 

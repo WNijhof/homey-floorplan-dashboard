@@ -51,6 +51,8 @@
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  // The step of a target temperature: the device's own, a whole degree when it has no decimals, else half a degree
+  const stepOf = (u) => (u && u.step > 0 ? u.step : u && u.decimals === 0 ? 1 : 0.5);
 
   const state = {
     Homey: null,
@@ -688,7 +690,7 @@
     if ('windowcoverings_state' in c) rows.push(`<div class="fp-btns"><button type="button" class="fp-btn" data-act="set" data-dev="${esc(dev.id)}" data-cap="windowcoverings_state" data-value="up">${T.open}</button><button type="button" class="fp-btn" data-act="set" data-dev="${esc(dev.id)}" data-cap="windowcoverings_state" data-value="idle">${T.stop}</button><button type="button" class="fp-btn" data-act="set" data-dev="${esc(dev.id)}" data-cap="windowcoverings_state" data-value="down">${T.close}</button></div>`);
     if (typeof c.target_temperature === 'number') {
       const u = (dev.units && dev.units.target_temperature) || {};
-      rows.push(`<div class="fp-row"><span class="fp-name">${T.target}</span><div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="${esc(dev.id)}" data-cap="target_temperature" data-step="${-(u.step || 0.5)}">−</button><span class="fp-big">${c.target_temperature}°</span><button type="button" class="fp-step" data-act="step" data-dev="${esc(dev.id)}" data-cap="target_temperature" data-step="${u.step || 0.5}">+</button></div></div>`);
+      rows.push(`<div class="fp-row"><span class="fp-name">${T.target}</span><div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="${esc(dev.id)}" data-cap="target_temperature" data-step="${-stepOf(u)}">−</button><span class="fp-big">${c.target_temperature}°</span><button type="button" class="fp-step" data-act="step" data-dev="${esc(dev.id)}" data-cap="target_temperature" data-step="${stepOf(u)}">+</button></div></div>`);
     }
     for (const cap of ['thermostat_mode', 'fan_mode']) {
       const values = dev.units && dev.units[cap] && dev.units[cap].values;
@@ -756,7 +758,7 @@
       if (rd.climateId) {
         const climate = state.devices.get(rd.climateId);
         const u = (climate.units && climate.units.target_temperature) || {};
-        parts.push(`<div class="fp-row"><span class="fp-name">${T.target}</span><div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="${esc(climate.id)}" data-cap="target_temperature" data-step="${-(u.step || 0.5)}">−</button><span class="fp-big">${rd.target}°</span><button type="button" class="fp-step" data-act="step" data-dev="${esc(climate.id)}" data-cap="target_temperature" data-step="${u.step || 0.5}">+</button></div></div>`);
+        parts.push(`<div class="fp-row"><span class="fp-name">${T.target}</span><div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="${esc(climate.id)}" data-cap="target_temperature" data-step="${-stepOf(u)}">−</button><span class="fp-big">${rd.target}°</span><button type="button" class="fp-step" data-act="step" data-dev="${esc(climate.id)}" data-cap="target_temperature" data-step="${stepOf(u)}">+</button></div></div>`);
       }
       const devs = itemsInRoom(level, room).map((i) => ({ item: i, dev: state.devices.get(i.deviceId) })).filter((x) => x.dev);
       const lights = devs.filter((x) => core.deviceKind(x.dev) === 'light' && 'onoff' in x.dev.caps);
@@ -802,7 +804,9 @@
     if (act === 'set' && dev) setCap(dev.id, el.dataset.cap, el.dataset.value);
     if (act === 'step' && dev) {
       const u = (dev.units && dev.units[el.dataset.cap]) || {};
-      let v = Math.round((dev.caps[el.dataset.cap] + Number(el.dataset.step)) * 10) / 10;
+      const step = Math.abs(Number(el.dataset.step)) || 0.5;
+      // On the device's own step (a whole degree for some air conditioners)
+      let v = Math.round(Math.round((dev.caps[el.dataset.cap] + Number(el.dataset.step)) / step) * step * 10) / 10;
       if (typeof u.min === 'number') v = Math.max(u.min, v);
       if (typeof u.max === 'number') v = Math.min(u.max, v);
       setCap(dev.id, el.dataset.cap, v);

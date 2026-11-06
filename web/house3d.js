@@ -326,12 +326,16 @@ class House3D {
     shows.water = !!present.water; shows.gas = !!present.gas;
     const outdoor = HC.outdoorLamps(plan, devices instanceof Map ? devices : null);
     const own = HC.garden(plan);
-    const key = JSON.stringify([plan.id, set, shape, shows, !!dark, this.lang, outdoor, levelRooms(plan), HC.outbuildings(plan), own]);
+    // Where the air conditioner is placed in the plan: its outdoor unit hangs on the outer wall nearest to it
+    const aircos = devices instanceof Map ? [...devices.values()].filter((d) => d.cls === 'airconditioning').map((d) => d.id) : [];
+    const aircoAt = HC.deviceWallSpot(plan, aircos);
+    const key = JSON.stringify([plan.id, set, shape, shows, !!dark, this.lang, outdoor, levelRooms(plan), HC.outbuildings(plan), own, aircoAt]);
     if (key !== this.key) {
       const first = !this.key;
       this.key = key;
       this.outdoor = outdoor;
       this.own = own; // the garden as drawn, or null
+      this.aircoAt = aircoAt;
       this.build(set, shape, shows, dark);
       if (first) this.resetCamera();
     }
@@ -366,18 +370,20 @@ class House3D {
     this.envs = this.envs || {};
     if (!this.envs[dark ? 'd' : 'l']) this.envs[dark ? 'd' : 'l'] = LOOK.environment(this.renderer, dark);
     this.scene.environment = this.envs[dark ? 'd' : 'l'];
-    this.scene.environmentIntensity = dark ? 0.32 : 0.7;
+    this.scene.environmentIntensity = dark ? 0.32 * (set.nightLight === 'bright' ? 1.8 : set.nightLight === 'dark' ? 1 : 1.4) : 0.7;
     // The sky behind the house is the page's (view3d.css), so nothing is drawn for it
     this.el.classList.toggle('h3-day', !dark);
     this.el.classList.toggle('h3-night', !!dark);
     this.el.classList.toggle('h3-studio', set.scene === 'studio');
-    this.renderer.toneMappingExposure = dark ? 1.15 : 1;
+    // After sunset the moon and the sky light the house; brighter as chosen in the editor (Night)
+    const nightBoost = !dark ? 1 : set.nightLight === 'dark' ? 1 : set.nightLight === 'bright' ? 1.75 : 1.35;
+    this.renderer.toneMappingExposure = dark ? 1.15 * Math.sqrt(nightBoost) : 1;
     this.set = set;
     this.shape = shape;
     this.shows = shows;
     this.entry = this.entrySpot(set, shape);
-    this.hemi.color.set(t.hemiSky); this.hemi.groundColor.set(t.hemiGround); this.hemi.intensity = t.hemi;
-    this.sun.intensity = t.sun;
+    this.hemi.color.set(t.hemiSky); this.hemi.groundColor.set(t.hemiGround); this.hemi.intensity = t.hemi * nightBoost;
+    this.sun.intensity = t.sun * nightBoost;
     this.sun.color.set(t.sunColor || '#fff4e0');
     this.wallHover = this.M.wall.clone();
     this.wallHover.emissive = new THREE.Color('#2e5bff');
@@ -395,8 +401,17 @@ class House3D {
     // The side of the front where the power comes in (the meter cupboard, the grid cabinet and the heat pump by it):
     // away from the carport, unless the owner chose a side, for a corner house whose neighbours stand on that side
     const gridAt = set.objects.grid.place;
-    const ms = gridAt === 'left' ? -1 : gridAt === 'right' ? 1 : -cs;
+    const against = (sd) => set.between || (set.oneSide && set.neighbour === (sd < 0 ? 'left' : 'right'));
+    // A meter cupboard on a side wall near the front, or by the room called meter cupboard: { x, z, n }
+    let meterAt = null;
+    if ((gridAt === 'sideleft' || gridAt === 'sideright') && !against(gridAt === 'sideleft' ? -1 : 1)) {
+      const sd = gridAt === 'sideleft' ? -1 : 1;
+      const w = this.wallSpot(shape, sd, 0, D / 2 - 1.2, 0.5);
+      if (w) meterAt = { x: w.x, z: w.z, n: [sd, 0] };
+    } else if (gridAt === 'room') meterAt = HC.meterRoomSpot(this.plan);
+    const ms = meterAt ? (meterAt.n[0] || Math.sign(meterAt.x) || -cs) : gridAt === 'left' ? -1 : gridAt === 'right' ? 1 : -cs;
     this.meterSide = ms;
+    this.meterAt = meterAt;
     // Garages and sheds, and how far the garden reaches for them
     this.yard = HC.yard(this.plan);
     // Whether a spot of the garden (a tree, a garden light) is free of them, with some room around
@@ -419,10 +434,12 @@ class House3D {
     this.buildOutbuildings();
 
     // Where the power of the house comes in: the meter cupboard at the front corner, on the side of the grid connection.
-    const { x: mx, z: mz } = this.frontSpot(shape, ms * (W / 2 - 0.9), 0.4);
-    const meter = new THREE.Vector3(mx, 0.9, mz + 0.04);
+    const mAt = this.meterAt || Object.assign({ n: [0, 1] }, this.frontSpot(shape, ms * (W / 2 - 0.9), 0.4));
+    const [mnx, mnz] = mAt.n;
+    const meter = new THREE.Vector3(mAt.x + mnx * 0.04, 0.9, mAt.z + mnz * 0.04);
     this.meterPoint = meter;
-    const meterBox = box(0.42, 0.55, 0.06, mat('#d7dbe0'), mx, 0.62, mz + 0.02);
+    const meterBox = box(0.42, 0.55, 0.06, mat('#d7dbe0'), mAt.x + mnx * 0.02, 0.62, mAt.z + mnz * 0.02);
+    meterBox.rotation.y = Math.atan2(mnx, mnz);
     this.root.add(meterBox);
 
     if (shows.solar) this.buildSolar(t, set, shape, W, D, anchors, meter);
@@ -432,8 +449,8 @@ class House3D {
     if (shows.heatpump) this.buildHeatpump(t, W, D, cs, meter);
     if (shows.airco) this.buildAirco(t, W, D, cs, shape, meter);
     this.cards.home = this.card('home', null, new THREE.Vector3(body.x, anchors.top + 1.2, 0));
-    if (shows.gas) this.cards.gas = this.card('gas', null, new THREE.Vector3(mx, 1.5, mz + 0.04));
-    if (shows.water) this.cards.water = this.card('water', null, new THREE.Vector3(mx, 1.3, mz + 0.04));
+    if (shows.gas) this.cards.gas = this.card('gas', null, new THREE.Vector3(meter.x, 1.5, meter.z));
+    if (shows.water) this.cards.water = this.card('water', null, new THREE.Vector3(meter.x, 1.3, meter.z));
     // The boiler stands inside: a card on the front wall, on the free side, without a model
     if (shows.boiler) {
       const spot = this.frontSpot(shape, cs * (W / 2 - 1.4), 0.4);
@@ -510,7 +527,11 @@ class House3D {
     };
     // A path to the front door, a strip of pavers around the house, the driveway to the carport
     const ex = this.entry ? this.entry.x : 0;
-    paved(ex - 0.8, D / 2, ex + 0.8, D / 2 + 5);
+    const en = this.entry ? this.entry.n : [0, 1];
+    if (en[0]) { // a door in a side wall: the path runs along that side from the street
+      const x0 = en[0] > 0 ? this.entry.x : this.entry.x - 1.6;
+      paved(x0, this.entry.z - 0.8, x0 + 1.6, D / 2 + 5);
+    } else paved(ex - 0.8, D / 2, ex + 0.8, D / 2 + 5);
     paved(-W / 2 - 0.6, D / 2, W / 2 + 0.6, D / 2 + 0.6);
     paved(-W / 2 - 0.6, -D / 2 - 0.6, -W / 2, D / 2);
     paved(W / 2, -D / 2 - 0.6, W / 2 + 0.6, D / 2);
@@ -632,6 +653,29 @@ class House3D {
       const x = cs * (W / 2 + 2.1);
       this.root.add(LOOK.lightPool(x, D / 2 - 3.4, 6, 8, g.pool));
       for (const z of zs) bollard(g, x + cs * 2.05, z);
+    } else if (this.outdoor.drive.length && !this.set.between) {
+      // No carport or car: the lamps of the driveway still stand along the free side of the house
+      const g = group('drive', { kind: 'lamp', id: 'drive' });
+      for (const z of [D / 2 + 1.6, D / 2 + 3.3]) if (this.free(cs * (W / 2 + 1.4), z, 0.3)) bollard(g, cs * (W / 2 + 1.4), z);
+    }
+    // The outdoor lamps placed in the plan, where they were placed: in the garden, or on an outer wall
+    const base = this.shape.floors[0] ? this.shape.floors[0].base : 0;
+    for (const sp of this.outdoor.spots || []) {
+      const place = `dev:${sp.id}`;
+      const g = group(place, { kind: 'lamp', id: place });
+      if (!sp.wall) { bollard(g, sp.x, sp.z); continue; }
+      const parts = new THREE.Group();
+      parts.userData.pick = g.pick;
+      const head = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.2, 0.1), g.head);
+      head.position.set(sp.x + sp.n[0] * 0.06, base + 2.2, sp.z + sp.n[1] * 0.06);
+      head.rotation.y = Math.atan2(sp.n[0], sp.n[1]);
+      parts.add(head);
+      this.root.add(parts);
+      this.root.add(LOOK.lightPool(sp.x + sp.n[0] * 1.1, sp.z + sp.n[1] * 1.1, 3, 3, g.pool));
+      const shine = LOOK.lightGlow(0.8, '#ffd9a0', 0);
+      shine.position.set(sp.x + sp.n[0] * 0.14, base + 2.2, sp.z + sp.n[1] * 0.14);
+      g.shines.push(shine);
+      this.root.add(shine);
     }
     if (this.outdoor.garden.length) {
       const g = group('garden', { kind: 'lamp', id: 'garden' });
@@ -642,13 +686,17 @@ class House3D {
 
   // Where the front door is: the door drawn in the front wall of the ground floor (the one nearest the middle),
   // or a place chosen in the editor, or else the middle of the front.
+  // A door chosen in the editor (doorId) may be in a side wall; n is the way the wall with the door faces.
   entrySpot(set, shape) {
     const W = shape.form ? shape.form.w : shape.width;
+    const doors = shape.form ? shape.form.floors[0].openings.filter((o) => o.door) : [];
+    const chosen = set.doorId && doors.find((o) => o.id === set.doorId);
+    if (chosen) return { x: chosen.x, z: chosen.z, n: chosen.n };
     const at = HC.DOOR_AT[set.doorAt];
-    if (at != null) return this.frontSpot(shape, (at - 0.5) * W, 0.8);
-    const front = shape.form ? shape.form.floors[0].openings.filter((o) => o.door && o.n[0] === 0 && o.n[1] === 1) : [];
-    const drawn = front.sort((a, b) => Math.abs(a.x) - Math.abs(b.x))[0];
-    return drawn ? { x: drawn.x, z: drawn.z } : this.frontSpot(shape, 0, 0.8);
+    const front = (spot) => Object.assign({ n: [0, 1] }, spot);
+    if (at != null) return front(this.frontSpot(shape, (at - 0.5) * W, 0.8));
+    const drawn = doors.filter((o) => o.n[0] === 0 && o.n[1] === 1).sort((a, b) => Math.abs(a.x) - Math.abs(b.x))[0];
+    return front(drawn ? { x: drawn.x, z: drawn.z } : this.frontSpot(shape, 0, 0.8));
   }
 
   // A spot on the front wall nearest to x, a margin from its ends: with the real form that wall need not lie at D / 2.
@@ -657,10 +705,12 @@ class House3D {
   }
 
   // The spot on the real outside wall of the ground floor that faces (nx, nz), closest to a place along that wall.
-  wallSpot(shape, nx, nz, along, margin) {
+  // floor: the storey (index) whose walls count, the ground floor unless said
+  wallSpot(shape, nx, nz, along, margin, floor) {
     if (!shape.form) return nx ? { x: nx * shape.width / 2, z: along } : { x: along, z: nz * shape.depth / 2 };
     const axis = nx ? 1 : 0; // the wall runs along z or along x
-    const spots = shape.form.floors[0].runs.filter((r) => r.n[0] === nx && r.n[1] === nz).map((r) => {
+    const runs = (shape.form.floors[floor || 0] || shape.form.floors[0]).runs;
+    const spots = runs.filter((r) => r.n[0] === nx && r.n[1] === nz).map((r) => {
       const lo = Math.min(r.a[axis], r.b[axis]); const hi = Math.max(r.a[axis], r.b[axis]);
       const m = Math.min(margin, (hi - lo) / 2);
       const at = Math.max(lo + m, Math.min(hi - m, along));
@@ -746,7 +796,7 @@ class House3D {
       // The doors and windows drawn in the floor plan, where they are; the front door stays the front door
       const real = shell && shell.openings.length ? shell.openings : null;
       for (const o of real || []) {
-        if (i === 0 && o.n[1] === 1 && Math.abs(o.z - entry.z) < 0.05 && Math.abs(o.x - entry.x) < 0.5 + o.w / 2) continue;
+        if (i === 0 && o.n[0] === entry.n[0] && o.n[1] === entry.n[1] && Math.abs(o.z - entry.z) + Math.abs(o.x - entry.x) < 0.5 + o.w / 2) continue;
         if (o.passage) { // an open wall: a dark opening from the ground up to the floor above, no frame or glass
           const hole = new THREE.Mesh(new THREE.PlaneGeometry(o.w, f.height - 0.04), M.reveal);
           hole.position.set(o.x + o.n[0] * 0.025, y0 + f.height / 2 - 0.02, o.z + o.n[1] * 0.025);
@@ -766,7 +816,7 @@ class House3D {
         for (let c = 0; c < count; c++) {
           const k = (c + 0.5) / count;
           const x = r.a[0] + (r.b[0] - r.a[0]) * k; const z = r.a[1] + (r.b[1] - r.a[1]) * k;
-          if (i === 0 && r.n[1] === 1 && z === entry.z && Math.abs(x - entry.x) < 1) continue;
+          if (i === 0 && r.n[0] === entry.n[0] && r.n[1] === entry.n[1] && Math.abs(z - entry.z) + Math.abs(x - entry.x) < 1) continue;
           add(wide ? 1.25 : 0.9, x + r.n[0] * 0.005, z + r.n[1] * 0.005, Math.atan2(r.n[0], r.n[1]));
         }
       }
@@ -797,22 +847,25 @@ class House3D {
       }
       if (i === 0) {
         const door = LOOK.doorPart({ frame: M.frame, glass: windowOf(entry.x, entry.z).glass, metal: M.metal }, set.door || '#2f4a3a');
-        door.position.set(entry.x, 0.02, entry.z + 0.005);
+        const [enx, enz] = entry.n;
+        door.position.set(entry.x + enx * 0.005, 0.02, entry.z + enz * 0.005);
+        door.rotation.y = Math.atan2(enx, enz);
         fg.add(door);
         // a lamp above the door, on at night
         const lampMat = new THREE.MeshStandardMaterial({ color: '#2b2b2b', emissive: '#ffd690', emissiveIntensity: 0 });
         const lamp = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.22, 0.1), lampMat);
-        lamp.position.set(entry.x, 2.5, entry.z + 0.06); // above the door: windows stand beside it
+        lamp.position.set(entry.x + enx * 0.06, 2.5, entry.z + enz * 0.06); // above the door: windows stand beside it
+        lamp.rotation.y = Math.atan2(enx, enz);
         lamp.userData.pick = { kind: 'lamp', id: 'door' };
         fg.add(lamp);
         this.doorLamp = { mat: lampMat };
         if (this.theme.night) {
           const light = new THREE.PointLight('#ffcf80', 5, 7, 2);
-          light.position.set(entry.x, 2.45, entry.z + 0.4);
+          light.position.set(entry.x + enx * 0.4, 2.45, entry.z + enz * 0.4);
           light.visible = false;
           fg.add(light);
           const shine = LOOK.lightGlow(1.1, '#ffc477', 0.55);
-          shine.position.set(entry.x, 2.5, entry.z + 0.14);
+          shine.position.set(entry.x + enx * 0.14, 2.5, entry.z + enz * 0.14);
           shine.visible = false;
           fg.add(shine);
           this.doorLamp.light = light; this.doorLamp.shine = shine;
@@ -834,6 +887,19 @@ class House3D {
       this.floorGroups.push({ levelId: f.levelId, group: fg });
     });
     this.windows = lamps;
+    // The storey under the roof (a level called attic, or with a sloping roof) gets its name tag too, in the roof
+    if (shape.attic && !shape.above) {
+      const tag = document.createElement('div');
+      tag.className = 'h3-floor';
+      tag.dataset.house = 'level';
+      tag.dataset.id = shape.attic.levelId || '';
+      tag.textContent = `${shape.attic.name || ''} ›`;
+      const label = new CSS2DObject(tag);
+      this.tags.push(tag);
+      label.position.set(-W / 2 - 0.2, shape.eaves + (set.roof === 'flat' ? 0.3 : 1.1), D / 2);
+      label.center.set(1, 0.5);
+      g.add(label);
+    }
     // A flat: the storeys of the block below and above it; the roof goes on top of the block
     if (shape.lift) g.add(this.blockStoreys(0, shape.lift, W, D, true));
     if (shape.above) {
@@ -930,7 +996,7 @@ class House3D {
       if (set.chimney !== false) {
         let cz = set.objects.solar.layout === 'both' ? 0 : -S / 4; const cx = L / 4; // both halves full of panels: on the ridge
         // A dormer nearly as wide as the roof takes the back (or front) slope: the chimney goes to the other one
-        if (set.dormer && set.dormerSize === 'full' && !turned && cz !== 0) cz = set.dormerAt === 'front' ? -S / 4 : S / 4;
+        if (set.dormer && (set.dormerSize === 'full' || set.dormerSize === 'ridge') && !turned && cz !== 0) cz = set.dormerAt === 'front' ? -S / 4 : S / 4;
         const ch = LOOK.box(0.6, rise * 0.5 + 0.9, 0.6, M.wall, cx, rise * 0.5 + lift - 0.2, cz);
         add(ch);
         rg.add(LOOK.box(0.72, 0.08, 0.72, M.sill, cx, rise + lift + 0.7, cz));
@@ -940,10 +1006,43 @@ class House3D {
     // A dormer on a slope of a gable roof along the front, set back a little from the eaves: normal, wide, or nearly as
     // wide as the roof and up to near the ridge (a ridge raise). The numbers are those of the back slope (z below 0);
     // a dormer at the front is that mirrored.
-    if (set.dormer && set.roof === 'gable' && !turned) {
+    if (set.dormer && set.roof === 'gable' && !turned && set.dormerSize === 'ridge') {
+      // A ridge raise: the slope lifted from the eaves up to a ridge higher than the old one, with an upright wall
+      // above the old ridge and closed cheeks at the gable ends
+      const front = set.dormerAt === 'front';
+      const raise = Math.min(set.ridgeRaise, rise * 0.8);
+      const yTop = rise + raise + lift;
+      const ze = front ? z1 : z0;
+      const slope = front
+        ? [[x0, -drop + lift + 0.02, ze], [x1, -drop + lift + 0.02, ze], [x1, yTop, 0], [x0, yTop, 0]]
+        : [[x1, -drop + lift + 0.02, ze], [x0, -drop + lift + 0.02, ze], [x0, yTop, 0], [x1, yTop, 0]];
+      add(LOOK.poly(slope, M.roof, T));
+      const cheek = M.trim.clone(); cheek.side = THREE.DoubleSide;
+      const back = front ? 0.04 : -0.04; // the upright wall stands just over the old ridge, on the other side
+      add(LOOK.poly([[x0 + 0.02, rise + lift, -back], [x1 - 0.02, rise + lift, -back], [x1 - 0.02, yTop, -back], [x0 + 0.02, yTop, -back]], cheek, M.tx.wallSize));
+      for (const x of [-L / 2, L / 2]) add(LOOK.poly([[x, lift, front ? S / 2 : -S / 2], [x, rise + lift, 0], [x, yTop, 0]], cheek, M.tx.wallSize));
+      rg.add(LOOK.bar([x0, yTop + 0.05, 0], [x1, yTop + 0.05, 0], 0.09, M.roof));
+      // roof windows in the lifted slope
+      const n = Math.max(1, Math.round(L / 3));
+      const winMat = M.glass();
+      for (let i = 0; i < n; i++) {
+        const wx = -L / 2 + (i + 0.5) * (L / n);
+        const along = 0.45; // halfway up the slope
+        const wz = ze * (1 - along); const wy = (-drop + lift) + (yTop + drop - lift) * along + 0.03;
+        const win = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1.1), winMat);
+        win.position.set(wx, wy, wz);
+        // lying in the slope, facing out of it
+        const h = yTop + drop - lift;
+        const normal = new THREE.Vector3(0, Math.abs(ze), Math.sign(ze) * h).normalize();
+        win.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+        rg.add(win);
+      }
+      top = Math.max(top, eaves + yTop);
+    } else if (set.dormer && set.roof === 'gable' && !turned) {
       const tan = Math.tan(pitch);
       const full = set.dormerSize === 'full';
-      const dw = full ? Math.max(1.6, L - 1.2) : Math.min(set.dormerSize === 'wide' ? 5 : 3, L * (set.dormerSize === 'wide' ? 0.6 : 0.35));
+      const dw0 = full ? Math.max(1.6, L - 1.2) : Math.min(set.dormerSize === 'wide' ? 5 : 3, L * (set.dormerSize === 'wide' ? 0.6 : 0.35));
+      const dw = set.dormerWidth ? Math.min(L - 0.6, Math.max(0.8, set.dormerWidth)) : dw0; // the width the owner gave
       const zf = -S / 2 + 0.6;
       const yf = 0.6 * tan + lift;
       const dh = full ? (rise - yf) * 0.85 : Math.min(1.5, (rise - yf) * 0.7);
@@ -951,7 +1050,9 @@ class House3D {
       if (zr > zf + 0.3) {
         const front = set.dormerAt === 'front';
         const mz = (z) => (front ? -z : z);
-        const dx = full ? 0 : -L / 4;
+        // where the owner put it, from the middle (+ is right as seen from the front), kept on the roof
+        const shift = set.dormerShift != null ? (front ? set.dormerShift : -set.dormerShift) : null;
+        const dx = Math.max(-L / 2 + 0.3 + dw / 2, Math.min(L / 2 - 0.3 - dw / 2, shift != null ? shift : full ? 0 : -L / 4));
         const dormer = LOOK.box(dw, yf + dh, zr - zf, M.trim, dx, 0, mz((zf + zr) / 2));
         add(dormer);
         const glass = M.glass();
@@ -1341,6 +1442,21 @@ class House3D {
   }
 
   buildGrid(t, W, D, meter, ms) {
+    const at = this.meterAt;
+    if (at && !(at.n[0] === 0 && at.n[1] === 1)) {
+      // A meter cupboard on a side or back wall: the grid cabinet stands a few metres out from that wall
+      const [nx, nz] = at.n;
+      const cx = at.x + nx * 3; const cz = at.z + nz * 3;
+      const cabinet = box(0.7, 1.15, 0.4, mat('#5f7d5a'), cx, 0, cz);
+      cabinet.rotation.y = Math.atan2(-nx, -nz);
+      cabinet.userData.pick = { kind: 'grid' };
+      this.root.add(cabinet);
+      this.cards.grid = this.card('grid', null, new THREE.Vector3(cx, 2.0, cz));
+      const p = (px, pz) => new THREE.Vector3(px, 0.05, pz);
+      const wx = at.x + nx * 0.06; const wz = at.z + nz * 0.06;
+      this.addFlow('grid', [new THREE.Vector3(cx - nx * 0.22, 0.5, cz - nz * 0.22), p(cx - nx * 0.3, cz - nz * 0.3), p(wx, wz), new THREE.Vector3(wx, meter.y - 0.25, wz), meter]);
+      return;
+    }
     const x = ms * (W / 2 + 3); // beside the house, on the side of the meter cupboard
     const cabinet = box(0.7, 1.15, 0.4, mat('#5f7d5a'), x, 0, D / 2 + 4.2);
     cabinet.userData.pick = { kind: 'grid' };
@@ -1483,19 +1599,27 @@ class House3D {
   // The outdoor unit of the air conditioner hangs on a wall of the upper storey: on the front wall above the meter
   // cupboard, or where the owner put it: at the front left or right, or on a side wall (not against a neighbour).
   buildAirco(t, W, D, cs, shape, meter) {
-    const top = shape.floors.length > 1 ? shape.floors[1] : shape.floors[0];
-    const y = top.base + 0.25;
+    // It hangs on the upper storey (on its own walls, not on a lower part that sticks out), or where the air
+    // conditioner is placed in the plan, on the outer wall nearest to it
     const place = this.set.objects.airco.place;
+    const placed = place === 'auto' ? this.aircoAt : null;
+    const fi = placed ? placed.floor : shape.floors.length > 1 ? 1 : 0;
+    const top = shape.floors[fi];
+    const y = top.base + (placed ? 1.6 : 0.25);
     const side = place === 'frontleft' || place === 'left' ? -1 : 1;
-    const against = (s) => this.set.between || (this.set.oneSide && this.set.neighbour === (s < 0 ? 'left' : 'right'));
-    let x = meter.x; let z = D / 2 + 0.2;
+    const against = (sd) => this.set.between || (this.set.oneSide && this.set.neighbour === (sd < 0 ? 'left' : 'right'));
+    const front = this.wallSpot(shape, 0, 1, meter.x, 0.4, fi);
+    let x = front ? front.x : meter.x; let z = (front ? front.z : D / 2) + 0.2;
     let turn = 0; // the unit faces +z; on a side wall it turns to face outwards
     let card = [0, 0.2]; // the card floats beside the unit's face
-    if (place === 'frontleft' || place === 'frontright') {
-      const spot = this.frontSpot(shape, side * (W / 2 - 0.9), 0.4);
+    if (placed) {
+      const [nx, nz] = placed.n;
+      x = placed.x + nx * 0.2; z = placed.z + nz * 0.2; turn = Math.atan2(nx, nz); card = [nx * 0.2, nz * 0.2];
+    } else if (place === 'frontleft' || place === 'frontright') {
+      const spot = this.wallSpot(shape, 0, 1, side * (W / 2 - 0.9), 0.4, fi);
       x = spot.x; z = spot.z + 0.2;
     } else if ((place === 'left' || place === 'right') && !against(side)) {
-      const wall = this.wallSpot(shape, side, 0, 0, 0.8);
+      const wall = this.wallSpot(shape, side, 0, 0, 0.8, fi);
       if (wall) { x = wall.x + side * 0.2; z = wall.z; turn = side * Math.PI / 2; card = [side * 0.2, 0]; }
     }
     const g = new THREE.Group();

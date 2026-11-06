@@ -98,7 +98,9 @@
         var d = rd.climateId && st().devices.get(rd.climateId);
         var control = '';
         if (d && typeof d.caps.target_temperature === 'number') {
-          control = '<div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="' + esc(d.id) + '" data-cap="target_temperature" data-step="-0.5">−</button><b>' + d.caps.target_temperature.toFixed(1) + '°</b><button type="button" class="fp-step" data-act="step" data-dev="' + esc(d.id) + '" data-cap="target_temperature" data-step="0.5">+</button></div>';
+          var u = (d.units && d.units.target_temperature) || {};
+          var step = u.step > 0 ? u.step : u.decimals === 0 ? 1 : 0.5;
+          control = '<div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="' + esc(d.id) + '" data-cap="target_temperature" data-step="' + (-step) + '">−</button><b>' + d.caps.target_temperature.toFixed(step >= 1 ? 0 : 1) + '°</b><button type="button" class="fp-step" data-act="step" data-dev="' + esc(d.id) + '" data-cap="target_temperature" data-step="' + step + '">+</button></div>';
           var modes = d.units && d.units.thermostat_mode && d.units.thermostat_mode.values;
           if (modes) {
             control += '<select data-act="set-value" data-dev="' + esc(d.id) + '" data-cap="thermostat_mode">' + modes.map(function (m) {

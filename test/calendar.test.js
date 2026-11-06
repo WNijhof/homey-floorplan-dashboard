@@ -56,3 +56,17 @@ test('daily with UNTIL, monthly skips short months, cancelled events are hidden'
   assert.deepStrictEqual(rent.map((e) => new Date(e.start + 3600000 * 2).getUTCMonth()), [0, 2, 4]); // Jan, Mar, May
   assert.strictEqual(cal.upcoming(events.filter((e) => e.uid === 'x'), 0, Infinity, 5).length, 0);
 });
+
+test('Outlook time zone names and unknown TZIDs are not read as UTC', () => {
+  const ics = [
+    'BEGIN:VCALENDAR',
+    'BEGIN:VEVENT', 'UID:w', 'DTSTART;TZID=W. Europe Standard Time:20261106T100000', 'DTEND;TZID=W. Europe Standard Time:20261106T110000', 'SUMMARY:Outlook', 'END:VEVENT',
+    'BEGIN:VEVENT', 'UID:m', 'DTSTART;TZID=/mozilla.org/20050126_1/Europe/Amsterdam:20261106T100000', 'DURATION:PT1H', 'SUMMARY:Moz', 'END:VEVENT',
+    'BEGIN:VEVENT', 'UID:u', 'DTSTART;TZID=Customized Time Zone:20261106T100000', 'DURATION:PT1H', 'SUMMARY:Own', 'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+  const events = cal.parseICS(ics, 'Europe/Amsterdam');
+  const nine = Date.UTC(2026, 10, 6, 9, 0, 0); // 10:00 in Amsterdam in November
+  for (const e of events) assert.equal(e.start.ms, nine, e.summary);
+  assert.equal(cal.zoneName('GMT Standard Time', 'Europe/Amsterdam'), 'Europe/London');
+});

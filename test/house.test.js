@@ -113,7 +113,7 @@ test('the sun stands where it should', () => {
 test('outdoor lamps: found by name or on a garden level, or chosen', () => {
   const devices = new Map([['a', { id: 'a', name: 'Lamp voordeur', cls: 'light' }], ['b', { id: 'b', name: 'Tuinverlichting', cls: 'light' }], ['c', { id: 'c', name: 'Oprit', cls: 'light' }], ['d', { id: 'd', name: 'Staande lamp', cls: 'light' }], ['e', { id: 'e', name: 'Spot', cls: 'light' }], ['f', { id: 'f', name: 'Tuin thermometer', cls: 'sensor' }]]);
   const plan = { levels: [{ id: 'l', name: 'Tuin', rooms: [], items: [{ deviceId: 'e' }] }] };
-  assert.deepStrictEqual(house.outdoorLamps(plan, devices), { door: ['a'], path: [], drive: ['c'], garden: ['b', 'e'] });
+  assert.deepStrictEqual(house.outdoorLamps(plan, devices), { door: ['a'], path: [], drive: ['c'], garden: ['b', 'e'], spots: [] });
   plan.house = { outdoor: { door: 'none', path: 'd' } };
   const chosen = house.outdoorLamps(plan, devices);
   assert.deepStrictEqual(chosen.door, []);
@@ -479,4 +479,82 @@ test('an open wall in an outer wall is an opening from the ground up; the front 
   assert.strictEqual(house.settings({ house: { doorAt: 'leftmid' } }).doorAt, 'leftmid');
   assert.strictEqual(house.settings({ house: { doorAt: 'roof' } }).doorAt, 'auto');
   assert.strictEqual(house.DOOR_AT.left < house.DOOR_AT.right, true);
+});
+
+// A plan of a house in the shape of its plan: a ground floor with an extension at the back, a smaller first floor
+// drawn against the back of the level, a front garden level, a cellar and a shed.
+function stackedPlan(extra) {
+  const room = (id, name, x0, y0, x1, y1) => ({ id, name, points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] });
+  return Object.assign({
+    id: 'p',
+    house: { form: 'plan' },
+    levels: [
+      { id: 'g', name: 'Begane grond', rooms: [room('hall', 'Hal', 0, 0, 800, 600), room('ext', 'Uitbouw', 0, 600, 800, 1000), room('mk', 'Meterkast', 700, 0, 800, 100)], items: [], openings: [] },
+      { id: 'u', name: 'Eerste verdieping', rooms: [room('bed', 'Slaapkamer', 0, 400, 800, 1000)], items: [], openings: [] },
+      { id: 'v', name: 'Voortuin', rooms: [room('gras', 'Gazon', 0, -500, 800, -100)], items: [], openings: [] },
+      { id: 'k', name: 'Souterrain', rooms: [room('k1', 'Opslag', 0, 0, 300, 300)], items: [], openings: [] },
+      { id: 's', name: 'Mijn hok', role: 'shed', rooms: [room('s1', 'Hok', 0, 0, 250, 200)], items: [], openings: [] },
+    ],
+  }, extra || {});
+}
+
+test('levels: front garden, cellar and a chosen shed are no storeys', () => {
+  const plan = stackedPlan();
+  assert.deepStrictEqual(plan.levels.map(house.levelRole), ['storey', 'storey', 'garden', 'other', 'shed']);
+  assert.strictEqual(house.levelRole({ name: 'Achtertuin' }), 'garden');
+  assert.strictEqual(house.levelRole({ name: 'Back garden' }), 'garden');
+  assert.strictEqual(house.levelRole({ name: 'Tuin', role: 'storey' }), 'storey', 'the choice in the editor wins');
+  const sh = house.shape(plan);
+  assert.strictEqual(sh.floors.length, 2);
+  assert.deepStrictEqual(house.outbuildings(plan).map((b) => b.kind), ['shed']);
+});
+
+test('storeys line up with the front or back walls of the one below', () => {
+  // the plan is drawn with its front at the top (y = 0), so turn it: front at the top of the drawing
+  const plan = stackedPlan();
+  plan.house.front = 'top';
+  const moved = (p) => house.shape(p).form.moved[1];
+  assert.deepStrictEqual(moved(plan), [0, 0], 'as drawn, the first floor stays against the back');
+  plan.levels[1].alignY = 'front';
+  // turned plan: the front wall of the ground floor is at y = 0 (turned -0), the first floor's front at y = 400
+  assert.deepStrictEqual(moved(plan).map(Math.abs), [0, 400]);
+  plan.levels[1].alignY = 'back';
+  assert.deepStrictEqual(moved(plan).map(Math.abs), [0, 0]);
+});
+
+test('meter cupboard room, a placed air conditioner and outdoor lamps from the plan', () => {
+  const plan = stackedPlan();
+  const meter = house.meterRoomSpot(plan);
+  assert.ok(meter && meter.floor === 0, 'found on the ground floor');
+  plan.levels[1].items.push({ id: 'i1', kind: 'device', deviceId: 'ac', x: 790, y: 700 });
+  const ac = house.deviceWallSpot(plan, ['ac']);
+  assert.strictEqual(ac.floor, 1);
+  assert.deepStrictEqual(ac.n, [1, 0], 'on the right outer wall of the first floor');
+  const devices = new Map([['g1', { id: 'g1', name: 'Tuinspot', cls: 'light' }], ['w1', { id: 'w1', name: 'Buitenlamp garage', cls: 'light' }], ['in', { id: 'in', name: 'Hal', cls: 'light' }]]);
+  plan.levels[2].items.push({ id: 'i2', kind: 'device', deviceId: 'g1', x: 400, y: -300 });
+  plan.levels[0].items.push({ id: 'i3', kind: 'device', deviceId: 'w1', x: 790, y: 300 }, { id: 'i4', kind: 'device', deviceId: 'in', x: 400, y: 300 });
+  const out = house.outdoorLamps(plan, devices);
+  assert.deepStrictEqual(out.spots.map((s) => [s.id, s.wall]).sort(), [['g1', false], ['w1', true]]);
+  assert.deepStrictEqual(out['dev:g1'], ['g1']);
+  assert.deepStrictEqual(out.garden, [], 'a placed lamp is not also one of the fixed garden spots');
+  assert.deepStrictEqual(out.drive, []);
+});
+
+test('dormer and ridge raise settings', () => {
+  const s = house.settings({ house: { dormer: true, dormerSize: 'ridge', ridgeRaise: 9, dormerShift: 2 } });
+  assert.strictEqual(s.dormerSize, 'ridge');
+  assert.strictEqual(s.ridgeRaise, 3);
+  assert.strictEqual(s.dormerShift, 2);
+  assert.strictEqual(house.settings({}).dormerShift, null);
+  assert.strictEqual(house.settings({ house: { nightLight: 'bright' } }).nightLight, 'bright');
+});
+
+test('a solar reading that is stuck counts as nothing', () => {
+  const old = new Date(Date.now() - 2 * 3600000).toISOString();
+  const devices = [{ id: 'pv', name: 'Enlighten', class: 'solarpanel', capabilities: ['measure_power'], capabilitiesObj: { measure_power: { value: 1500, lastUpdated: old } } }];
+  const live = summarize(devices, {});
+  assert.strictEqual(live.solarW, 0);
+  assert.strictEqual(live.solarStuck, true);
+  devices[0].capabilitiesObj.measure_power.lastUpdated = new Date().toISOString();
+  assert.strictEqual(summarize(devices, {}).solarW, 1500);
 });
