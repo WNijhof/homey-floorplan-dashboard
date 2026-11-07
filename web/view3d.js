@@ -266,6 +266,14 @@ function fixtureMesh(kind, item, wallHeight, theme) {
     knob.rotation.x = Math.PI / 2; knob.position.set(0, h / 2, 0); g.add(knob);
     const ring = new THREE.Mesh(new THREE.CylinderGeometry(w / 2 * 0.8, w / 2 * 0.8, 0.004, 24), dark);
     ring.rotation.x = Math.PI / 2; ring.position.set(0, h / 2, d / 2 + 0.002); g.add(ring);
+  } else if (kind === 'split') {
+    // The indoor unit of a split air conditioner: a white body with a dark air slot at the bottom and a small light
+    const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), white);
+    body.position.set(0, h / 2, 0); body.castShadow = true; g.add(body);
+    const slot = new THREE.Mesh(new THREE.BoxGeometry(w * 0.86, h * 0.14, 0.004), dark);
+    slot.position.set(0, h * 0.16, d / 2 + 0.002); g.add(slot);
+    const led = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.008, 0.004), new THREE.MeshBasicMaterial({ color: '#7fd3ff' }));
+    led.position.set(w * 0.36, h * 0.42, d / 2 + 0.002); g.add(led);
   } else if (kind === 'fancoil') {
     // A fan coil unit: a white cabinet low on the wall with a dark grille on top and a strip at the front.
     const body = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), white);
@@ -587,7 +595,9 @@ class View3D {
     const sloped = !!core.slopeOf(level);
     const roofBox = sloped ? core.slopeBox(level) : null;
     // A window or door in a low knee wall fits under the roof: lower, or (no room left) not there at all
-    const openings = !sloped ? level.openings : level.openings.map((o) => {
+    // Only doors and windows that stand in a wall (one a little off moves onto the nearest wall)
+    const fitted = core.fitOpenings(level);
+    const openings = !sloped ? fitted : fitted.map((o) => {
       if (o.type !== 'window' && o.type !== 'door') return o;
       const u = [Math.cos(o.angle || 0), Math.sin(o.angle || 0)]; const half = (o.width || 90) / 2;
       const room = core.wallTop(level, core.geom.sub([o.x, o.y], core.geom.mul(u, half)), core.geom.add([o.x, o.y], core.geom.mul(u, half)), level.wallThickness || 12, roofBox)

@@ -363,6 +363,48 @@ test('the drawn garden is measured from the middle of the house, in metres, with
   assert.strictEqual(house.garden(bare), null, 'no garden level');
 });
 
+test('a room called shed on the garden level is a building with its doors and windows, the others stay ground', () => {
+  const plan = {
+    house: { form: 'plan', front: 'bottom' },
+    levels: [
+      { id: 'l0', name: 'Begane grond', rooms: [{ id: 'r1', name: 'Woonkamer', points: [[0, 0], [1000, 0], [1000, 800], [0, 800]] }] },
+      {
+        id: 'lg', name: 'Achtertuin',
+        rooms: [
+          { id: 'g', name: 'Gazon', points: [[0, -900], [1000, -900], [1000, -100], [0, -100]] },
+          { id: 's', name: 'Schuurtje', points: [[700, -900], [1000, -900], [1000, -600], [700, -600]] },
+        ],
+        openings: [
+          { id: 'o1', type: 'door', x: 850, y: -600, angle: 0, width: 80 },
+          { id: 'o2', type: 'window', x: 1000, y: -750, angle: Math.PI / 2, width: 60 },
+          { id: 'o3', type: 'door', x: 300, y: -500, angle: 0, width: 80 }, // far from the shed
+        ],
+      },
+    ],
+  };
+  const g = house.garden(plan);
+  assert.deepStrictEqual(g.patches.map((p) => p.name), ['Gazon'], 'the shed is no patch of ground');
+  assert.strictEqual(g.sheds.length, 1);
+  const s = g.sheds[0];
+  assert.strictEqual(s.kind, 'shed');
+  assert.strictEqual(s.height, 2.3);
+  assert.deepStrictEqual(s.pts[0], [2, -13]);
+  assert.strictEqual(s.openings.length, 2, 'only the openings in its walls');
+  const door = s.openings.find((o) => o.door);
+  assert.strictEqual(door.edge, 2, 'the door in the edge facing the house');
+  assert.strictEqual(door.w, 0.8);
+  assert.ok(Math.abs(door.s - 1.5) < 1e-9);
+  assert.strictEqual(s.openings.find((o) => !o.door).edge, 1);
+});
+
+test('a garage or shed level can have a flat or a pitched roof of its own', () => {
+  const plan = (outRoofs) => ({ house: { outRoofs }, levels: [{ id: 'g', name: 'Garage', rooms: [] }, { id: 's', name: 'Schuur', rooms: [] }] });
+  assert.deepStrictEqual(house.outbuildings(plan()).map((b) => b.roof), ['flat', 'pitched'], 'without a choice');
+  assert.deepStrictEqual(house.outbuildings(plan({ g: 'pitched', s: 'flat' })).map((b) => b.roof), ['pitched', 'flat']);
+  assert.deepStrictEqual(house.outbuildings(plan({ s: 'round' })).map((b) => b.roof), ['flat', 'pitched'], 'an unknown roof is ignored');
+  assert.strictEqual(house.settings({ house: { roof: 'gable', outRoofs: { s: 'flat' } } }).roof, 'gable', 'the house keeps its own roof');
+});
+
 test('the chimney is on by default and can be switched off', () => {
   assert.strictEqual(house.settings({}).chimney, true);
   assert.strictEqual(house.settings({ house: { chimney: false } }).chimney, false);

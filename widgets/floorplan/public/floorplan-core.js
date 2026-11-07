@@ -293,6 +293,34 @@
     return out.sort((p, q) => p.s0 - q.s0);
   }
 
+  /**
+   * The doors and windows of a level as they stand in the walls. One that is not on a wall any more (its room was
+   * made bigger, or a drawing was recognised a little off) moves onto the nearest wall within maxD cm, turned along
+   * it and kept inside its length; one with no wall near is left out, so no window stands loose in a room.
+   */
+  function fitOpenings(level, maxD) {
+    const walls = levelWalls(level);
+    const reach = maxD == null ? 60 : maxD;
+    const out = [];
+    for (const o of level.openings || []) {
+      if (walls.some((w) => openingsOnWall(w, [o]).length)) { out.push(o); continue; }
+      let best = null;
+      for (const w of walls) {
+        const pr = projectOnSegment([o.x, o.y], w.a, w.b);
+        if (pr.d <= reach && (!best || pr.d < best.d)) best = { w, d: pr.d };
+      }
+      if (!best) continue;
+      const { w } = best;
+      const L = dist(w.a, w.b);
+      const u = norm(sub(w.b, w.a));
+      const half = Math.min((o.width || 90) / 2, L / 2);
+      const at = Math.max(half, Math.min(L - half, dot(sub([o.x, o.y], w.a), u)));
+      const p = add(w.a, mul(u, at));
+      out.push(Object.assign({}, o, { x: p[0], y: p[1], angle: Math.atan2(u[1], u[0]), width: half * 2 }));
+    }
+    return out;
+  }
+
   /** Splits a wall into solid pieces around openings. 2.5D pieces carry z ranges (lintels, sills). */
   function wallPieces(wall, openings, level, withHeights) {
     const H = Math.min(level.wallHeight || DEFAULTS.wallHeight, wall.height > 0 ? wall.height : Infinity);
@@ -520,7 +548,8 @@
     if (!M || item.shape) return null;
     const kind = deviceKind(dev);
     if (kind === 'light') return M.get(M.DEFAULT_FIXTURE);
-    if (kind === 'thermostat') return M.get(M.DEFAULT_THERMOSTAT);
+    // an air conditioner hangs as an indoor unit high on the wall; other climate devices as a wall thermostat
+    if (kind === 'thermostat') return M.get(dev && dev.cls === 'airconditioning' && M.DEFAULT_SPLIT ? M.DEFAULT_SPLIT : M.DEFAULT_THERMOSTAT);
     if (kind === 'tv' && M.DEFAULT_TV) return M.get(M.DEFAULT_TV); // a TV from Homey hangs on the wall
     return null;
   }
@@ -551,7 +580,7 @@
     if ('alarm_smoke' in c || 'alarm_co' in c || 'alarm_fire' in c || 'alarm_gas' in c) return 'smoke';
     // A switched device with a child lock (a plug, a heater) is no door lock
     if (cls === 'lock' || ('locked' in c && !('onoff' in c))) return 'lock';
-    if (cls === 'thermostat' || cls === 'heater' || 'target_temperature' in c) return 'thermostat';
+    if (cls === 'thermostat' || cls === 'heater' || cls === 'airconditioning' || 'target_temperature' in c) return 'thermostat';
     if (cls === 'windowcoverings' || cls === 'blinds' || cls === 'curtain' || cls === 'sunshade' || 'windowcoverings_set' in c || 'windowcoverings_state' in c) return 'cover';
     if (cls === 'speaker' || 'speaker_playing' in c) return 'speaker';
     if (cls === 'tv') return 'tv';
@@ -1413,7 +1442,7 @@
     DEFAULTS, CATALOGUE, GLYPHS, LIGHT_PALETTE, DARK_PALETTE, ALARM_CAPS,
     uid, newPlan, newLevel, newFurniture, newDeviceItem,
     geom: { sub, add, mul, dot, cross, len, norm, dist, signedArea, pointInPolygon, projectOnSegment, bbox, labelPoint, rotatePt, rect },
-    levelWalls, wallOutside, openingsOnWall, wallPieces, arcPoints, furnitureParts, SLOPE_SIDES, slopeOf, slopeBox, ceilingAt, wallTop,
+    levelWalls, wallOutside, openingsOnWall, fitOpenings, wallPieces, arcPoints, furnitureParts, SLOPE_SIDES, slopeOf, slopeBox, ceilingAt, wallTop,
     deviceKind, deviceFixture, isLampItem, openState, defaultMount, isOn, coverClosed, lightColor, lightIntensity, deviceValueText, roomReadings, isVacuum, roomLabel, showsLabel, tintColor, modelOf,
     makeView, render, levelsFromZones, autoPlace,
   };

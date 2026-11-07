@@ -415,7 +415,12 @@ class House3D {
     // Garages and sheds, and how far the garden reaches for them
     this.yard = HC.yard(this.plan);
     // Whether a spot of the garden (a tree, a garden light) is free of them, with some room around
-    this.free = (x, z, room) => !this.yard.buildings.some((b) => Math.abs(x - b.x) < b.w / 2 + room && Math.abs(z - b.z) < b.d / 2 + room);
+    const drawn = ((this.own && this.own.sheds) || []).map((sh) => {
+      const xs = sh.pts.map((p) => p[0]); const zs = sh.pts.map((p) => p[1]);
+      const x0 = Math.min(...xs); const x1 = Math.max(...xs); const z0 = Math.min(...zs); const z1 = Math.max(...zs);
+      return { x: (x0 + x1) / 2, z: (z0 + z1) / 2, w: x1 - x0, d: z1 - z0 };
+    });
+    this.free = (x, z, room) => ![...this.yard.buildings, ...drawn].some((b) => Math.abs(x - b.x) < b.w / 2 + room && Math.abs(z - b.z) < b.d / 2 + room);
 
     // Sunlight from the south, wherever the front of the house looks.
     const dir = (compass) => { const a = THREE.MathUtils.degToRad(compass - set.facing); return new THREE.Vector3(-Math.sin(a), 0, Math.cos(a)); };
@@ -551,7 +556,15 @@ class House3D {
     }
     // Hedges along the plot and a few trees and shrubs
     // Beside a neighbour the plot ends at the party wall: a hedge between the back gardens only
-    const back = this.yard.back; const side = this.yard.side;
+    let back = this.yard.back; let side = this.yard.side;
+    if (own) {
+      // The garden drawn reaches as far as it was drawn: the hedges go round it, not through it
+      const pts = [...own.patches.flatMap((p) => p.pts), ...(own.sheds || []).flatMap((s) => s.pts), ...own.fences.flatMap((f) => [f.a, f.b])];
+      for (const [x, z] of pts) {
+        if (z < -D / 2) back = Math.min(back, z - 0.4);
+        if (z < D / 2 + 3) side = Math.max(side, Math.abs(x) + 0.4);
+      }
+    }
     const built = (s) => this.set.between || (this.set.oneSide && this.set.neighbour === (s < 0 ? 'left' : 'right'));
     const left = built(-1) ? -W / 2 : -side; const right = built(1) ? W / 2 : side;
     this.root.add(LOOK.hedge([left, back], [right, back], 1.3, M));
@@ -615,6 +628,32 @@ class House3D {
       const bar = LOOK.box(len, f.h, Math.max(0.05, f.t), f.fence ? M.wood : M.wall, (f.a[0] + f.b[0]) / 2, 0, (f.a[1] + f.b[1]) / 2);
       bar.rotation.y = -Math.atan2(dz, dx);
       this.root.add(bar);
+    }
+    // A shed or garage drawn as a room of the garden: walls along its edges, a flat roof, its doors and windows
+    for (const s of own.sheds || []) {
+      const wallMat = s.kind === 'garage' ? M.wall : M.wood;
+      const h = s.height;
+      const door = new THREE.MeshStandardMaterial({ color: night ? '#3d4a3f' : '#5f7563', roughness: 0.7 });
+      s.pts.forEach((a, i) => {
+        const b = s.pts[(i + 1) % s.pts.length];
+        const dx = b[0] - a[0]; const dz = b[1] - a[1];
+        const len = Math.hypot(dx, dz);
+        if (len < 0.05) return;
+        const turn = -Math.atan2(dz, dx);
+        const put = (mesh) => { mesh.rotation.y = turn; this.root.add(mesh); };
+        put(LOOK.box(len + 0.1, h, 0.1, wallMat, (a[0] + b[0]) / 2, 0, (a[1] + b[1]) / 2));
+        for (const o of s.openings.filter((q) => q.edge === i)) {
+          const x = a[0] + (dx / len) * o.s; const z = a[1] + (dz / len) * o.s;
+          if (o.door) put(LOOK.box(o.w, Math.min(2, h - 0.15), 0.14, door, x, 0, z));
+          else put(LOOK.box(o.w, Math.min(0.7, h - 1.2), 0.14, M.glass(), x, Math.min(1.1, h - 0.9), z));
+        }
+      });
+      const roof = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(s.pts.map(([x, z]) => new THREE.Vector2(x, -z))), { depth: 0.12, bevelEnabled: false }), M.trim);
+      roof.rotation.x = -Math.PI / 2;
+      roof.position.y = h;
+      roof.castShadow = true;
+      roof.receiveShadow = true;
+      this.root.add(roof);
     }
   }
 
@@ -1243,8 +1282,8 @@ class House3D {
     return g;
   }
 
-  // Garages and sheds (levels of their own): a garage in the facade of the house with a flat roof and a
-  // sectional door, a shed in wood with a pitched roof. Each faces the house or the street, and a tap opens its level.
+  // Garages and sheds (levels of their own): a garage in the facade of the house with a sectional door, a shed in
+  // wood, each with a flat or a pitched roof (without a choice: the garage flat, the shed pitched). Each faces the house or the street, and a tap opens its level.
   buildOutbuildings() {
     const M = this.M;
     for (const b of this.yard.buildings) {
@@ -1262,9 +1301,23 @@ class House3D {
         LOOK.poly([[x0, 0, z0], [x0, 0, z1], [x0, h, z1], [x0, h, z0]], wallMat, size),
       ];
       for (const w of walls) { w.userData.base = wallMat; if (hover) w.userData.hover = hover; g.add(w); }
+      const flat = b.roof === 'flat';
+      let top = h; // where the name tag goes over
+      if (flat) {
+        g.add(LOOK.box(b.w + 0.25, 0.25, b.d + 0.25, M.trim, b.x, h, b.z));
+        top = h + 0.25;
+      } else {
+        // a pitched roof with its ridge from side to side, gable ends like the walls
+        const rise = Math.min(1.1, (b.d / 2) * Math.tan(THREE.MathUtils.degToRad(28)));
+        const ov = 0.2; const drop = ov * (rise / (b.d / 2));
+        const roof = M.roof;
+        g.add(LOOK.poly([[x0 - ov, h - drop, z1 + ov], [x1 + ov, h - drop, z1 + ov], [x1 + ov, h + rise, b.z], [x0 - ov, h + rise, b.z]], roof, LOOK.TILE_SIZE));
+        g.add(LOOK.poly([[x1 + ov, h - drop, z0 - ov], [x0 - ov, h - drop, z0 - ov], [x0 - ov, h + rise, b.z], [x1 + ov, h + rise, b.z]], roof, LOOK.TILE_SIZE));
+        for (const gable of [LOOK.poly([[x1, h, z1], [x1, h, z0], [x1, h + rise, b.z]], wallMat, size), LOOK.poly([[x0, h, z0], [x0, h, z1], [x0, h + rise, b.z]], wallMat, size)]) { gable.userData.base = wallMat; if (hover) gable.userData.hover = hover; walls.push(gable); g.add(gable); }
+        top = h + rise;
+      }
       if (garage) {
         g.add(LOOK.box(b.w + 0.04, 0.3, b.d + 0.04, M.plinth, b.x, 0, b.z));
-        g.add(LOOK.box(b.w + 0.25, 0.25, b.d + 0.25, M.trim, b.x, h, b.z));
         // a sectional door with its panels
         const dw = Math.min(b.w - 0.5, 2.6); const dh = Math.min(2.15, h - 0.3);
         const door = new THREE.MeshStandardMaterial({ color: this.theme.night ? '#9a9c9f' : '#dcdedf', roughness: 0.5, metalness: 0.2 });
@@ -1272,13 +1325,6 @@ class House3D {
         g.add(LOOK.box(dw, dh, 0.06, door, b.x, 0, z1 + 0.03));
         for (let k = 1; k < 4; k++) g.add(LOOK.box(dw, 0.025, 0.07, M.frame, b.x, (dh / 4) * k, z1 + 0.03));
       } else {
-        // a pitched roof with its ridge from side to side, wooden gable ends
-        const rise = Math.min(1.1, (b.d / 2) * Math.tan(THREE.MathUtils.degToRad(28)));
-        const ov = 0.2; const drop = ov * (rise / (b.d / 2));
-        const roof = M.roof;
-        g.add(LOOK.poly([[x0 - ov, h - drop, z1 + ov], [x1 + ov, h - drop, z1 + ov], [x1 + ov, h + rise, b.z], [x0 - ov, h + rise, b.z]], roof, LOOK.TILE_SIZE));
-        g.add(LOOK.poly([[x1 + ov, h - drop, z0 - ov], [x0 - ov, h - drop, z0 - ov], [x0 - ov, h + rise, b.z], [x1 + ov, h + rise, b.z]], roof, LOOK.TILE_SIZE));
-        for (const gable of [LOOK.poly([[x1, h, z1], [x1, h, z0], [x1, h + rise, b.z]], M.wood, size), LOOK.poly([[x0, h, z0], [x0, h, z1], [x0, h + rise, b.z]], M.wood, size)]) { gable.userData.base = M.wood; gable.userData.hover = hover; walls.push(gable); g.add(gable); }
         // a door and a small window at the front
         const dw = Math.min(0.9, b.w * 0.4);
         g.add(LOOK.box(dw + 0.1, Math.min(2, h - 0.15) + 0.05, 0.05, M.trim, b.x - b.w * 0.18, 0, z1 + 0.01));
@@ -1296,7 +1342,7 @@ class House3D {
       tag.dataset.id = b.levelId || '';
       tag.textContent = `${b.name || ''} ›`;
       const label = new CSS2DObject(tag);
-      label.position.set(b.x, h + (garage ? 0.5 : 1.4), b.z);
+      label.position.set(b.x, top + 0.3, b.z);
       label.center.set(0.5, 1);
       g.add(label);
       this.tags.push(tag);

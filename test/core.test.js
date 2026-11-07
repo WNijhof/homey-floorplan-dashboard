@@ -306,3 +306,34 @@ test('a metering plug with a dim value is a socket, also when meter_power is not
   assert.strictEqual(core.deviceKind(plug), 'light', 'without the flag it still looks like a dimmable lamp');
   assert.strictEqual(core.deviceKind(Object.assign({ metered: true }, plug)), 'socket');
 });
+
+test('an air conditioner with only variants of its capabilities is a thermostat, shown as an indoor unit', () => {
+  const DeviceHub = require('../lib/DeviceHub');
+  const raw = {
+    id: 'ac', name: 'Daikin', class: 'airconditioning', zone: 'z',
+    capabilities: ['onoff', 'target_temperature.heat', 'target_temperature.cool', 'measure_temperature.inside', 'thermostat_mode'],
+    capabilitiesObj: { onoff: { value: true }, 'target_temperature.heat': { value: 21, min: 10, max: 30, step: 1 }, 'measure_temperature.inside': { value: 19.5 }, thermostat_mode: { value: 'heat', values: [{ id: 'heat', title: 'Heat' }] } },
+  };
+  assert.deepStrictEqual(DeviceHub.aliasesOf(raw), { target_temperature: 'target_temperature.heat', measure_temperature: 'measure_temperature.inside' });
+  const dev = DeviceHub.compactDevice(raw);
+  assert.strictEqual(dev.caps.target_temperature, 21);
+  assert.strictEqual(dev.caps.measure_temperature, 19.5);
+  assert.strictEqual(dev.units.target_temperature.step, 1);
+  assert.strictEqual(core.deviceKind(dev), 'thermostat');
+  assert.strictEqual(core.deviceFixture({}, dev).fixture, 'split');
+});
+
+test('a door or window off its wall goes onto the nearest wall, or is left out', () => {
+  const level = { rooms: [{ id: 'r', points: [[0, 0], [400, 0], [400, 300], [0, 300]] }], walls: [], openings: [
+    { id: 'on', type: 'window', x: 200, y: 0, angle: 0, width: 100 },
+    { id: 'turned', type: 'window', x: 400, y: 150, angle: 0, width: 100 },
+    { id: 'near', type: 'door', x: 150, y: 330, angle: 0, width: 90 },
+    { id: 'far', type: 'window', x: 200, y: 150, angle: Math.PI / 2, width: 100 },
+  ] };
+  const fit = core.fitOpenings(level);
+  assert.deepStrictEqual(fit.map((o) => o.id), ['on', 'turned', 'near']);
+  const turned = fit.find((o) => o.id === 'turned');
+  assert.ok(Math.abs(Math.abs(Math.sin(turned.angle)) - 1) < 1e-9, 'turned along the side wall');
+  assert.strictEqual(fit.find((o) => o.id === 'near').y, 300);
+  assert.strictEqual(fit[0], level.openings[0], 'one in its wall stays as it is');
+});
