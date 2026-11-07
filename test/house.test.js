@@ -600,3 +600,31 @@ test('a solar reading that is stuck counts as nothing', () => {
   devices[0].capabilitiesObj.measure_power.lastUpdated = new Date().toISOString();
   assert.strictEqual(summarize(devices, {}).solarW, 1500);
 });
+
+test('a roof terrace is outside the block, and a sloping top storey under a flat roof stays a storey', () => {
+  const room = (id, name, x0, y0, x1, y1, extra) => Object.assign({ id, name, points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] }, extra);
+  const levels = [
+    { id: 'g', name: 'Begane grond', rooms: [room('a', 'Woonkamer', 0, 0, 1200, 800)] },
+    { id: 'u', name: '1e verdieping', rooms: [room('b', 'Slaapkamer', 0, 0, 1200, 800)] },
+    { id: 't', name: '2e verdieping', rooms: [room('c', 'Master bedroom', 0, 0, 700, 800), room('d', 'Dakterras', 700, 0, 1200, 800, { walls: false })],
+      walls: [{ id: 'w1', a: [700, 0], b: [1200, 0], height: 90 }, { id: 'w2', a: [1200, 0], b: [1200, 800], height: 90 }, { id: 'w3', a: [700, 800], b: [1200, 800], height: 90 }],
+      slope: { sides: ['left'], knee: 100, pitch: 45 } },
+  ];
+  const flat = house.shape({ levels, house: { form: 'plan', roof: 'flat', lowRoof: 'lean' } });
+  assert.strictEqual(flat.floors.length, 3, 'the sloping top storey is drawn under a flat roof');
+  assert.strictEqual(flat.attic, null);
+  const [, first, top] = flat.form.floors;
+  assert.deepStrictEqual([flat.form.main.w, flat.form.main.d], [7, 8], 'the roof sits on the rooms, not on the terrace');
+  assert.strictEqual(first.roofs.length, 1);
+  assert.strictEqual(first.roofs[0].terrace, true, 'the roof under the terrace stays flat');
+  assert.deepStrictEqual([first.roofs[0].w, first.roofs[0].d], [5, 8]);
+  assert.strictEqual(top.parapets.length, 3, 'the drawn low walls round the terrace');
+  assert.ok(top.parapets.every((p) => p.h === 0.9));
+  // Without drawn walls: a railing on the three free edges, none against the house
+  const bare = levels.map((l) => (l.id === 't' ? { ...l, walls: [] } : l));
+  const rails = house.shape({ levels: bare, house: { form: 'plan', roof: 'flat' } }).form.floors[2].parapets;
+  assert.strictEqual(rails.length, 3);
+  assert.ok(rails.every((p) => p.fence && p.h === 1));
+  // Under a pitched roof the sloping level is still the space in the roof
+  assert.strictEqual(house.shape({ levels, house: { form: 'plan', roof: 'gable' } }).attic.levelId, 't');
+});

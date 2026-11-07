@@ -865,11 +865,21 @@ class House3D {
           const low = new THREE.Group();
           low.userData.pick = { kind: 'level', id: f.levelId };
           for (const b of shell.roofs) {
-            if (set.lowRoof === 'lean') low.add(this.buildLeanRoof(b, y1, this.highSide(b, form, i), f.height, set));
+            if (set.lowRoof === 'lean' && !b.terrace) low.add(this.buildLeanRoof(b, y1, this.highSide(b, form, i), f.height, set));
             else low.add(LOOK.box(b.w + 0.25, 0.25, b.d + 0.25, M.trim, b.x, y1, b.z));
           }
           g.add(low);
           this.liftWith.push(low);
+        }
+        // The low walls or railing round a terrace of this storey, on the flat roof below it
+        for (const p of shell.parapets || []) {
+          const dx = p.b[0] - p.a[0]; const dz = p.b[1] - p.a[1];
+          const len = Math.hypot(dx, dz);
+          if (len < 0.05) continue;
+          const floor = i > 0 ? y0 + 0.25 : 0;
+          const bar = LOOK.box(len + (p.fence ? 0 : p.t), p.h, Math.max(0.05, p.t), p.fence ? M.metal : M.wall, (p.a[0] + p.b[0]) / 2, floor, (p.a[1] + p.b[1]) / 2);
+          bar.rotation.y = -Math.atan2(dz, dx);
+          fg.add(bar);
         }
       }
       const cols = shell ? 0 : Math.max(2, Math.round(W / 2.6));
