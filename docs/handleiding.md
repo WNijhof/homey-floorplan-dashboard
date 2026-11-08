@@ -37,7 +37,7 @@ In de linkerbalk staan de gereedschappen: Selecteren, Kamer, Muren, Deuren, Rame
 - Staat een deur of raam niet meer in een muur, bijvoorbeeld nadat je een kamer groter maakte, sleep hem dan naar de muur of kies **Alle muren uitlijnen**. Losse ramen en deuren zonder muur in de buurt worden in 3D niet getekend.
 - Een schakelaar met meer knoppen (in Homey bijvoorbeeld onoff.2) staat per extra knop als eigen apparaat in de lijst, met het nummer of de naam van die knop erachter. Zo koppel je een lamp aan de knop die hem schakelt.
 - Begin je met een afbeelding of pdf, zet dan de schaal door één bekende lengte te meten. De editor herkent muren, kamers, deuren en ramen, ook bij muren die schuin lopen en bij kamers die donker zijn ingekleurd, zoals een garage of een betegelde badkamer. Dat gebeurt in je browser; er wordt niets verstuurd. Controleer het resultaat: gebogen muren worden niet herkend, een deur vlak bij een hoek wordt soms gemist (dan lopen twee kamers in elkaar over) en een onduidelijke tekening kan fouten geven.
-- Schuin dak: klik naast de plattegrond op een leeg stuk en vink bij **Schuin dak** de kanten van de tekening aan waar het dak naar beneden komt, of kies **Zoals het dak van het huis**. Stel de hoogte van het knieschot en de helling in. In 3D lopen de muren dan schuin mee, ramen in een laag knieschot worden lager, en in het huisaanzicht ligt de bovenste verdieping onder het dak. Heeft het huis een plat dak, dan blijft die verdieping gewoon een laag van het huis.
+- Schuin dak: klik naast de plattegrond op een leeg stuk en vink bij **Schuin dak** de kanten van de tekening aan waar het dak naar beneden komt, of kies **Zoals het dak van het huis**. Stel de hoogte van het knieschot en de helling in. In 3D lopen de muren dan schuin mee, ramen in een laag knieschot worden lager, en in het huisaanzicht ligt de bovenste verdieping onder het dak. Heeft het huis een plat dak, dan blijft die verdieping gewoon een laag van het huis, en in het huisaanzicht lopen de muren en het dak aan die kanten schuin.
 - Dakterras of balkon: teken het als kamer met de naam Dakterras, Terras of Balkon op die verdieping (zet op wens **Muren om deze kamer** uit). Met **Vorm van het huis** op de plattegrond ligt hij in 3D open op het platte dak eronder. Lage muurtjes die je eromheen tekent staan er met hun hoogte bij; zonder muurtjes komt er een hekje langs de vrije kanten.
 - Wat een verdieping is: klik naast de plattegrond op een leeg stuk en kies onder **In het 3D-huis** of het een verdieping van het huis is, de tuin, een losse garage of schuur, of iets wat niet in het 3D-huis hoort (een kelder, een berging). Zonder keuze gaat het op de naam: Tuin, Voortuin, Achtertuin, Terras en Oprit zijn tuin; Kelder en Souterrain staan niet in het 3D-huis. Alleen verdiepingen stapelen als lagen van het huis.
 - Garage en schuur: maak een verdieping met de naam Garage, Schuur, Tuinhuis of Berging. Die staat dan als eigen gebouwtje in de tuin van het 3D-huis, met de maat van de kamers die je erin tekent. Tik erop om hem te openen. Onder **Huis** kies je bij **Garage en schuur** of hij naast het huis, achter in de tuin of niet staat, en of hij een zadeldak of een plat dak heeft. Voor de tuin zelf maak je een verdieping met de naam Tuin.
@@ -65,7 +65,7 @@ Onder **Huis** stel je in hoe je huis er van buiten uitziet.
 
 Verdiepingen die bijvoorbeeld Overig, Kelder, Schuur of Garage heten, of Tuin, Voortuin, Achtertuin of Terras, tellen niet mee als verdieping van het huis. Ze blijven wel een eigen tabblad. Klopt de naam niet, kies het dan zelf onder **In het 3D-huis**.
 
-Onderdelen zoals panelen, accu, auto, warmtepomp en airco verschijnen vanzelf als Homey zo'n apparaat heeft. Per onderdeel kun je kiezen voor Automatisch, Altijd of Nooit. Heeft het huis een plat dak, dan kan de warmtepomp ook plat op het dak liggen. Fancoils zonder buitenunit? Zet de airco dan op Nooit.
+Onderdelen zoals panelen, accu, auto, warmtepomp en airco verschijnen vanzelf als Homey zo'n apparaat heeft. Per onderdeel kun je kiezen voor Automatisch, Altijd of Nooit. Heeft het huis een plat dak, dan kan de warmtepomp ook plat op het dak liggen. Fancoils zonder buitenunit? Zet de airco dan op Nooit. Wil je de kabels tussen de onderdelen niet zien, zet dan **Kabels tussen de onderdelen** uit. Per kamer kies je bij **Dak boven deze kamer in het 3D-huis** een plat of schuin dak, voor een aanbouw of schuur waar niets bovenop staat.
 
 ## Het dashboard
 
@@ -92,6 +92,8 @@ Heb je Energie Dashboard al, dan opent de knop Energie die app, met zijn eigen i
 ## Flows
 
 HomeDeck heeft Flow-kaarten om iets op een scherm te tonen en iets aan een lijstje toe te voegen, en triggers voor stroom over en goedkope stroom.
+
+Flowknoppen op het dashboard: Homey laat een app niet altijd een Flow starten. Begin de Flow dan met de kaart **Een HomeDeck-knop wordt ingedrukt** en kies de knop; dan start de knop hem wel.
 
 ## Beveiliging
 

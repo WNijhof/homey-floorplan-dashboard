@@ -99,6 +99,9 @@ test('device kinds', () => {
   // Groups of lamps from a group app, even when the group's class is not "light".
   assert.strictEqual(core.deviceKind({ cls: 'other', group: true, caps: { onoff: true } }), 'light');
   assert.strictEqual(core.deviceKind({ cls: 'socket', group: true, caps: { onoff: true, measure_power: 5 } }), 'socket');
+  // a plug with TV as its connected device stays a plug, with Light it is a lamp
+  assert.strictEqual(core.deviceKind({ cls: 'tv', plug: true, caps: { onoff: true, measure_power: 60, meter_power: 3 } }), 'socket');
+  assert.strictEqual(core.deviceKind({ cls: 'light', plug: true, caps: { onoff: true } }), 'light');
   assert.strictEqual(core.deviceKind({ cls: 'other', caps: { onoff: true } }), 'socket');
 });
 

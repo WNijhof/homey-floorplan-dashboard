@@ -109,6 +109,7 @@
       lowPitch: clamp(h.lowPitch, 5, 45, 20),
       lowFlat: clamp(h.lowFlat, 0, 3, 0),
       gardenOwn: h.gardenOwn !== false, // the garden drawn on its own level goes into the 3D house
+      cables: h.cables !== false, // the cables with flowing energy between the parts and the meter cupboard
       form: pick(h.form, ['simple', 'plan'], 'simple'), // a neat block, or the real form of the floor plan
       extension: pick(h.extension, ['none', 'back', 'side'], 'none'),
       carport: pick(h.carport, ['none', 'left', 'right'], 'none'),
@@ -356,8 +357,37 @@
     return out;
   }
 
+  // The sloping roof drawn over a level in the editor (level.slope), as floorplan-core reads it: sides of the drawing,
+  // knee wall and pitch. Null without one.
+  function levelSlope(level) {
+    const sl = level && level.slope;
+    if (!sl || !Array.isArray(sl.sides)) return null;
+    const sides = ['top', 'bottom', 'left', 'right'].filter((k) => sl.sides.indexOf(k) >= 0);
+    if (!sides.length) return null;
+    const H = level.wallHeight || 260;
+    return { sides, knee: clamp(sl.knee, 0, H, Math.min(100, H)), pitch: clamp(sl.pitch, 15, 75, 45) };
+  }
+
   function planForm(floors, front) {
     const turn = TURNS[front];
+    // The sloping sides of a level in the frame of the house: each with the way it faces (n) and how far out its eaves
+    // lie along n (edge), in metres; the ceiling there is the knee wall and rises inwards with the pitch
+    const slopeIn = (level, place, metres) => {
+      const sl = levelSlope(level);
+      if (!sl) return null;
+      const pts = [];
+      for (const r of level.rooms || []) if (!TERRACE.test(r.name || '')) pts.push(...(r.points || []));
+      if (!pts.length) return null;
+      const xs = pts.map((p) => p[0]); const ys = pts.map((p) => p[1]);
+      const corners = [[Math.min(...xs), Math.min(...ys)], [Math.max(...xs), Math.min(...ys)], [Math.max(...xs), Math.max(...ys)], [Math.min(...xs), Math.max(...ys)]].map((p) => metres(place(p)));
+      const OUT = { top: [0, -1], bottom: [0, 1], left: [-1, 0], right: [1, 0] };
+      const sides = sl.sides.map((k) => {
+        const t = turn(OUT[k]);
+        const n = [Math.round(t[0]) || 0, Math.round(t[1]) || 0];
+        return { n, edge: Math.max(...corners.map((c) => c[0] * n[0] + c[1] * n[1])) };
+      });
+      return { sides, knee: sl.knee / 100, tan: Math.tan((sl.pitch * Math.PI) / 180) };
+    };
     const rooms = (l) => (l.rooms || []).filter((r) => (r.points || []).length >= 3);
     const polys = floors.map((l) => rooms(l).map((r) => r.points.map(turn)));
     const outside = floors.map((l) => rooms(l).map((r) => TERRACE.test(r.name || '')));
@@ -412,11 +442,22 @@
         const parapets = terracesOf(i).length
           ? terraceEdges(floors[i], terracesOf(i), indoorOf(i), place).map((e) => Object.assign(e, { a: metres(e.a), b: metres(e.b) }))
           : [];
+        // A room can have its own roof (flat or sloping) where nothing stands on it: the blocks split by that choice
+        const list = rooms(floors[i]);
+        const roofAt = (r, c) => {
+          const x = (cols[c] + cols[c + 1]) / 2; const y = (rows[r] + rows[r + 1]) / 2;
+          const k = list.findIndex((room, n) => !outside[i][n] && (room.roof === 'flat' || room.roof === 'lean') && inPolygon(x, y, polys[i][n]));
+          return k >= 0 ? list[k].roof : '';
+        };
+        const kinds = plain.map((row, r) => row.map((on, c) => (on ? roofAt(r, c) : null)));
+        const own = ['', 'flat', 'lean'].flatMap((kind) => maskRects(kinds.map((row) => row.map((k) => k === kind))).map((b) => (kind ? Object.assign(box(b), { roof: kind }) : box(b))));
         return {
           rects: maskRects(mask).map(box),
-          roofs: [...maskRects(plain).map(box), ...maskRects(under).map((b) => Object.assign(box(b), { terrace: true }))],
+          roofs: [...own, ...maskRects(under).map((b) => Object.assign(box(b), { terrace: true }))],
           runs: maskRuns(mask).map((run) => ({ a: [X(run.a[0]), Z(run.a[1])], b: [X(run.b[0]), Z(run.b[1])], n: run.n })),
           parapets, // the low walls round a terrace on this storey, in metres; they stand on the roof below it
+          // a sloping side of the top storey (under a flat house roof): its walls and roof follow the slope
+          slope: i === floors.length - 1 ? slopeIn(floors[i], place, metres) : null,
         };
       }).map((f, i) => {
         // The doors and windows of the floor plan that sit in an outer wall, on that wall of the house
@@ -791,7 +832,13 @@
         if (!d || chosen.has(d.id) || !Number.isFinite(it.x) || !Number.isFinite(it.y)) continue;
         const q = turn([it.x, it.y]);
         const x = Math.round(q[0] + mv[0] - cx) / 100; const z = Math.round(q[1] + mv[1] - cz) / 100;
-        if (garden) { spots.push({ id: d.id, x, z, wall: false }); continue; }
+        if (garden) {
+          // Placed against an outer wall of the house (within half a metre): it hangs on that wall, else it stands
+          const by = nearestRun(form.floors[0].runs, x, z);
+          if (by && by.off <= 0.5) spots.push({ id: d.id, x: by.x, z: by.z, n: by.n, wall: true });
+          else spots.push({ id: d.id, x, z, wall: false });
+          continue;
+        }
         // On the ground floor: only a lamp with an outdoor name, outside the rooms or right by an outer wall
         if (!PLACES.some((p) => PLACE_NAMES[p].test(d.name || ''))) continue;
         const inRoom = (l.rooms || []).some((r) => (r.points || []).length >= 3 && inPolygon(it.x, it.y, r.points));
@@ -1114,8 +1161,18 @@
     }
     if (shows(set, 'car', present)) {
       const x = cx + sx * 0.25; const z = cz + 0.4;
-      boxFaces(x - 0.9, x + 0.9, 0.15, 0.9, z - 2.15, z + 2.15, t.car, t.car, { pick: 'car' });
-      boxFaces(x - 0.75, x + 0.75, 0.9, 1.45, z - 1.2, z + 0.9, '#1e2733', '#1e2733', { pick: 'car' });
+      const pick = { pick: 'car' };
+      const glass = '#1e2733'; const tyre = '#16181b';
+      // four wheels under a body with a lower bonnet, and a cabin whose windows slope front and back
+      for (const wz of [z - 1.4, z + 1.35]) for (const s of [-1, 1]) boxFaces(x + s * 0.92 - 0.12, x + s * 0.92 + 0.12, 0, 0.62, wz - 0.31, wz + 0.31, tyre, tyre, pick);
+      boxFaces(x - 0.9, x + 0.9, 0.25, 0.85, z - 2.15, z + 2.15, t.car, t.car, pick);
+      const cab = [[z - 1.35, z + 0.95], [z - 0.95, z + 0.4]]; // [rear, front] at the bottom and at the roof
+      const yb = 0.85; const yt = 1.42; const xb = 0.84; const xt = 0.72;
+      const c = [x, 1.1, z];
+      for (const s of [-1, 1]) face([[x + s * xb, yb, cab[0][0]], [x + s * xb, yb, cab[0][1]], [x + s * xt, yt, cab[1][1]], [x + s * xt, yt, cab[1][0]]], glass, c, pick);
+      face([[x - xb, yb, cab[0][1]], [x + xb, yb, cab[0][1]], [x + xt, yt, cab[1][1]], [x - xt, yt, cab[1][1]]], glass, c, pick); // windscreen
+      face([[x - xb, yb, cab[0][0]], [x + xb, yb, cab[0][0]], [x + xt, yt, cab[1][0]], [x - xt, yt, cab[1][0]]], glass, c, pick); // rear window
+      face([[x - xt, yt, cab[1][0]], [x + xt, yt, cab[1][0]], [x + xt, yt, cab[1][1]], [x - xt, yt, cab[1][1]]], t.car, c, pick); // roof
       anchors.car = [x, 2.4, z];
     }
     if (shows(set, 'battery', present)) {

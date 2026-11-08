@@ -310,7 +310,11 @@
       if (!a) return;
       b.disabled = true;
       HomeyWeb.request('POST', '/actions/run', { plan: st().plan.id, kind: a.kind, id: a.id })
-        .catch(function () { b.title = T.runFailed; b.classList.add('alarm'); })
+        .catch(function (e) {
+          b.title = T.runFailed; b.classList.add('alarm');
+          // Homey refused the Flow: say what helps, the message stays until someone taps
+          if (e && /HomeDeck/.test(e.message || '')) window.FpPanels.message(e.message);
+        })
         .then(function () { setTimeout(function () { b.disabled = false; b.classList.remove('alarm'); }, 1500); });
     }
   });

@@ -231,6 +231,30 @@ test('moods, Flows and vacuum Flows only run from what is on the plan', async ()
   });
 });
 
+test('a Flow button: own trigger card, a clear message when Homey refuses, gone when its Flow is gone', async () => {
+  await withApp({}, async ({ app, api, homey }, get) => {
+    const plan = app.plans.list()[0];
+    plan.actions = [{ kind: 'flow', id: 'f1', name: 'Welterusten' }, { kind: 'advanced', id: 'a1', name: 'Film' }, { kind: 'flow', id: 'gone', name: 'Weg' }];
+    app.plans.save(plan.id, plan);
+    const found = await homey.cards.listeners['button-pressed.button']('wel');
+    assert.deepStrictEqual(found.map((b) => b.id), ['flow:f1']);
+    // a Flow that starts with the card: the card fires, Homey is not asked
+    homey.cards.args['button-pressed'] = [{ button: found[0] }];
+    assert.strictEqual((await get('/api/actions/run', { method: 'POST', body: { plan: plan.id, kind: 'flow', id: 'f1' } })).status, 200);
+    const fired = homey.cards.trigger['button-pressed'].pop();
+    assert.strictEqual(await homey.cards.listeners['button-pressed.run']({ button: found[0] }, fired.state), true);
+    assert.strictEqual(await homey.cards.listeners['button-pressed.run']({ button: { id: 'advanced:a1' } }, fired.state), false);
+    assert.ok(!api.ran.some(([k, id]) => k === 'flow' && id === 'f1'));
+    // Homey refuses: a message that says what to do
+    api.flow.triggerAdvancedFlow = async () => { throw new Error('Missing Scopes'); };
+    const refused = await get('/api/actions/run', { method: 'POST', body: { plan: plan.id, kind: 'advanced', id: 'a1' } });
+    assert.strictEqual(refused.status, 409);
+    assert.match(refused.json.error, /HomeDeck-knop/);
+    await app.pruneActions();
+    assert.deepStrictEqual(app.plans.get(plan.id).actions.map((a) => a.id), ['f1', 'a1']);
+  });
+});
+
 test('the report stays anonymous with everything in use', async () => {
   await withApp({}, async ({ app }, get) => {
     const plan = app.plans.list()[0];

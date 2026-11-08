@@ -580,6 +580,39 @@ test('meter cupboard room, a placed air conditioner and outdoor lamps from the p
   assert.deepStrictEqual(out['dev:g1'], ['g1']);
   assert.deepStrictEqual(out.garden, [], 'a placed lamp is not also one of the fixed garden spots');
   assert.deepStrictEqual(out.drive, []);
+  // on the garden level right against the house: it hangs on that wall
+  devices.set('g2', { id: 'g2', name: 'Tuinlamp', cls: 'light' });
+  plan.levels[2].items.push({ id: 'i5', kind: 'device', deviceId: 'g2', x: 400, y: -20 });
+  const g2 = house.outdoorLamps(plan, devices).spots.find((s) => s.id === 'g2');
+  assert.ok(g2 && g2.wall, 'by the wall');
+});
+
+test('a sloping side of the top storey under a flat roof, in the frame of the house', () => {
+  const room = (id, name, x0, y0, x1, y1) => ({ id, name, points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] });
+  const plan = { house: { form: 'plan', roof: 'flat' }, levels: [
+    { id: 'g', name: 'Begane grond', rooms: [room('a', 'Woonkamer', 0, 0, 800, 1000)] },
+    { id: 't', name: '2e verdieping', slope: { sides: ['top'], knee: 100, pitch: 45 }, rooms: [room('b', 'Slaapkamer', 0, 0, 800, 1000)] },
+  ] };
+  const sh = house.shape(plan);
+  assert.strictEqual(sh.floors.length, 2, 'a storey of its own, not an attic');
+  const sl = sh.form.floors[1].slope;
+  assert.deepStrictEqual(sl.sides, [{ n: [0, -1], edge: 5 }], 'the top of the drawing is the back');
+  assert.strictEqual(sl.knee, 1);
+  assert.ok(Math.abs(sl.tan - 1) < 1e-9);
+  assert.strictEqual(sh.form.floors[0].slope, null);
+  plan.house.front = 'left';
+  assert.deepStrictEqual(house.shape(plan).form.floors[1].slope.sides[0].n, [-1, 0], 'with the front on the left the top is the left side');
+});
+
+test('a lower part keeps the roof chosen for its room', () => {
+  const room = (id, name, x0, y0, x1, y1, extra) => Object.assign({ id, name, points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] }, extra);
+  const plan = { house: { form: 'plan', lowRoof: 'lean' }, levels: [
+    { id: 'g', name: 'Begane grond', rooms: [room('a', 'Woonkamer', 0, 0, 800, 1000), room('s', 'Schuur', 800, 0, 1100, 400, { roof: 'flat' }), room('e', 'Aanbouw', 800, 400, 1100, 1000)] },
+    { id: 'f', name: 'Eerste verdieping', rooms: [room('b', 'Slaapkamer', 0, 0, 800, 1000)] },
+  ] };
+  const roofs = house.shape(plan).form.floors[0].roofs;
+  assert.strictEqual(roofs.length, 2, 'the shed and the extension are two blocks');
+  assert.deepStrictEqual(roofs.map((b) => b.roof || '').sort(), ['', 'flat']);
 });
 
 test('dormer and ridge raise settings', () => {

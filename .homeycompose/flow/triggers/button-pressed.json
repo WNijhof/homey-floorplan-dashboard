@@ -1,0 +1,28 @@
+{
+  "title": {
+    "en": "A HomeDeck button is pressed",
+    "nl": "Een HomeDeck-knop wordt ingedrukt"
+  },
+  "titleFormatted": {
+    "en": "Button [[button]] is pressed on the dashboard",
+    "nl": "Knop [[button]] wordt ingedrukt op het dashboard"
+  },
+  "hint": {
+    "en": "Choose one of the Flow buttons of your plans. Use this card when Homey does not let HomeDeck start the Flow itself.",
+    "nl": "Kies een van de Flowknoppen van je plattegronden. Gebruik deze kaart als Homey HomeDeck de Flow niet zelf laat starten."
+  },
+  "args": [
+    {
+      "type": "autocomplete",
+      "name": "button",
+      "title": {
+        "en": "Button",
+        "nl": "Knop"
+      },
+      "placeholder": {
+        "en": "Button name",
+        "nl": "Naam van de knop"
+      }
+    }
+  ]
+}

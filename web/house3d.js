@@ -129,6 +129,41 @@ function fmtW(w, lang) {
 // Rooms per level: windows belong to the room behind them.
 const levelRooms = (plan) => (plan.levels || []).map((l) => (l.rooms || []).map((r) => [r.id, r.points]));
 
+// The height of the ceiling at (x, z) of a storey with sloping sides (shell.slope), at most H; H without slope.
+function slopeHeight(sl, x, z, H) {
+  if (!sl) return H;
+  let h = H;
+  for (const s of sl.sides) h = Math.min(h, sl.knee + Math.max(0, s.edge - (x * s.n[0] + z * s.n[1])) * sl.tan);
+  return h;
+}
+
+// The part of a block b ({ x, z, w, d }) where the ceiling of a storey with sloping sides is level; null when none.
+function flatPart(sl, b, H) {
+  const run = (H - sl.knee) / sl.tan;
+  let x0 = b.x - b.w / 2; let x1 = b.x + b.w / 2; let z0 = b.z - b.d / 2; let z1 = b.z + b.d / 2;
+  for (const s of sl.sides) {
+    const lim = s.edge - run;
+    if (s.n[0] > 0) x1 = Math.min(x1, lim); else if (s.n[0] < 0) x0 = Math.max(x0, -lim);
+    if (s.n[1] > 0) z1 = Math.min(z1, lim); else if (s.n[1] < 0) z0 = Math.max(z0, -lim);
+  }
+  if (x1 - x0 < 0.3 || z1 - z0 < 0.3) return null;
+  return Object.assign({}, b, { x: (x0 + x1) / 2, z: (z0 + z1) / 2, w: x1 - x0, d: z1 - z0 });
+}
+
+// Points along a line, without the ones where the line goes straight on.
+function straight(pts) {
+  const out = [pts[0]];
+  for (let i = 1; i < pts.length - 1; i++) {
+    const p = out[out.length - 1]; const q = pts[i + 1]; const m = pts[i];
+    // along an outer wall x or z stays the same, so x + z measures the way along it
+    const t = (v) => v[0] + v[2];
+    const cross = (t(m) - t(p)) * (q[1] - p[1]) - (m[1] - p[1]) * (t(q) - t(p));
+    if (Math.abs(cross) > 1e-4) out.push(m);
+  }
+  if (pts.length > 1) out.push(pts[pts.length - 1]);
+  return out;
+}
+
 class House3D {
 
   constructor(container, hooks) {
@@ -554,12 +589,14 @@ class House3D {
       if (g.place === 'side') { if (carport === 'none' && !this.shows.car) paved(g.x - g.w / 2, g.z + g.d / 2, g.x + g.w / 2, D / 2 + 5); } // else the driveway is there
       else paved(g.x - 0.5, g.z + g.d / 2, g.x + 0.5, -D / 2 - 3.2);
     }
+    // A garden drawn with its own fences or walls takes the place of the made-up one: no hedges, trees or shrubs
+    if (own && own.fences.length) { this.buildOwnGarden(own); return; }
     // Hedges along the plot and a few trees and shrubs
     // Beside a neighbour the plot ends at the party wall: a hedge between the back gardens only
     let back = this.yard.back; let side = this.yard.side;
     if (own) {
       // The garden drawn reaches as far as it was drawn: the hedges go round it, not through it
-      const pts = [...own.patches.flatMap((p) => p.pts), ...(own.sheds || []).flatMap((s) => s.pts), ...own.fences.flatMap((f) => [f.a, f.b])];
+      const pts = [...own.patches.flatMap((p) => p.pts), ...(own.sheds || []).flatMap((s) => s.pts)];
       for (const [x, z] of pts) {
         if (z < -D / 2) back = Math.min(back, z - 0.4);
         if (z < D / 2 + 3) side = Math.max(side, Math.abs(x) + 0.4);
@@ -788,7 +825,20 @@ class House3D {
       fg.userData.pick = { kind: 'level', id: f.levelId };
       const y0 = f.base; const y1 = f.base + f.height;
       const shell = form ? form.floors[i] : null;
-      const walls = shell ? shell.runs.map((r) => LOOK.poly([[r.a[0], y0, r.a[1]], [r.b[0], y0, r.b[1]], [r.b[0], y1, r.b[1]], [r.a[0], y1, r.a[1]]], M.wall, size)) : [
+      // A sloping side (top storey under a flat roof): the walls rise with the roof from the knee wall
+      const hAt = (x, z) => slopeHeight(shell && shell.slope, x, z, f.height);
+      const runWall = (r) => {
+        if (!shell.slope) return LOOK.poly([[r.a[0], y0, r.a[1]], [r.b[0], y0, r.b[1]], [r.b[0], y1, r.b[1]], [r.a[0], y1, r.a[1]]], M.wall, size);
+        const L = Math.hypot(r.b[0] - r.a[0], r.b[1] - r.a[1]);
+        const steps = Math.max(1, Math.ceil(L / 0.25));
+        const tops = [];
+        for (let k = steps; k >= 0; k--) {
+          const x = r.a[0] + ((r.b[0] - r.a[0]) * k) / steps; const z = r.a[1] + ((r.b[1] - r.a[1]) * k) / steps;
+          tops.push([x, y0 + hAt(x, z), z]);
+        }
+        return LOOK.poly([[r.a[0], y0, r.a[1]], [r.b[0], y0, r.b[1]], ...straight(tops)], M.wall, size);
+      };
+      const walls = shell ? shell.runs.map(runWall) : [
         LOOK.poly([[-W / 2, y0, D / 2], [W / 2, y0, D / 2], [W / 2, y1, D / 2], [-W / 2, y1, D / 2]], M.wall, size),
         LOOK.poly([[W / 2, y0, -D / 2], [-W / 2, y0, -D / 2], [-W / 2, y1, -D / 2], [W / 2, y1, -D / 2]], M.wall, size),
         LOOK.poly([[W / 2, y0, D / 2], [W / 2, y0, -D / 2], [W / 2, y1, -D / 2], [W / 2, y1, D / 2]], M.wall, size),
@@ -844,6 +894,7 @@ class House3D {
           continue;
         }
         if (y0 + o.top > y1 - 0.05) o.top = y1 - y0 - 0.15; // never through the floor above
+        if (shell.slope && o.top > hAt(o.x, o.z) - 0.1) { o.top = hAt(o.x, o.z) - 0.15; if (o.top - o.sill < 0.4) continue; } // nor through the slope
         add(o.w, o.x + o.n[0] * 0.005, o.z + o.n[1] * 0.005, Math.atan2(o.n[0], o.n[1]), o);
       }
       // Else along the real walls: windows evenly over each stretch, none on a stub or where the door is
@@ -856,6 +907,7 @@ class House3D {
           const k = (c + 0.5) / count;
           const x = r.a[0] + (r.b[0] - r.a[0]) * k; const z = r.a[1] + (r.b[1] - r.a[1]) * k;
           if (i === 0 && r.n[0] === entry.n[0] && r.n[1] === entry.n[1] && Math.abs(z - entry.z) + Math.abs(x - entry.x) < 1) continue;
+          if (shell.slope && hAt(x, z) < winY - y0 + winH / 2 + 0.1) continue; // under the slope: no room for a window
           add(wide ? 1.25 : 0.9, x + r.n[0] * 0.005, z + r.n[1] * 0.005, Math.atan2(r.n[0], r.n[1]));
         }
       }
@@ -864,12 +916,20 @@ class House3D {
         if (shell.roofs.length) {
           const low = new THREE.Group();
           low.userData.pick = { kind: 'level', id: f.levelId };
-          for (const b of shell.roofs) {
-            if (set.lowRoof === 'lean' && !b.terrace) low.add(this.buildLeanRoof(b, y1, this.highSide(b, form, i), f.height, set));
+          for (const b0 of shell.roofs) {
+            const b = shell.slope ? flatPart(shell.slope, b0, f.height) : b0;
+            if (!b) continue;
+            if ((b.roof || set.lowRoof) === 'lean' && !b.terrace) low.add(this.buildLeanRoof(b, y1, this.highSide(b, form, i), f.height, set));
             else low.add(LOOK.box(b.w + 0.25, 0.25, b.d + 0.25, M.trim, b.x, y1, b.z));
           }
           g.add(low);
           this.liftWith.push(low);
+        }
+        if (shell.slope) {
+          const slope = this.buildSlope(shell, y0, f.height, hAt);
+          slope.userData.pick = { kind: 'level', id: f.levelId };
+          g.add(slope);
+          this.liftWith.push(slope);
         }
         // The low walls or railing round a terrace of this storey, on the flat roof below it
         for (const p of shell.parapets || []) {
@@ -978,11 +1038,51 @@ class House3D {
       g.add(ext);
     }
     if (!form) return this.buildRoof(t, set, shape, W, D, g, eaves);
-    const main = form.main;
+    // Under a sloping side of the top storey the flat roof only covers where the ceiling is level
+    const topShell = form.floors[form.floors.length - 1];
+    const main = (topShell.slope && flatPart(topShell.slope, form.main, shape.floors[shape.floors.length - 1].height)) || form.main;
     const roof = this.buildRoof(t, set, shape, main.w, main.d, g, eaves);
     this.roofGroup.position.x = main.x;
     this.roofGroup.position.z = main.z;
     return roof;
+  }
+
+  // The sloping roof of a storey with a sloping side, over its blocks where the ceiling is lower than the walls: a
+  // surface that follows hAt, on a grid with lines where the slope reaches the full height.
+  buildSlope(shell, y0, H, hAt) {
+    const sl = shell.slope;
+    const pos = []; const uv = [];
+    const T = LOOK.TILE_SIZE;
+    const sec = Math.sqrt(1 + sl.tan * sl.tan);
+    const su = sl.sides.some((s) => s.n[0]) ? sec : 1; const sv = sl.sides.some((s) => s.n[1]) ? sec : 1;
+    const run = (H - sl.knee) / sl.tan;
+    const put = (x, z) => { pos.push(x, y0 + hAt(x, z) + 0.06, z); uv.push((x * su) / T[0], (z * sv) / T[1]); };
+    for (const b of shell.rects) {
+      const lines = (lo, hi, axis) => {
+        const out = new Set([lo, hi]);
+        for (let v = lo; v < hi; v += 0.5) out.add(v);
+        for (const s of sl.sides) if (s.n[axis]) { const v = (s.edge - run) * s.n[axis]; if (v > lo && v < hi) out.add(v); }
+        return [...out].sort((p, q) => p - q);
+      };
+      const xs = lines(b.x - b.w / 2, b.x + b.w / 2, 0); const zs = lines(b.z - b.d / 2, b.z + b.d / 2, 1);
+      for (let i = 0; i + 1 < xs.length; i++) {
+        for (let k = 0; k + 1 < zs.length; k++) {
+          const x0 = xs[i]; const x1 = xs[i + 1]; const z0 = zs[k]; const z1 = zs[k + 1];
+          if ([[x0, z0], [x1, z0], [x0, z1], [x1, z1]].every(([x, z]) => hAt(x, z) >= H - 0.001)) continue;
+          put(x0, z0); put(x0, z1); put(x1, z1);
+          put(x0, z0); put(x1, z1); put(x1, z0);
+        }
+      }
+    }
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+    geo.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+    geo.computeVertexNormals();
+    const mesh = new THREE.Mesh(geo, this.M.roof);
+    mesh.castShadow = true; mesh.receiveShadow = true;
+    const group = new THREE.Group();
+    group.add(mesh);
+    return group;
   }
 
   // The roof in its own frame: length L along x, span S along z; turned when the ridge runs front to back.
@@ -1747,6 +1847,7 @@ class House3D {
   // A real cable on the wall: a thin dark line with clips, always there, and over it the current as moving light towards
   // the end (speed > 0) or the start (speed < 0). Straight, with small round bends.
   addFlow(kind, points, target) {
+    if (this.set && this.set.cables === false) return; // switched off in the editor
     const path = cablePath(points);
     const length = path.getLength();
     const segments = Math.max(30, Math.round(length * 10));

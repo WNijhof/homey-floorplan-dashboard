@@ -67,6 +67,9 @@ class FloorplanApp extends Homey.App {
     });
     this.extras = new HouseExtras(this);
     this.extras.registerFlows();
+    this.registerButtonCard();
+    this.homey.setInterval(() => this.pruneActions().catch((err) => this.error('Buttons', err)), ENERGY_CHECK);
+    this.hubReady.then(() => this.pruneActions()).catch(() => {});
     this.backup = new Backup(this);
     this.backup.keepBeforeUpdate();
     this.guardEnergyCards();
@@ -359,17 +362,71 @@ class FloorplanApp extends Homey.App {
       .sort((a, b) => a.name.localeCompare(b.name));
   }
 
+  // The Flow buttons of all plans, each once.
+  planButtons() {
+    const seen = new Map();
+    for (const p of this.plans.list()) {
+      const vacuums = (p.levels || []).flatMap((l) => (l.rooms || []).map((r) => r.vacuum).filter(Boolean));
+      for (const a of (p.actions || []).concat(vacuums)) if (a && a.kind !== 'mood' && !seen.has(`${a.kind}:${a.id}`)) seen.set(`${a.kind}:${a.id}`, { name: a.name || '', id: `${a.kind}:${a.id}`, description: p.name });
+    }
+    return [...seen.values()];
+  }
+
+  // HomeDeck's own trigger card: a Flow that starts with it runs when its button is pressed, without asking Homey
+  // to start a Flow (which an app is not always allowed to do: "Missing Scopes").
+  registerButtonCard() {
+    this.buttonCard = this.homey.flow.getTriggerCard('button-pressed');
+    this.buttonCard.registerArgumentAutocompleteListener('button', async (query) => {
+      const q = String(query || '').toLowerCase();
+      return this.planButtons().filter((b) => b.name.toLowerCase().includes(q));
+    });
+    this.buttonCard.registerRunListener(async (args, state) => !!(args.button && state && args.button.id === state.key));
+  }
+
+  async buttonCardUsed(key) {
+    const values = await this.buttonCard.getArgumentValues().catch(() => []);
+    return (values || []).some((v) => v && v.button && v.button.id === key);
+  }
+
   // Only what is on the plan can be started from the web page.
   async runAction({ plan, kind, id } = {}) {
     const buttons = (p) => (p.actions || []).concat(p.levels.flatMap((l) => (l.rooms || []).map((r) => r.vacuum).filter(Boolean)));
     const known = this.plans.list().some((p) => (!plan || p.id === plan) && buttons(p).some((a) => a.kind === kind && a.id === id));
     if (!known) throw Object.assign(new Error('Not a button of this plan'), { status: 403 });
+    const key = `${kind}:${id}`;
+    if (kind !== 'mood' && await this.buttonCardUsed(key)) {
+      await this.buttonCard.trigger({}, { key });
+      return true;
+    }
     await this.hubReady;
     const { flow, moods } = this.hub.api;
-    if (kind === 'mood') await moods.setMood({ id });
-    else if (kind === 'advanced') await flow.triggerAdvancedFlow({ id });
-    else await flow.triggerFlow({ id });
+    try {
+      if (kind === 'mood') await moods.setMood({ id });
+      else if (kind === 'advanced') await flow.triggerAdvancedFlow({ id });
+      else await flow.triggerFlow({ id });
+    } catch (err) {
+      if (kind === 'mood') throw err;
+      this.error('Flow button', err.message);
+      const nl = this.homey.i18n.getLanguage() === 'nl';
+      throw Object.assign(new Error(nl
+        ? 'Homey laat HomeDeck deze Flow niet starten. Begin de Flow met de kaart "Een HomeDeck-knop wordt ingedrukt" (bij HomeDeck) en kies deze knop: dan werkt hij wel.'
+        : 'Homey does not let HomeDeck start this Flow. Start the Flow with the card "A HomeDeck button is pressed" (under HomeDeck) and choose this button: then it works.'), { status: 409 });
+    }
     return true;
+  }
+
+  // Buttons whose Flow or mood is gone from Homey go off the plans. Only for a kind Homey could list.
+  async pruneActions() {
+    await this.hubReady;
+    const { flow, moods } = this.hub.api;
+    const read = (promise) => promise.then((o) => new Set(Object.keys(o || {}))).catch(() => null);
+    const [plain, advanced, all] = await Promise.all([read(flow.getFlows()), read(flow.getAdvancedFlows()), read(moods.getMoods())]);
+    const have = { flow: plain, advanced, mood: all };
+    for (const p of this.plans.list()) {
+      const actions = p.actions || [];
+      const kept = actions.filter((a) => !a || !have[a.kind] || have[a.kind].has(a.id));
+      if (kept.length !== actions.length) this.plans.save(p.id, { ...p, actions: kept });
+    }
   }
 
   // The Flow cards of the Energy page work while it runs here (it then takes these cards over).

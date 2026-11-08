@@ -33,7 +33,17 @@ function fakeHomey({ lang = 'nl', config = {} } = {}) {
     },
     flow: {
       getActionCard(id) { return { registerRunListener(fn) { cards.action[id] = fn; } }; },
-      getTriggerCard(id) { cards.trigger[id] = cards.trigger[id] || []; return { trigger: async (tokens) => { cards.trigger[id].push(tokens); } }; },
+      getTriggerCard(id) {
+        cards.trigger[id] = cards.trigger[id] || [];
+        cards.args = cards.args || {};
+        cards.listeners = cards.listeners || {};
+        return {
+          trigger: async (tokens, state) => { cards.trigger[id].push(state ? Object.assign({}, tokens, { state }) : tokens); },
+          registerArgumentAutocompleteListener(arg, fn) { cards.listeners[`${id}.${arg}`] = fn; },
+          registerRunListener(fn) { cards.listeners[`${id}.run`] = fn; },
+          getArgumentValues: async () => cards.args[id] || [],
+        };
+      },
       createToken: async () => ({ setValue: async () => {}, unregister: async () => {} }),
     },
     dashboards: { getWidget: () => ({ registerSettingAutocompleteListener() {} }) },
