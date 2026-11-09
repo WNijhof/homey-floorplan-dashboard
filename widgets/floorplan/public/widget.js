@@ -1141,7 +1141,11 @@
       state.weather = data;
       const now = data && data.now;
       const hours = (Array.isArray(data && data.hourly) ? data.hourly : []).filter((h) => pickTemp(h) != null).slice(0, 6);
-      const days = (Array.isArray(data && data.daily) ? data.daily : []).filter((h) => typeof h.temperatureMax === 'number').slice(1, 5);
+      // The next four days after today, picked by date: Homey's list may start today or already tomorrow
+      const dailyAll = (Array.isArray(data && data.daily) ? data.daily : []).filter((h) => typeof h.temperatureMax === 'number');
+      const tomorrow = new Date(); tomorrow.setHours(24, 0, 0, 0);
+      const dated = dailyAll.every((h) => toDate(h));
+      const days = (dated ? dailyAll.filter((h) => toDate(h) >= tomorrow) : dailyAll.slice(1)).slice(0, 4);
       const t = pickTemp(now);
       const hourHtml = hours.map((h) => {
         const d = toDate(h);

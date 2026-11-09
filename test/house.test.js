@@ -587,6 +587,33 @@ test('meter cupboard room, a placed air conditioner and outdoor lamps from the p
   assert.ok(g2 && g2.wall, 'by the wall');
 });
 
+test('a plug placed as a lamp, or a dimmable plug, is an outdoor lamp too', () => {
+  const plan = stackedPlan();
+  const devices = new Map([
+    ['p1', { id: 'p1', name: 'Stekker tuin', cls: 'socket', caps: { onoff: true } }],
+    ['p2', { id: 'p2', name: 'Dimmer tuin', cls: 'socket', caps: { onoff: true, dim: 0.5 } }],
+    ['p3', { id: 'p3', name: 'Vijverpomp', cls: 'socket', caps: { onoff: true } }],
+  ]);
+  plan.levels[2].items.push(
+    { id: 'a1', kind: 'device', deviceId: 'p1', x: 300, y: -300, isLight: true },
+    { id: 'a2', kind: 'device', deviceId: 'p2', x: 500, y: -300 },
+    { id: 'a3', kind: 'device', deviceId: 'p3', x: 700, y: -300 },
+  );
+  const ids = house.outdoorLamps(plan, devices).spots.map((s) => s.id).sort();
+  assert.deepStrictEqual(ids, ['p1', 'p2'], 'the plug set as a lamp and the dimmable one, not the pump');
+});
+
+test('an air conditioner without power of its own takes the reading of its energy meter', () => {
+  const ac = { id: 'ac', name: 'Airco woonkamer', class: 'airconditioning', capabilities: ['onoff'], capabilitiesObj: { onoff: { value: false } } };
+  const meter = (w) => ({ id: 'm', name: 'Airco kWh-meter', class: 'sensor', capabilities: ['measure_power'], capabilitiesObj: { measure_power: { value: w } } });
+  const idle = summarize([ac, meter(2)], {}).airco[0];
+  assert.strictEqual(idle.on, false);
+  const running = summarize([ac, meter(640)], {}).airco[0];
+  assert.strictEqual(running.on, true);
+  assert.strictEqual(running.watts, 640);
+  assert.strictEqual(summarize([ac], {}).airco[0].watts, null, 'without a meter nothing changes');
+});
+
 test('a sloping side of the top storey under a flat roof, in the frame of the house', () => {
   const room = (id, name, x0, y0, x1, y1) => ({ id, name, points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] });
   const plan = { house: { form: 'plan', roof: 'flat' }, levels: [

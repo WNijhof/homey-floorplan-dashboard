@@ -895,6 +895,14 @@ class House3D {
         }
         if (y0 + o.top > y1 - 0.05) o.top = y1 - y0 - 0.15; // never through the floor above
         if (shell.slope && o.top > hAt(o.x, o.z) - 0.1) { o.top = hAt(o.x, o.z) - 0.15; if (o.top - o.sill < 0.4) continue; } // nor through the slope
+        // A door wider than a person needs is a garage door: a sectional door with its panels
+        if (o.door && o.w >= 2) {
+          const gd = this.buildGarageDoor(o.w, Math.min(o.top, 2.4));
+          gd.position.set(o.x + o.n[0] * 0.005, y0, o.z + o.n[1] * 0.005);
+          gd.rotation.y = Math.atan2(o.n[0], o.n[1]);
+          fg.add(gd);
+          continue;
+        }
         add(o.w, o.x + o.n[0] * 0.005, o.z + o.n[1] * 0.005, Math.atan2(o.n[0], o.n[1]), o);
       }
       // Else along the real walls: windows evenly over each stretch, none on a stub or where the door is
@@ -1155,7 +1163,9 @@ class House3D {
     // A dormer on a slope of a gable roof along the front, set back a little from the eaves: normal, wide, or nearly as
     // wide as the roof and up to near the ridge (a ridge raise). The numbers are those of the back slope (z below 0);
     // a dormer at the front is that mirrored.
+    let dormerBox = null; // the slope with a dormer and how far along the ridge it reaches, for the solar panels
     if (set.dormer && set.roof === 'gable' && !turned && set.dormerSize === 'ridge') {
+      dormerBox = { side: set.dormerAt === 'front' ? 'front' : 'back', x0: -L / 2, x1: L / 2 };
       // A ridge raise: the slope lifted from the eaves up to a ridge higher than the old one, with an upright wall
       // above the old ridge and closed cheeks at the gable ends
       const front = set.dormerAt === 'front';
@@ -1204,6 +1214,7 @@ class House3D {
         const dx = Math.max(-L / 2 + 0.3 + dw / 2, Math.min(L / 2 - 0.3 - dw / 2, shift != null ? shift : full ? 0 : -L / 4));
         const dormer = LOOK.box(dw, yf + dh, zr - zf, M.trim, dx, 0, mz((zf + zr) / 2));
         add(dormer);
+        dormerBox = { side: front ? 'front' : 'back', x0: dx - dw / 2, x1: dx + dw / 2 };
         const glass = M.glass();
         // one window, or a row of them across a wide dormer
         const n = full ? Math.max(1, Math.round(dw / 2.4)) : 1;
@@ -1217,7 +1228,7 @@ class House3D {
       }
     }
     this.roofGroup = rg;
-    this.roofInfo = { L, S, rise, pitch, turned, ov, lift };
+    this.roofInfo = { L, S, rise, pitch, turned, ov, lift, dormer: dormerBox };
     return { top, rise };
   }
 
@@ -1461,6 +1472,18 @@ class House3D {
     }
   }
 
+  // A sectional garage door in a facade, in its own frame: width w along x, standing on y = 0, facing +z.
+  buildGarageDoor(w, h) {
+    const M = this.M;
+    const g = new THREE.Group();
+    const leaf = new THREE.MeshStandardMaterial({ color: this.theme.night ? '#9a9c9f' : '#dcdedf', roughness: 0.5, metalness: 0.2 });
+    g.add(LOOK.box(w + 0.12, h + 0.06, 0.05, M.frame, 0, 0, 0.01));
+    g.add(LOOK.box(w, h, 0.06, leaf, 0, 0, 0.03));
+    const panels = Math.max(3, Math.round(h / 0.5));
+    for (let k = 1; k < panels; k++) g.add(LOOK.box(w, 0.025, 0.07, M.frame, 0, (h / panels) * k, 0.03));
+    return g;
+  }
+
   // A wooden carport with a flat roof against the side wall.
   buildCarport(t, W, D, cs) {
     const M = this.M;
@@ -1486,17 +1509,22 @@ class House3D {
       const share = i === 0 ? Math.ceil(total / sides.length) : Math.floor(total / sides.length);
       return total > 0 && !share ? null : this.panelsOn(side, share, t, shape);
     }).filter(Boolean);
+    // A dormer or ridge raise that takes the whole sunny slope: the panels go on the other one
+    if (!placed.length && sides.length === 1 && (sides[0] === 'front' || sides[0] === 'back')) {
+      const other = this.panelsOn(sides[0] === 'front' ? 'back' : 'front', total, t, shape);
+      if (other) placed.push(other);
+    }
     if (!placed.length) return;
     // The card and the cable go with the first face
-    const { panels, middle } = placed[0];
+    const { panels, middle, centre } = placed[0];
     const anchor = new THREE.Vector3();
     panels.updateWorldMatrix(true, true);
-    panels.localToWorld(anchor.set(0, 0.3, middle));
+    panels.localToWorld(anchor.set(centre || 0, 0.3, middle));
     this.cards.solar = this.card('solar', null, anchor.clone().add(new THREE.Vector3(0, 1.2, 0)));
     // The cable leaves the panels at their lowest edge, runs down the roof and along the gutter, down the corner of the
     // house and along the wall to the meter cupboard
-    const onRoof = panels.localToWorld(new THREE.Vector3(0, 0.09, -0.42));
-    const atGutter = panels.localToWorld(new THREE.Vector3(0, 0.09, 0.02));
+    const onRoof = panels.localToWorld(new THREE.Vector3(centre || 0, 0.09, -0.42));
+    const atGutter = panels.localToWorld(new THREE.Vector3(centre || 0, 0.09, 0.02));
     const wall = this.onWall(atGutter);
     const front = Math.abs(wall.z) >= D / 2;
     const corner = new THREE.Vector3(front ? Math.sign(meter.x) * (W / 2 - 0.3) : wall.x, shape.eaves + (shape.above || 0) - 0.12, front ? wall.z : Math.sign(meter.z) * (D / 2 - 0.3));
@@ -1506,6 +1534,7 @@ class House3D {
   // Panels on one face of the roof: as many as asked and as fit (0: as many as fit nicely).
   panelsOn(side, wanted, t, shape) {
     const info = this.roofInfo;
+    let shiftX = 0; // where the panels sit along the slope: in the middle, or beside a dormer
     const group = new THREE.Group();
     const panelW = 1.05; const panelH = 1.72; const gap = 0.04;
     if (!this.panelMat) this.panelMat = new THREE.MeshPhysicalMaterial({ map: this.M.tx.panel, roughness: 0.18, metalness: 0.3, envMapIntensity: 1.3, clearcoat: 0.6 });
@@ -1525,7 +1554,20 @@ class House3D {
       const slope = info.S / 2 / Math.cos(info.pitch);
       const hipCut = this.set.roof === 'hip' ? 1 : 0;
       const sideways = (side === 'left' || side === 'right') !== info.turned;
-      const length = sideways ? info.S : info.L;
+      let length = sideways ? info.S : info.L;
+      // A dormer on this slope keeps its width: the panels go beside it, on the wider side. Where nothing is left they
+      // go on the other slope.
+      const dm = info.dormer && info.dormer.side === side && !info.turned ? info.dormer : null;
+      if (dm) {
+        const flip = side === 'back' ? -1 : 1; // the panels of the back slope are turned half round
+        const a = Math.min(flip * dm.x0, flip * dm.x1); const b = Math.max(flip * dm.x0, flip * dm.x1);
+        const lo = -length / 2 + 0.5; const hi = length / 2 - 0.5;
+        const left = a - 0.3 - lo; const right = hi - (b + 0.3);
+        const free = Math.max(left, right);
+        if (free < panelW + gap) return null;
+        length = free + 1; // the margin of the formula below
+        shiftX = left >= right ? (lo + (a - 0.3)) / 2 : ((b + 0.3) + hi) / 2;
+      }
       along = Math.max(1, Math.floor((length - 1 - hipCut * slope) / (panelW + gap)));
       up = Math.max(1, Math.floor((slope - 0.8) / (panelH + gap)));
       if (sideways && this.set.roof === 'hip') { along = Math.max(1, Math.floor(along * 0.5)); up = Math.min(up, 2); }
@@ -1537,7 +1579,7 @@ class House3D {
     let n = 0;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols && n < target; c++, n++) {
-        const x = (c - (cols - 1) / 2) * (panelW + gap);
+        const x = shiftX + (c - (cols - 1) / 2) * (panelW + gap);
         const s = 0.5 + r * (panelH + gap) + panelH / 2 - (tent ? 0.5 + (rows * (panelH + gap)) / 2 : 0);
         const p = new THREE.Mesh(new THREE.BoxGeometry(panelW, 0.04, panelH), panelMat);
         p.position.set(x, 0.06, -s);
@@ -1562,7 +1604,7 @@ class House3D {
     const glow = new THREE.Mesh(new THREE.PlaneGeometry(gw, gh), new THREE.MeshBasicMaterial({ color: '#ffc23d', alphaMap: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
     glow.rotation.x = -Math.PI / 2;
     const middle = tent ? 0 : -(0.5 + (rows * (panelH + gap)) / 2);
-    glow.position.set(0, 0.03, middle);
+    glow.position.set(shiftX, 0.03, middle);
     panels.add(glow);
     this.glows.push(glow);
     panels.userData.pick = { kind: 'solar' };
@@ -1594,7 +1636,7 @@ class House3D {
       holder.add(slope);
       this.roofGroup.add(holder);
     }
-    return { panels, middle };
+    return { panels, middle, centre: shiftX };
   }
 
   buildGrid(t, W, D, meter, ms) {
