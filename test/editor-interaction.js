@@ -244,6 +244,89 @@
   const savedCals = window.__calendars || await (await fetch('/api/calendars')).json();
   report.calendarSaved = Array.isArray(savedCals) && savedCals[0].url === 'https://example.com/basic.ics';
 
+  // 10b. Paint, pictures, decals and the colours of furniture
+  {
+    const PNG1 = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+    const input = (el, v) => { el.value = v; el.dispatchEvent(new Event('input', { bubbles: true })); };
+    document.getElementById('view-2d').click();
+    tool('select');
+    document.getElementById('zoom-fit').click();
+    const room0 = lv().rooms[0];
+    const mid = [room0.points.reduce((s, p) => s + p[0], 0) / room0.points.length, room0.points.reduce((s, p) => s + p[1], 0) / room0.points.length];
+    // a spot in the first room with nothing on it, to select the room by
+    const freeSpot = () => {
+      const r = lv().rooms[0]; const xs = r.points.map((p) => p[0]); const ys = r.points.map((p) => p[1]);
+      for (let y = Math.min(...ys) + 30; y < Math.max(...ys) - 20; y += 20) {
+        for (let x = Math.min(...xs) + 30; x < Math.max(...xs) - 20; x += 20) {
+          if (!FloorplanCore.geom.pointInPolygon([x, y], r.points)) continue;
+          if (lv().items.some((i) => Math.abs(i.x - x) < (i.w || 40) / 2 + 30 && Math.abs(i.y - y) < (i.d || 40) / 2 + 30)) continue;
+          if (lv().openings.some((o) => Math.hypot(o.x - x, o.y - y) < 120)) continue;
+          return [x, y];
+        }
+      }
+      return mid;
+    };
+    const spot = freeSpot();
+    const selectRoom0 = async () => { tool('select'); click(spot); await wait(30); };
+    await selectRoom0();
+    report.lookPanel = !!window.__editorState().sel && window.__editorState().sel.kind === 'room' && !!document.querySelector('#panel [data-hex="sel.paint.color"]') && !!document.querySelector('#panel [data-action=pick-picture][data-path="sel.floorImage"]');
+    input(document.querySelector('#panel [data-hex="sel.paint.color"]'), '#a8bfa6');
+    report.wallPaint = !!lv().rooms[0].paint && lv().rooms[0].paint.color === '#a8bfa6';
+    document.querySelector('#panel [data-action=band-add]').click();
+    await wait(30);
+    report.wainscot = lv().rooms[0].paint.bands.length === 1 && lv().rooms[0].paint.bands[0].to === 90;
+    input(document.querySelector('#panel [data-path="sel.paint.bands.0.to"]'), '110');
+    report.bandHeight = lv().rooms[0].paint.bands[0].to === 110;
+    const wallSel = document.querySelector('#panel [data-edge]');
+    wallSel.value = '1'; wallSel.dispatchEvent(new Event('change', { bubbles: true }));
+    await wait(30);
+    input(document.querySelector('#panel [data-hex="sel.paint.edges.1.color"]'), '#c97b63');
+    report.ownWall = lv().rooms[0].paint.edges[1].color === '#c97b63' && lv().rooms[0].paint.color === '#a8bfa6';
+    document.querySelector('#panel [data-action=paint-clear]').click();
+    await wait(30);
+    report.ownWallCleared = !(lv().rooms[0].paint.edges && lv().rooms[0].paint.edges[1]) && lv().rooms[0].paint.color === '#a8bfa6';
+    // a picture on the floor keeps its ratio when the width changes (a file cannot be chosen in a test: it is put in the plan)
+    window.__editorState().plan.levels[0].rooms[0].floorImage = { src: PNG1, w: 60, h: 30, ratio: 0.5, rot: 0, ox: 0, oy: 0 };
+    await selectRoom0();
+    const tw = document.querySelector('#panel [data-psize="w"]');
+    report.floorPictureFields = !!tw && !!document.querySelector('#panel [data-psize="h"]');
+    if (tw) { input(tw, '80'); report.floorPictureRatio = lv().rooms[0].floorImage.h === 40 && document.querySelector('#panel [data-psize="h"]').value === '40'; }
+    // decals: a coloured area on the floor and on a wall
+    tool('furniture');
+    const decals0 = lv().items.filter((i) => i.kind === 'decal').length;
+    document.querySelector('#panel [data-action=decal-add][data-surface=floor][data-picture="0"]').click();
+    await wait(60);
+    const dec = lv().items.filter((i) => i.kind === 'decal');
+    report.decalAdded = dec.length === decals0 + 1 && dec[dec.length - 1].surface === 'floor' && !!document.querySelector('#panel [data-dsize="w"]');
+    input(document.querySelector('#panel [data-dsize="w"]'), '150');
+    report.decalSize = lv().items.find((i) => i.id === window.__editorState().sel.id).w === 150;
+    tool('furniture');
+    document.querySelector('#panel [data-action=decal-add][data-surface=wall][data-picture="0"]').click();
+    await wait(60);
+    const wd = lv().items.filter((i) => i.kind === 'decal').pop();
+    report.wallDecal = wd.surface === 'wall' && wd.d === 2 && Number.isFinite(wd.rot) && !!document.querySelector('#panel [data-dsize="h"]');
+    // a display cabinet: doors, glass, colours and finish
+    tool('furniture');
+    document.querySelector('[data-action=pick-furniture][data-type=own-vitrine]').click();
+    click(spot);
+    await wait(60);
+    const cabId = window.__editorState().sel && window.__editorState().sel.id;
+    const placed = lv().items.find((i) => i.id === cabId);
+    tool('select');
+    click([placed.x, placed.y]);
+    await wait(30);
+    const cab = () => lv().items.find((i) => i.id === cabId);
+    report.cabinetPlaced = !!cab() && cab().type === 'own-vitrine' && cab().doors === 2 && cab().glass === 0.5 && !!document.querySelector('#panel [data-path="sel.doors"]');
+    input(document.querySelector('#panel [data-path="sel.glass"]'), '0.7');
+    report.cabinetGlass = cab().glass === 0.7;
+    input(document.querySelector('#panel [data-hex="sel.colors.1"]'), '#445566');
+    report.cabinetDoorColour = cab().colors[1] === '#445566';
+    const fin = document.querySelector('#panel [data-path="sel.finish"]');
+    fin.value = 'gloss'; fin.dispatchEvent(new Event('change', { bubbles: true }));
+    report.cabinetFinish = cab().finish === 'gloss';
+    tool('select');
+  }
+
   // 11. Recognise a floor plan picture (set by scripts/ui-check.js), check the draft and use it
   if (window.__testPlanPng) {
     document.getElementById('view-2d').click();

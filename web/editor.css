@@ -92,6 +92,18 @@ a.ed-btn { text-decoration: none; color: inherit; display: inline-flex; align-it
 .ed-row-btns { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
 .ed-color { display: flex; gap: 6px; align-items: center; }
 .ed-color input[type="color"] { width: 36px; height: 28px; border: 1px solid var(--ed-line); border-radius: 6px; padding: 0; background: transparent; }
+.ed-color .ed-hex { width: 82px; font-family: ui-monospace, Menlo, Consolas, monospace; font-size: 12px; }
+.ed-colour { margin-bottom: 12px; }
+.ed-swatches { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 6px; }
+.ed-swatch { width: 20px; height: 20px; border-radius: 50%; border: 1px solid var(--ed-line); padding: 0; cursor: pointer; }
+.ed-swatch.on { outline: 2px solid var(--ed-accent); outline-offset: 1px; }
+.ed-pic { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; }
+.ed-pic img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; border: 1px solid var(--ed-line); background: repeating-conic-gradient(#8883 0 25%, transparent 0 50%) 0 0 / 12px 12px; }
+.ed-pic .ed-row-btns { margin-top: 0; flex-direction: column; align-items: flex-start; }
+.ed-band { display: flex; gap: 6px; align-items: center; margin-bottom: 6px; }
+.ed-band input[type="number"] { width: 64px; }
+.ed-band input[type="color"] { width: 36px; height: 28px; border: 1px solid var(--ed-line); border-radius: 6px; padding: 0; background: transparent; }
+.ed-panel h4 { font-size: 12px; margin: 14px 0 4px; }
 
 @media (max-width: 760px) {
   .ed { grid-template-columns: 70px 1fr; grid-template-rows: auto 60vh auto; grid-template-areas: "top top" "tools canvas" "panel panel"; height: auto; }

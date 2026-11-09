@@ -526,13 +526,114 @@
   function newFurniture(type, x, y, lang) {
     const entry = modelOf(type);
     if (entry) {
-      return {
+      const item = {
         id: uid('itm'), kind: 'furniture', type, x, y, w: entry.w, d: entry.d, h: entry.h, z: entry.mount === 'floor' ? 0 : entry.z,
         mount: entry.mount, rot: 0, label: entry.name[lang] || entry.name.en, color: null,
       };
+      // A piece drawn in code starts with the doors, glass and colours its model comes with
+      if (entry.defaults) Object.assign(item, JSON.parse(JSON.stringify(entry.defaults)));
+      return item;
     }
     const c = CATALOGUE[type] || CATALOGUE.box;
     return { id: uid('itm'), kind: 'furniture', type, x, y, w: c.w, d: c.d, h: c.h, z: c.z || 0, rot: 0, label: c.name, color: null };
+  }
+
+  /* -------------------------------------------------------------- surfaces */
+
+  // Paint, pictures and decals on floors and walls. A picture is a data URI together with the real size (cm) of what it
+  // shows, so the editor and the 3D view draw it at the size it has in the house.
+  const HEX = /^#([0-9a-f]{3}|[0-9a-f]{6})$/i;
+  const IMAGE_URI = /^data:image\/(png|jpeg|webp|gif);base64,[a-z0-9+/=]+$/i;
+  const FINISHES = ['matte', 'satin', 'gloss', 'metal'];
+  const clampNum = (v, lo, hi, dflt) => (Number.isFinite(Number(v)) && v !== '' && v !== null ? Math.min(hi, Math.max(lo, Number(v))) : dflt);
+
+  /** A colour as #rgb or #rrggbb, else null. */
+  function cleanColor(c) { return typeof c === 'string' && HEX.test(c) ? c : null; }
+
+  /** A picture of the plan: { src, w, h (real size in cm), rot, ox, oy (turn and shift of the pattern) }, or null. */
+  function cleanImage(img) {
+    if (!img || typeof img.src !== 'string' || !IMAGE_URI.test(img.src)) return null;
+    return {
+      src: img.src,
+      w: clampNum(img.w, 1, 3000, 60), h: clampNum(img.h, 1, 3000, 60),
+      rot: clampNum(img.rot, -360, 360, 0), ox: clampNum(img.ox, -5000, 5000, 0), oy: clampNum(img.oy, -5000, 5000, 0),
+    };
+  }
+
+  /** The horizontal bands of a wall (a painted wainscot, a frieze): [{ from, to, color, image }] in cm above the floor. */
+  function cleanBands(list) {
+    if (!Array.isArray(list)) return [];
+    return list.map((b) => {
+      const from = clampNum(b && b.from, 0, 1000, 0); const to = clampNum(b && b.to, 0, 1000, 0);
+      const color = cleanColor(b && b.color); const image = cleanImage(b && b.image);
+      return to - from >= 1 && (color || image) ? { from, to, color, image } : null;
+    }).filter(Boolean).slice(0, 6);
+  }
+
+  /**
+   * How the walls of a room look on the inside: its own colour, picture and bands (room.paint), where one wall of the room (an
+   * edge, counted from its first corner) can have a look of its own (room.paint.edges[i]), which then takes the place of
+   * the fields it sets. Null when nothing is chosen.
+   */
+  function paintOf(room, edge) {
+    const base = (room && room.paint) || {};
+    const own = edge != null && edge >= 0 && base.edges && base.edges[edge] ? base.edges[edge] : null;
+    const pick = (k) => (own && own[k] != null && own[k] !== '' ? own[k] : base[k]);
+    const color = cleanColor(pick('color')); const image = cleanImage(pick('image')); const bands = cleanBands(pick('bands'));
+    return color || image || bands.length ? { color, image, bands } : null;
+  }
+
+  /** The edge of the room (index of its first corner) that a point on a wall lies on, within tol cm; -1 when none. */
+  function roomEdgeNear(room, p, tol) {
+    const pts = (room && room.points) || [];
+    let best = -1; let bestD = tol == null ? 8 : tol;
+    for (let i = 0; i < pts.length; i++) {
+      const d = projectOnSegment(p, pts[i], pts[(i + 1) % pts.length]).d;
+      if (d < bestD) { bestD = d; best = i; }
+    }
+    return best;
+  }
+
+  /**
+   * Adding a corner to a room (op 'insert' after corner i) or taking one away (op 'delete' of corner i) makes the walls after
+   * it count one more or less: the paint of each wall (room.paint.edges) goes with its wall. Call it before room.points changes.
+   */
+  function reindexEdges(room, op, i) {
+    const ed = room && room.paint && room.paint.edges;
+    if (!ed) return;
+    const list = room.points.map((_, j) => ed[j] || null);
+    if (op === 'insert') list.splice(i + 1, 0, list[i] ? JSON.parse(JSON.stringify(list[i])) : null); else list.splice(i, 1);
+    const out = {};
+    list.forEach((x, j) => { if (x) out[j] = x; });
+    room.paint.edges = out;
+  }
+
+  /** The tiled picture of a floor: a room's own (room.floorImage), as cleaned up, or null. */
+  function floorImageOf(room) { return cleanImage(room && room.floorImage); }
+
+  /** The colour chosen for the k-th colour field of a piece of furniture (0 is item.color, the rest item.colors[k]), or null. */
+  function slotColor(item, k) { return cleanColor(k === 0 ? item && item.color : item && item.colors && item.colors[k]); }
+
+  /** The surface finish chosen for a piece (matte, satin, gloss, metal), or null. */
+  function finishOf(item) { return item && FINISHES.includes(item.finish) ? item.finish : null; }
+
+  /** A decal on a floor or against a wall: a picture or a plain coloured area of a real size (cm). */
+  function newDecal(surface, p, image) {
+    const wall = surface === 'wall';
+    const w = image ? image.w : 100; const h = image ? image.h : (wall ? 60 : 100);
+    const item = { id: uid('dec'), kind: 'decal', surface: wall ? 'wall' : 'floor', x: Math.round(p[0]), y: Math.round(p[1]), rot: 0, w: Math.round(w), opacity: 1, lockRatio: true };
+    if (wall) Object.assign(item, { h: Math.round(h), d: 2, z: 100 }); else Object.assign(item, { d: Math.round(h), h: 0, z: 0 });
+    if (image) item.src = image.src; else item.color = '#8a9bb0';
+    return item;
+  }
+
+  /** A decal of the plan as drawn: size, picture (checked) or colour, opacity. Null when it has neither. */
+  function decalOf(item) {
+    if (!item || item.kind !== 'decal') return null;
+    const src = typeof item.src === 'string' && IMAGE_URI.test(item.src) ? item.src : null;
+    const color = cleanColor(item.color);
+    if (!src && !color) return null;
+    return { wall: item.surface === 'wall', src, color, round: !!item.round, opacity: clampNum(item.opacity, 0.05, 1, 1) };
   }
 
   /* --------------------------------------------------------------- devices */
@@ -909,7 +1010,9 @@
     const walls = levelWalls(level);
     const openings = level.openings || [];
     const rooms = level.rooms || [];
-    const items = (level.items || []).filter((i) => i.kind === 'device' || showFurniture);
+    const items = (level.items || []).filter((i) => i.kind === 'device' || i.kind === 'decal' || showFurniture);
+    // A picture of the plan can be a long data URI; the web pages hand out a short address for it (opts.imageUrl)
+    const imgHref = (src) => esc(typeof opts.imageUrl === 'function' ? opts.imageUrl(src) || src : src);
     const t = level.wallThickness || DEFAULTS.wallThickness;
 
     // Fit
@@ -947,12 +1050,20 @@
 
     // Room floors (+ tint)
     const readings = new Map();
+    let floorImages = 0;
     for (const room of rooms) {
       const rd = roomReadings(room, devices);
       readings.set(room.id, rd);
       const fill = room.color || pal.floor;
       const sel = selected.has(room.id) ? ' data-selected="1"' : '';
       floor.push(`<polygon class="fp-room" data-kind="room" data-id="${esc(room.id)}"${sel} points="${ptsAttr(room.points)}" fill="${fill}"/>`);
+      // The picture of the floor, tiled at its real size
+      const fimg = floorImageOf(room);
+      if (fimg) {
+        const pid = `${prefix}-fi-${floorImages++}`;
+        defs.push(`<pattern id="${pid}" patternUnits="userSpaceOnUse" x="${f1(fimg.ox)}" y="${f1(fimg.oy)}" width="${f1(fimg.w)}" height="${f1(fimg.h)}" patternTransform="rotate(${f1(fimg.rot)})"><image href="${imgHref(fimg.src)}" width="${f1(fimg.w)}" height="${f1(fimg.h)}" preserveAspectRatio="none"/></pattern>`);
+        floor.push(`<polygon points="${ptsAttr(room.points)}" fill="url(#${pid})" pointer-events="none"/>`);
+      }
       const tintVal = opts.tint === 'temperature' ? rd.temperature : opts.tint === 'humidity' ? rd.humidity : null;
       if (tintVal != null && !opts.eink) {
         floor.push(`<polygon points="${ptsAttr(room.points)}" fill="${tintColor(opts.tint, tintVal)}" opacity="${pal.dark ? 0.42 : 0.38}" pointer-events="none"/>`);
@@ -968,7 +1079,7 @@
       defs.push(`<pattern id="${prefix}-tiles" width="60" height="60" patternUnits="userSpaceOnUse"><path d="M0 0H60M0 0V60" stroke="${line}" stroke-width="1.2" fill="none"/></pattern>`);
       for (const room of rooms) {
         const kind = floorKind(room.name);
-        if (kind === 'wood' || kind === 'tiles') floor.push(`<polygon points="${ptsAttr(room.points)}" fill="url(#${prefix}-${kind})" pointer-events="none"/>`);
+        if ((kind === 'wood' || kind === 'tiles') && !floorImageOf(room)) floor.push(`<polygon points="${ptsAttr(room.points)}" fill="url(#${prefix}-${kind})" pointer-events="none"/>`);
       }
       if (rooms.length) {
         defs.push(`<clipPath id="${prefix}-inside" clipPathUnits="userSpaceOnUse">${rooms.map((r) => `<polygon points="${ptsAttr(r.points)}"/>`).join('')}</clipPath>`);
@@ -977,6 +1088,28 @@
         const bands = [[58, 0.018], [44, 0.024], [32, 0.03], [22, 0.036], [14, 0.045]].map(([w, o]) => `<path d="${lines}" fill="none" stroke="${shade}" stroke-opacity="${pal.dark ? o * 2.4 : o}" stroke-width="${w}" stroke-linecap="round"/>`);
         floor.push(`<g clip-path="url(#${prefix}-inside)" pointer-events="none">${bands.join('')}</g>`);
       }
+    }
+
+    // Decals: a picture or a coloured area of a real size on the floor; against a wall only a thin mark shows here
+    for (const item of items) {
+      const dec = item.kind === 'decal' ? decalOf(item) : null;
+      if (!dec || (dec.wall && view.is3d)) continue;
+      const sel = selected.has(item.id) ? ' data-selected="1"' : '';
+      const w = Math.max(1, item.w || 100); const d = dec.wall ? 6 : Math.max(1, item.d || 100);
+      const at = `transform="translate(${f1(item.x)} ${f1(item.y)}) rotate(${f1(item.rot || 0)})"`;
+      let body;
+      if (dec.wall) {
+        body = `<rect x="${f1(-w / 2)}" y="${f1(-d / 2)}" width="${f1(w)}" height="${f1(d)}" fill="${dec.color || '#8f98a3'}" stroke="${pal.dark ? '#cfd0d2' : '#3b3f46'}" stroke-width="1" opacity="0.85"/>`;
+      } else {
+        const cid = `${prefix}-dc-${esc(item.id)}`;
+        const outline = dec.round
+          ? `<ellipse cx="0" cy="0" rx="${f1(w / 2)}" ry="${f1(d / 2)}"`
+          : `<rect x="${f1(-w / 2)}" y="${f1(-d / 2)}" width="${f1(w)}" height="${f1(d)}"`;
+        if (dec.src && dec.round) defs.push(`<clipPath id="${cid}" clipPathUnits="userSpaceOnUse">${outline}/></clipPath>`);
+        body = `${outline} fill="${dec.color || 'transparent'}"/>`
+          + (dec.src ? `<image href="${imgHref(dec.src)}" x="${f1(-w / 2)}" y="${f1(-d / 2)}" width="${f1(w)}" height="${f1(d)}" preserveAspectRatio="none"${dec.round ? ` clip-path="url(#${cid})"` : ''}/>` : '');
+      }
+      floor.push(`<g class="fp-item fp-decal" data-kind="item" data-id="${esc(item.id)}"${sel} ${at} opacity="${dec.opacity}">${body}</g>`);
     }
 
     // Light pools: radial gradients clipped to the room the light is in (walls block light).
@@ -1439,7 +1572,7 @@
   }
 
   return {
-    floorKind,
+    floorKind, cleanColor, cleanImage, cleanBands, paintOf, roomEdgeNear, reindexEdges, floorImageOf, newDecal, decalOf, slotColor, finishOf, FINISHES,
     DEFAULTS, CATALOGUE, GLYPHS, LIGHT_PALETTE, DARK_PALETTE, ALARM_CAPS,
     uid, newPlan, newLevel, newFurniture, newDeviceItem,
     geom: { sub, add, mul, dot, cross, len, norm, dist, signedArea, pointInPolygon, projectOnSegment, bbox, labelPoint, rotatePt, rect },

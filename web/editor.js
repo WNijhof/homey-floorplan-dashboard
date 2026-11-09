@@ -165,6 +165,47 @@
       north: 'Noorden', northEast: 'Noordoosten', east: 'Oosten', southEast: 'Zuidoosten', south: 'Zuiden', southWest: 'Zuidwesten', west: 'Westen', northWest: 'Noordwesten',
     },
   };
+  // Colours, pictures at their real size, wall paint, decals, and the colours and finish of furniture
+  Object.assign(STRINGS.en, {
+    floorLook: 'Floor look', wallsInside: 'Walls (inside)', wallTarget: 'Applies to', wallAll: 'All walls of this room', wallN: 'Wall %n',
+    wallColour: 'Wall colour', wallPicture: 'Wall picture', floorPicture: 'Floor picture',
+    pickPicture: 'Choose a picture…', replacePicture: 'Replace', removePicture: 'Remove picture',
+    tileW: 'Real width (cm)', tileH: 'Real height (cm)', pictureShift: 'Shift (cm)', pictureTurn: 'Turn (°)',
+    floorPictureNote: 'The picture repeats over the floor at the size you give: the real width and height of what it shows (one tile, a few planks).',
+    wallPictureNote: 'The picture repeats over the wall at that real size, from the floor up.',
+    bands: 'Bands', bandsNote: 'A band paints a strip of the wall between two heights, for example a painted wainscot.', bandAdd: 'Add a band', bandRemove: 'Remove', bandFrom: 'From (cm)', bandTo: 'To (cm)',
+    bandsLikeRoom: 'This wall has the bands of the room.', bandsOwn: 'Own bands for this wall', bandsBack: 'Use the bands of the room again', wallOwnNote: 'Colour and picture set here take the place of those of the whole room, for this wall only.',
+    clearAll: 'Back to the theme',
+    decals: 'Decals', decal: 'Decal', decalNote: 'A picture or coloured area at its real size, on the floor (a rug, a mural, a terrace pattern) or hung on a wall (a painting, a panel).',
+    decalFloorPic: 'Picture on the floor', decalWallPic: 'Picture on a wall', decalFloorColour: 'Coloured area on the floor', decalWallColour: 'Coloured area on a wall',
+    surface: 'Where', surfFloor: 'On the floor', surfWall: 'On a wall', realWidth: 'Real width (cm)', realHeightWall: 'Real height (cm)', realDepthFloor: 'Real depth (cm)', roundShape: 'Round or oval', decalAbove: 'Height above the floor (cm)', decalNoPicture: 'No picture: a plain coloured area.',
+    sizeFromPicture: 'Type the real size of what the picture shows; with the ratio kept the other side follows the picture.',
+    planPictures: 'Pictures in this plan', planFull: 'The plan is nearly full. Use smaller pictures or fewer of them.', pictureFailed: 'The picture could not be read.',
+    colourN: 'Colour %n', finish: 'Finish', finAuto: 'As the model', finMatte: 'Matte', finSatin: 'Satin', finGloss: 'Glossy', finMetal: 'Metal',
+    colourPartNote: 'Each field colours one material of the model, the biggest first.', colourReset: 'Reset the colours',
+    doors: 'Doors', glassShare: 'Glass in the doors from the top (%)', shelves: 'Shelves behind the glass', handle: 'Handles', handleBar: 'Bar', handleKnob: 'Knob', handleNone: 'None',
+    cabinetNote: 'Drawn in 3D to your size: choose the number of doors and how much of each door is glass, then the colours.',
+  });
+  Object.assign(STRINGS.nl, {
+    floorLook: 'Uiterlijk vloer', wallsInside: 'Muren (binnenkant)', wallTarget: 'Geldt voor', wallAll: 'Alle muren van deze kamer', wallN: 'Muur %n',
+    wallColour: 'Muurkleur', wallPicture: 'Afbeelding op de muur', floorPicture: 'Afbeelding op de vloer',
+    pickPicture: 'Kies een afbeelding…', replacePicture: 'Vervangen', removePicture: 'Afbeelding weghalen',
+    tileW: 'Echte breedte (cm)', tileH: 'Echte hoogte (cm)', pictureShift: 'Verschuiving (cm)', pictureTurn: 'Draaien (°)',
+    floorPictureNote: 'De afbeelding herhaalt zich over de vloer op de maat die je opgeeft: de echte breedte en hoogte van wat je ziet (één tegel, een paar planken).',
+    wallPictureNote: 'De afbeelding herhaalt zich over de muur op die echte maat, vanaf de vloer.',
+    bands: 'Banden', bandsNote: 'Een band verft een strook van de muur tussen twee hoogtes, bijvoorbeeld een geschilderde lambrisering.', bandAdd: 'Band toevoegen', bandRemove: 'Weghalen', bandFrom: 'Van (cm)', bandTo: 'Tot (cm)',
+    bandsLikeRoom: 'Deze muur heeft de banden van de kamer.', bandsOwn: 'Eigen banden voor deze muur', bandsBack: 'Weer de banden van de kamer', wallOwnNote: 'Kleur en afbeelding die je hier instelt, gelden alleen voor deze muur en nemen de plaats in van die van de hele kamer.',
+    clearAll: 'Terug naar het thema',
+    decals: 'Decals', decal: 'Decal', decalNote: 'Een afbeelding of gekleurd vlak op echte maat, op de vloer (een kleed, een muurschildering, een terraspatroon) of aan een muur (een schilderij, een paneel).',
+    decalFloorPic: 'Afbeelding op de vloer', decalWallPic: 'Afbeelding op een muur', decalFloorColour: 'Gekleurd vlak op de vloer', decalWallColour: 'Gekleurd vlak op een muur',
+    surface: 'Waar', surfFloor: 'Op de vloer', surfWall: 'Op een muur', realWidth: 'Echte breedte (cm)', realHeightWall: 'Echte hoogte (cm)', realDepthFloor: 'Echte diepte (cm)', roundShape: 'Rond of ovaal', decalAbove: 'Hoogte boven de vloer (cm)', decalNoPicture: 'Geen afbeelding: een effen gekleurd vlak.',
+    sizeFromPicture: 'Geef de echte maat van wat de afbeelding laat zien; met de verhouding vast volgt de andere kant de afbeelding.',
+    planPictures: 'Afbeeldingen in dit plan', planFull: 'Het plan zit bijna vol. Gebruik kleinere afbeeldingen of minder.', pictureFailed: 'De afbeelding kon niet worden gelezen.',
+    colourN: 'Kleur %n', finish: 'Afwerking', finAuto: 'Zoals het model', finMatte: 'Mat', finSatin: 'Zijdeglans', finGloss: 'Glanzend', finMetal: 'Metaal',
+    colourPartNote: 'Elk veld kleurt één materiaal van het model, het grootste eerst.', colourReset: 'Kleuren herstellen',
+    doors: 'Deuren', glassShare: 'Glas in de deuren, van boven (%)', shelves: 'Planken achter het glas', handle: 'Grepen', handleBar: 'Stang', handleKnob: 'Knop', handleNone: 'Geen',
+    cabinetNote: 'Getekend in 3D op jouw maat: kies het aantal deuren en hoeveel van elke deur glas is, en daarna de kleuren.',
+  });
   const T = STRINGS[(navigator.language || 'en').slice(0, 2)] || STRINGS.en;
 
   /* ---------------------------------------------------------------- state */
@@ -228,7 +269,9 @@
 
   function snapshot() {
     S.undo.push(JSON.stringify(S.plan));
-    if (S.undo.length > 60) S.undo.shift();
+    // (a plan with pictures is big: the steps back together stay below about 60 MB)
+    let held = S.undo.reduce((n, x) => n + x.length, 0);
+    while (S.undo.length > 60 || (S.undo.length > 3 && held > 60e6)) held -= S.undo.shift().length;
     S.redo = [];
   }
 
@@ -449,12 +492,14 @@
   // Furniture and wall-mounted devices dropped near a wall turn their back to it and touch it.
   function faceWall(item, ev) {
     if (ev && ev.shiftKey) return;
-    const depth = item.kind === 'furniture' ? item.d : 0;
+    const decal = item.kind === 'decal';
+    if (decal && item.surface !== 'wall') return; // a decal on the floor stays where it is put
+    const depth = item.kind === 'furniture' ? item.d : decal ? (item.d || 2) : 0;
     const nw = nearestWall([item.x, item.y], depth / 2 + 35);
     if (!nw) return;
     const dir = G.norm(G.sub(nw.point, [item.x, item.y]));
     if (!Number.isFinite(dir[0]) || (dir[0] === 0 && dir[1] === 0)) return;
-    if (item.kind === 'furniture') {
+    if (item.kind === 'furniture' || decal) {
       item.rot = Math.round((Math.atan2(dir[0], -dir[1]) * 180) / Math.PI / 15) * 15;
       const c = G.sub(nw.point, G.mul(dir, depth / 2 + nw.wall.t / 2));
       item.x = Math.round(c[0]); item.y = Math.round(c[1]);
@@ -619,6 +664,11 @@
           const q = room.points[(i + 1) % room.points.length];
           parts.push(ccw ? lengthLabel(q, p, k, true) : lengthLabel(p, q, k, true));
         });
+        // The wall chosen in the room panel for its own paint
+        if (S.paintEdge != null && S.paintRoom === room.id && room.points[S.paintEdge]) {
+          const a = room.points[S.paintEdge]; const b = room.points[(S.paintEdge + 1) % room.points.length];
+          parts.push(`<line x1="${f1(a[0])}" y1="${f1(a[1])}" x2="${f1(b[0])}" y2="${f1(b[1])}" stroke="#ff8c00" stroke-width="${f1(6 * k)}" stroke-linecap="round" opacity="0.85" pointer-events="none"/>`);
+        }
         if (!room.locked) {
           room.points.forEach((p, i) => {
             parts.push(`<circle data-handle="v:${i}" cx="${f1(p[0])}" cy="${f1(p[1])}" r="${f1(6 * k)}" fill="#fff" stroke="${accent}" stroke-width="${f1(2 * k)}" style="cursor:move"/>`);
@@ -857,12 +907,13 @@
           // A new corner halfway the edge, moved at once
           snapshot();
           const a = room.points[index]; const b = room.points[(index + 1) % room.points.length];
+          core.reindexEdges(room, 'insert', index);
           room.points.splice(index + 1, 0, [Math.round((a[0] + b[0]) / 2), Math.round((a[1] + b[1]) / 2)]);
           S.drag = { type: 'vertex', room, index: index + 1 };
           draw();
           return;
         }
-        if (ev.altKey && room.points.length > 3) { commit(() => room.points.splice(index, 1)); return; }
+        if (ev.altKey && room.points.length > 3) { commit(() => { core.reindexEdges(room, 'delete', index); room.points.splice(index, 1); }); return; }
         snapshot();
         S.drag = { type: 'vertex', room, index };
       } else if (S.sel.kind === 'wall') {
@@ -1018,6 +1069,7 @@
         it.x = sp[0]; it.y = sp[1];
         const entryMove = MODELS.get(it.kind === 'device' ? it.fixture : it.type);
         if (it.kind === 'furniture' && !(entryMove && (entryMove.mount === 'surface' || entryMove.mount === 'ceiling'))) faceWall(it, ev);
+        else if (it.kind === 'decal' && it.surface === 'wall') faceWall(it, ev);
         const fxMove = it.kind === 'device' ? core.deviceFixture(it, S.devices.get(it.deviceId)) : null;
         if (fxMove && fxMove.mount === 'wall') faceWall(it, ev);
         settleOnSurface(it);
@@ -1069,7 +1121,7 @@
       const pr = G.projectOnSegment(p, a, room.points[(i + 1) % room.points.length]);
       if (pr.d < 10 * scale() && pr.t > 0.02 && pr.t < 0.98 && (!best || pr.d < best.d)) best = { i, ...pr };
     });
-    if (best) commit(() => room.points.splice(best.i + 1, 0, best.point.map(Math.round)));
+    if (best) commit(() => { core.reindexEdges(room, 'insert', best.i); room.points.splice(best.i + 1, 0, best.point.map(Math.round)); });
   }
 
   function finishWall() {
@@ -1359,7 +1411,7 @@
     const placing = (S.tool === 'furniture' || S.tool === 'device') && (!obj || S.sel.kind === 'item');
     if (placing) { key = S.tool; html = (obj ? selectedBar(obj) : '') + (S.tool === 'furniture' ? cataloguePanel() : devicesPanel(lv)); }
     else if (obj && S.sel.kind === 'room') html = roomPanel(obj);
-    else if (obj && S.sel.kind === 'item') html = obj.kind === 'device' ? devicePanel(obj) : furniturePanel(obj);
+    else if (obj && S.sel.kind === 'item') html = obj.kind === 'device' ? devicePanel(obj) : obj.kind === 'decal' ? decalPanel(obj) : furniturePanel(obj);
     else if (obj && S.sel.kind === 'opening') html = openingPanel(obj);
     else if (obj && S.sel.kind === 'wall') html = wallPanel(obj);
     else if (S.tool === 'furniture') html = cataloguePanel();
@@ -1521,7 +1573,8 @@
       <p class="ed-note">${T.area}: ${area.toFixed(1)} m²</p>
       ${lockRow(room)}
       ${room.locked ? '' : `<div class="ed-row-btns"><button type="button" class="ed-btn" data-action="room-straighten">📐 ${T.straighten}</button><button type="button" class="ed-btn" data-action="room-align">⇹ ${T.align}</button></div>`}
-      ${field(T.floorColour, `<div class="ed-color"><input type="color" data-path="sel.color" value="${esc(room.color || '#ffffff')}"><button type="button" class="ed-btn small" data-action="clear-color">${T.themeColour}</button></div>`)}
+      ${colourField(T.floorColour, 'sel.color', room.color, '#ece6dc', false)}
+      ${roomLookHtml(room)}
       ${field(T.climate, `<select data-path="sel.climateDevice">${options(climates, room.climateDevice, T.zoneAverage)}</select>`)}
       ${field(T.tempFrom, `<select data-path="sel.tempDevice">${options(temps, room.tempDevice, T.zoneAverage)}</select>`)}
       ${field(T.humFrom, `<select data-path="sel.humDevice">${options(hums, room.humDevice, T.zoneAverage)}</select>`)}
@@ -1574,6 +1627,280 @@
       <div class="ed-row-btns">${deleteBtn('sel')}</div>`;
   }
 
+  /* ------------------------------------------- colours, pictures and decals */
+
+  const SWATCHES = ['#ffffff', '#efe9dd', '#d8d0c2', '#b9b4aa', '#8c8f94', '#4a4f57', '#1b1c1f', '#c8a27a', '#8a5a3b', '#5c3d2a',
+    '#a8bfa6', '#7d9a8a', '#8fb0c8', '#3f5f7f', '#c97b63', '#e0b95c', '#c68a9a', '#6d4f7a'];
+  const hex6 = (c) => {
+    if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(c || '')) return '#ffffff';
+    return c.length === 4 ? `#${c[1]}${c[1]}${c[2]}${c[2]}${c[3]}${c[3]}` : c;
+  };
+  const round1 = (n) => Math.round(n * 10) / 10;
+  const PLAN_MAX_BYTES = 4 * 1024 * 1024; // what the plan store accepts (lib/PlanStore.js)
+
+  // The object and key a panel path points at ('sel.paint.edges.2.color'); with `make` the objects on the way are made
+  function pathParent(path, make) {
+    const [root, ...rest] = path.split('.');
+    let obj = root === 'level' ? level() : root === 'plan' ? S.plan : selectedObject();
+    for (let i = 0; i < rest.length - 1 && obj; i++) {
+      if (obj[rest[i]] == null) {
+        if (!make) return null;
+        obj[rest[i]] = rest[i] === 'colors' || rest[i] === 'bands' ? [] : {};
+      }
+      obj = obj[rest[i]];
+    }
+    return obj ? { obj, key: rest[rest.length - 1] } : null;
+  }
+
+  // The value at a panel path, made with `fallback` when it is not there yet
+  function valueAt(path, make, fallback) {
+    const pp = pathParent(path, make);
+    if (!pp) return null;
+    if (pp.obj[pp.key] == null && make) pp.obj[pp.key] = fallback;
+    return pp.obj[pp.key];
+  }
+
+  // A colour: the colour picker, the code to type, a button back to the theme, and a row of ready-made colours
+  function colourField(label, path, value, dflt, swatches) {
+    const open = S.swatchOpen && path in S.swatchOpen ? S.swatchOpen[path] : swatches !== false;
+    return `<div class="ed-field ed-colour"><span>${esc(label)}</span>
+      <div class="ed-color"><input type="color" data-path="${path}" value="${hex6(value || dflt)}">
+      <input type="text" class="ed-hex" data-hex="${path}" value="${esc(value || '')}" placeholder="${esc(dflt || '#rrggbb')}" maxlength="7" spellcheck="false" autocomplete="off">
+      <button type="button" class="ed-btn small" data-action="swatches" data-path="${path}" title="${esc(T.colour)}">${open ? '▴' : '▾'}</button>
+      <button type="button" class="ed-btn small" data-action="clear-path" data-path="${path}" title="${esc(T.themeColour)}">×</button></div>
+      ${open ? `<div class="ed-swatches">${SWATCHES.map((c) => `<button type="button" class="ed-swatch${(value || '').toLowerCase() === c ? ' on' : ''}" style="background:${c}" data-action="set-colour" data-path="${path}" data-value="${c}" title="${c}"></button>`).join('')}</div>` : ''}</div>`;
+  }
+
+  // How much of the plan store the pictures take
+  function pictureBytes() {
+    let n = 0;
+    JSON.stringify(S.plan, (k, v) => { if (k === 'src' && typeof v === 'string' && v.startsWith('data:')) n += v.length; return v; });
+    return n;
+  }
+
+  function pictureMeter() {
+    const total = JSON.stringify(S.plan).length;
+    return `<p class="ed-note">${T.planPictures}: ${(pictureBytes() / 1048576).toFixed(1)} MB · ${Math.round((total / PLAN_MAX_BYTES) * 100)}%${total > PLAN_MAX_BYTES * 0.8 ? `<br><b>${T.planFull}</b>` : ''}</p>`;
+  }
+
+  // A picture of a real size, tiled over a floor or a wall: the picture, its real width and height, and where it starts
+  function pictureFields(path, img, o) {
+    if (!img || !img.src) return `<div class="ed-row-btns"><button type="button" class="ed-btn" data-action="pick-picture" data-path="${path}" data-def="${o.def || 60}">🖼 ${T.pickPicture}</button></div>`;
+    const size = (key, label) => field(label, `<input type="number" step="any" min="1" data-path="${path}.${key}" data-psize="${key}" value="${esc(img[key])}">`);
+    return `<div class="ed-pic"><img src="${esc(img.src)}" alt=""><div class="ed-row-btns">
+        <button type="button" class="ed-btn small" data-action="pick-picture" data-path="${path}" data-def="${o.def || 60}">${T.replacePicture}</button>
+        <button type="button" class="ed-btn small danger" data-action="clear-path" data-path="${path}">${T.removePicture}</button></div></div>
+      <div class="ed-two">${size('w', T.tileW)}${size('h', T.tileH)}</div>
+      <label class="ed-check"><input type="checkbox" data-path="${path}.keepRatio" data-bool="1"${img.keepRatio !== false ? ' checked' : ''}>${T.keepRatio}</label>
+      <div class="ed-two">${field(`${T.pictureShift} →`, input(`${path}.ox`, img.ox || 0, 'number'))}${field(`${T.pictureShift} ↓`, input(`${path}.oy`, img.oy || 0, 'number'))}</div>
+      ${o.turn ? field(T.pictureTurn, input(`${path}.rot`, img.rot || 0, 'number')) : ''}`;
+  }
+
+  // The look of a floor and of the walls on the inside, for the room panel
+  function roomLookHtml(room) {
+    return `<h3>${T.floorLook}</h3>
+      ${pictureFields('sel.floorImage', room.floorImage, { turn: true, def: 60 })}
+      <p class="ed-note">${T.floorPictureNote}</p>
+      ${wallPaintHtml(room)}
+      ${pictureMeter()}`;
+  }
+
+  function wallPaintHtml(room) {
+    if (S.paintRoom !== room.id) { S.paintRoom = room.id; S.paintEdge = null; }
+    const n = room.points.length;
+    if (S.paintEdge != null && S.paintEdge >= n) S.paintEdge = null;
+    const edge = S.paintEdge;
+    const base = edge == null ? 'sel.paint' : `sel.paint.edges.${edge}`;
+    const cur = (edge == null ? room.paint : room.paint && room.paint.edges && room.paint.edges[edge]) || {};
+    const metres = (m) => String(Math.round(m * 100) / 100).replace('.', LANG === 'nl' ? ',' : '.');
+    const list = room.points.map((p, i) => ({ id: String(i), name: `${T.wallN.replace('%n', i + 1)} · ${metres(G.dist(p, room.points[(i + 1) % n]) / 100)} m` }));
+    const bandRow = (b, i) => `<div class="ed-band"><input type="number" step="any" min="0" data-path="${base}.bands.${i}.from" value="${esc(b.from)}" title="${esc(T.bandFrom)}"><span>–</span>`
+      + `<input type="number" step="any" min="0" data-path="${base}.bands.${i}.to" value="${esc(b.to)}" title="${esc(T.bandTo)}">`
+      + `<input type="color" data-path="${base}.bands.${i}.color" value="${hex6(b.color || '#7f9bb0')}"><span class="ed-note" style="margin:0">cm</span>`
+      + `<button type="button" class="ed-btn small" data-action="band-remove" data-path="${base}.bands" data-index="${i}" title="${esc(T.bandRemove)}">×</button></div>`;
+    let bands;
+    if (edge != null && !Array.isArray(cur.bands)) {
+      bands = `<p class="ed-note">${T.bandsLikeRoom}</p><div class="ed-row-btns"><button type="button" class="ed-btn small" data-action="edge-bands-own">${T.bandsOwn}</button></div>`;
+    } else {
+      bands = `${(cur.bands || []).map(bandRow).join('')}<div class="ed-row-btns"><button type="button" class="ed-btn small" data-action="band-add" data-path="${base}.bands">＋ ${T.bandAdd}</button>`
+        + `${edge != null ? `<button type="button" class="ed-btn small" data-action="edge-bands-back">${T.bandsBack}</button>` : ''}</div>`;
+    }
+    return `<h3>${T.wallsInside}</h3>
+      ${field(T.wallTarget, `<select data-edge="1">${options([{ id: '', name: T.wallAll }, ...list], edge == null ? '' : String(edge))}</select>`)}
+      ${edge != null ? `<p class="ed-note">${T.wallOwnNote}</p>` : ''}
+      ${colourField(T.wallColour, `${base}.color`, cur.color, '#f3f1ec', edge == null)}
+      ${pictureFields(`${base}.image`, cur.image, { def: 60 })}
+      ${cur.image ? `<p class="ed-note">${T.wallPictureNote}</p>` : ''}
+      <h4>${T.bands}</h4><p class="ed-note">${T.bandsNote}</p>${bands}
+      <div class="ed-row-btns"><button type="button" class="ed-btn small" data-action="paint-clear">${T.clearAll}</button></div>`;
+  }
+
+  function decalPanel(item) {
+    const wall = item.surface === 'wall';
+    const v = wall ? 'h' : 'd';
+    const pic = !!item.src;
+    return `<h2>${esc(item.label || T.decal)}</h2>
+      ${field(T.label, input('sel.label', item.label))}
+      ${field(T.surface, `<select data-path="sel.surface" data-rerender="1">${options([{ id: 'floor', name: T.surfFloor }, { id: 'wall', name: T.surfWall }], item.surface || 'floor')}</select>`)}
+      <p class="ed-note">${pic ? T.sizeFromPicture : T.decalNoPicture}</p>
+      <div class="ed-two">${field(T.realWidth, `<input type="number" step="any" min="1" data-dsize="w" value="${esc(item.w)}">`)}${field(wall ? T.realHeightWall : T.realDepthFloor, `<input type="number" step="any" min="1" data-dsize="${v}" value="${esc(item[v])}">`)}</div>
+      ${pic ? `<label class="ed-check"><input type="checkbox" data-path="sel.lockRatio" data-bool="1"${item.lockRatio !== false ? ' checked' : ''}>${T.keepRatio}</label>` : ''}
+      <div class="ed-two">${wall ? field(T.decalAbove, input('sel.z', item.z || 0, 'number')) : field(T.rotation, input('sel.rot', item.rot || 0, 'number'))}
+        ${field(T.opacity, `<input type="range" min="0.1" max="1" step="0.05" data-path="sel.opacity" data-num="1" value="${item.opacity != null ? item.opacity : 1}">`)}</div>
+      ${wall ? '' : `${turnButtons()}<label class="ed-check"><input type="checkbox" data-path="sel.round" data-bool="1"${item.round ? ' checked' : ''}>${T.roundShape}</label>`}
+      ${pic ? '' : colourField(T.colour, 'sel.color', item.color, '#8a9bb0', true)}
+      <div class="ed-row-btns"><button type="button" class="ed-btn" data-action="decal-picture">🖼 ${pic ? T.replacePicture : T.pickPicture}</button>${pic ? `<button type="button" class="ed-btn" data-action="decal-nopicture">${T.removePicture}</button>` : ''}</div>
+      ${pictureMeter()}
+      <div class="ed-row-btns">${deleteBtn('sel')}</div>`;
+  }
+
+  // The colours of a piece of furniture: a field for each material of its model (or for the frame, doors and glass of a
+  // cabinet drawn in code), the finish, and for a cabinet its doors, glass and handles.
+  function furnitureColours(item, entry) {
+    const mats = entry && entry.materials ? entry.materials : null;
+    const count = entry && entry.slots ? entry.slots.length : mats ? Math.min(mats.length, 6) : 1;
+    const label = (k) => (entry && entry.slots ? entry.slots[k][LANG === 'nl' ? 0 : 1] : T.colourN.replace('%n', k + 1));
+    const dflt = (k) => (mats && mats[k]) || '#cfc8bd';
+    const rows = [];
+    for (let k = 0; k < count; k++) rows.push(colourField(label(k), k === 0 ? 'sel.color' : `sel.colors.${k}`, k === 0 ? item.color : item.colors && item.colors[k], dflt(k), count === 1));
+    const finish = [{ id: 'matte', name: T.finMatte }, { id: 'satin', name: T.finSatin }, { id: 'gloss', name: T.finGloss }, { id: 'metal', name: T.finMetal }];
+    const cabinet = entry && entry.build === 'cabinet'
+      ? `<p class="ed-note">${T.cabinetNote}</p>
+        <div class="ed-two">${field(T.doors, `<select data-path="sel.doors" data-num="1">${[1, 2, 3, 4].map((d) => `<option value="${d}"${Number(item.doors || 2) === d ? ' selected' : ''}>${d}</option>`).join('')}</select>`)}
+        ${field(T.handle, `<select data-path="sel.handle">${options([{ id: 'bar', name: T.handleBar }, { id: 'knob', name: T.handleKnob }, { id: 'none', name: T.handleNone }], item.handle || 'bar')}</select>`)}</div>
+        ${field(`${T.glassShare}: ${Math.round((item.glass || 0) * 100)}`, `<input type="range" min="0" max="1" step="0.05" data-path="sel.glass" data-num="1" data-rerender="1" value="${item.glass || 0}">`)}
+        ${(item.glass || 0) > 0 ? field(T.shelves, input('sel.shelves', item.shelves != null ? item.shelves : 3, 'number')) : ''}`
+      : '';
+    return `${cabinet}<h3>${T.colour}</h3>${count > 1 && !(entry && entry.slots) ? `<p class="ed-note">${T.colourPartNote}</p>` : ''}${rows.join('')}
+      ${field(T.finish, `<select data-path="sel.finish">${options(finish, item.finish, T.finAuto)}</select>`)}
+      ${item.color || (item.colors || []).some(Boolean) || item.finish ? `<div class="ed-row-btns"><button type="button" class="ed-btn small" data-action="colours-reset">${T.colourReset}</button></div>` : ''}`;
+  }
+
+  // Reads a picture file and shrinks it so a plan with a few of them stays well below what the store takes. Pictures with
+  // see-through parts stay PNG, the rest becomes JPEG.
+  async function readPicture(file, max) {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = await new Promise((resolve, reject) => { const i = new Image(); i.onload = () => resolve(i); i.onerror = reject; i.src = url; });
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const w = Math.max(1, Math.round(img.naturalWidth * k)); const h = Math.max(1, Math.round(img.naturalHeight * k));
+      const c = document.createElement('canvas'); c.width = w; c.height = h;
+      const g = c.getContext('2d');
+      g.drawImage(img, 0, 0, w, h);
+      let alpha = false;
+      if (/png|webp|gif|svg/.test(file.type)) {
+        const px = g.getImageData(0, 0, w, h).data;
+        for (let i = 3; i < px.length; i += 16) if (px[i] < 250) { alpha = true; break; }
+      }
+      return { src: alpha ? c.toDataURL('image/png') : c.toDataURL('image/jpeg', 0.85), ratio: img.naturalHeight / img.naturalWidth };
+    } finally { URL.revokeObjectURL(url); }
+  }
+
+  function chooseFile() {
+    return new Promise((resolve) => {
+      const el = document.createElement('input');
+      el.type = 'file'; el.accept = 'image/*';
+      el.onchange = () => resolve((el.files && el.files[0]) || null);
+      el.click();
+    });
+  }
+
+  async function takePicture(max) {
+    const file = await chooseFile();
+    if (!file) return null;
+    try { return await readPicture(file, max); } catch (err) { setSaveState(T.pictureFailed); return null; }
+  }
+
+  // Where a decal on a wall goes in a room: the middle of its longest wall, against it, facing the room
+  function wallSpotIn(room, depth) {
+    const pts = room.points; let best = null;
+    pts.forEach((p, i) => { const q = pts[(i + 1) % pts.length]; const L = G.dist(p, q); if (!best || L > best.L) best = { p, q, L }; });
+    const mid = G.mul(G.add(best.p, best.q), 0.5);
+    const u = G.norm(G.sub(best.q, best.p));
+    let into = [-u[1], u[0]];
+    if (!G.pointInPolygon(G.add(mid, G.mul(into, 30)), pts)) into = G.mul(into, -1);
+    const t = level().wallThickness || core.DEFAULTS.wallThickness;
+    const c = G.add(mid, G.mul(into, t / 2 + depth / 2));
+    return { x: Math.round(c[0]), y: Math.round(c[1]), rot: Math.round((Math.atan2(-into[0], into[1]) * 180) / Math.PI / 15) * 15 };
+  }
+
+  // Adds a decal in the selected room (or the biggest one): a picture of its own, or a plain coloured area
+  async function addDecal(surface, withPicture) {
+    const lv = level();
+    let pic = null;
+    if (withPicture) { pic = await takePicture(1024); if (!pic) return; }
+    const sel = S.sel && S.sel.kind === 'room' ? lv.rooms.find((r) => r.id === S.sel.id) : null;
+    const room = sel || lv.rooms.slice().sort((a, b) => Math.abs(G.signedArea(b.points)) - Math.abs(G.signedArea(a.points)))[0] || null;
+    const at = room ? G.labelPoint(room.points) : [0, 0];
+    commit(() => {
+      const image = pic ? { src: pic.src, w: surface === 'wall' ? 60 : 100, h: (surface === 'wall' ? 60 : 100) * pic.ratio } : null;
+      const item = core.newDecal(surface, at, image);
+      if (pic) item.ratio = pic.ratio;
+      if (surface === 'wall' && room) Object.assign(item, wallSpotIn(room, item.d || 2));
+      lv.items.push(item);
+      S.sel = { kind: 'item', id: item.id };
+      S.pendingFurniture = null; S.pendingDevice = null;
+    });
+    setTool('select');
+  }
+
+  const SURFACE_ACTIONS = new Set(['set-colour', 'clear-path', 'swatches', 'pick-picture', 'band-add', 'band-remove', 'edge-bands-own', 'edge-bands-back', 'paint-clear', 'decal-add', 'decal-picture', 'decal-nopicture', 'colours-reset']);
+
+  // Panel actions of this section
+  async function surfaceAction(el, action) {
+    const path = el.dataset.path;
+    switch (action) {
+      case 'set-colour': commit(() => setPath(path, el.dataset.value)); return true;
+      case 'clear-path': commit(() => setPath(path, '')); return true;
+      case 'swatches': {
+        S.swatchOpen = S.swatchOpen || {};
+        const was = path in S.swatchOpen ? S.swatchOpen[path] : !/colors\.|^sel\.color$/.test(path) || (selectedObject() && selectedObject().kind === 'decal');
+        S.swatchOpen[path] = !was;
+        renderPanel();
+        return true;
+      }
+      case 'pick-picture': {
+        const pic = await takePicture(768);
+        if (!pic) return true;
+        const def = Number(el.dataset.def) || 60;
+        commit(() => {
+          const pp = pathParent(path, true);
+          const old = pp.obj[pp.key] || {};
+          const w = old.w || def;
+          pp.obj[pp.key] = Object.assign({}, old, { src: pic.src, ratio: pic.ratio, w, h: round1(w * pic.ratio) });
+        });
+        return true;
+      }
+      case 'band-add': commit(() => {
+        const list = valueAt(path, true, []);
+        const last = list[list.length - 1];
+        list.push({ from: last ? last.to : 0, to: last ? last.to + 50 : 90, color: '#7f9bb0' });
+      }); return true;
+      case 'band-remove': commit(() => { const list = valueAt(path, false); if (list) list.splice(Number(el.dataset.index), 1); }); return true;
+      case 'edge-bands-own': commit(() => { const room = selectedObject(); const own = valueAt(`sel.paint.edges.${S.paintEdge}`, true, {}); own.bands = JSON.parse(JSON.stringify((room.paint && room.paint.bands) || [])); }); return true;
+      case 'edge-bands-back': commit(() => { const own = valueAt(`sel.paint.edges.${S.paintEdge}`, false); if (own) delete own.bands; }); return true;
+      case 'paint-clear': commit(() => {
+        const room = selectedObject();
+        if (S.paintEdge == null) delete room.paint; else if (room.paint && room.paint.edges) delete room.paint.edges[S.paintEdge];
+      }); return true;
+      case 'decal-add': await addDecal(el.dataset.surface, el.dataset.picture === '1'); return true;
+      case 'decal-picture': {
+        const pic = await takePicture(1024);
+        if (!pic) return true;
+        commit(() => {
+          const it = selectedObject();
+          const wall = it.surface === 'wall';
+          it.src = pic.src; it.ratio = pic.ratio; delete it.color;
+          if (it.lockRatio !== false) { if (wall) it.h = Math.round(it.w * pic.ratio); else it.d = Math.round(it.w * pic.ratio); }
+        });
+        return true;
+      }
+      case 'decal-nopicture': commit(() => { const it = selectedObject(); delete it.src; delete it.ratio; it.color = it.color || '#8a9bb0'; }); return true;
+      case 'colours-reset': commit(() => { const it = selectedObject(); delete it.color; delete it.colors; delete it.finish; const e = MODELS.get(it.type); if (e && e.defaults) Object.assign(it, JSON.parse(JSON.stringify(e.defaults))); }); return true;
+      default: return false;
+    }
+  }
+
   function furniturePanel(item) {
     const entry = MODELS.get(item.type);
     return `<h2>${esc(item.label || nameOf(entry) || T.furniture)}</h2>
@@ -1586,7 +1913,7 @@
       <div class="ed-two">${field(item.mount === 'surface' ? T.standsOn : T.elevation, input('sel.z', item.z || 0, 'number'))}${field(T.rotation, input('sel.rot', item.rot || 0, 'number'))}</div>
       ${turnButtons()}
       ${entry && /^stairs_/.test(entry.parts || '') ? `<div class="ed-row-btns"><button type="button" class="ed-btn${item.mirror ? ' on' : ''}" data-action="mirror-stairs">⇋ ${T.mirrorStairs}</button></div><p class="ed-note">${T.mirrorStairsNote}</p>` : ''}
-      ${field(T.colour, `<div class="ed-color"><input type="color" data-path="sel.color" value="${esc(item.color || '#cfc8bd')}"><button type="button" class="ed-btn small" data-action="clear-color">${T.themeColour}</button></div>`)}
+      ${furnitureColours(item, entry)}
       <div class="ed-row-btns">${deleteBtn('sel')}</div>`;
   }
 
@@ -1663,7 +1990,10 @@
     const groups = MODELS.GROUPS.map((g) => ({ g, items: list.filter((m) => m.group === g.id) })).filter((x) => x.items.length);
     const credits = Object.values(MODELS.PACKS).filter((p) => p.license).map((p) => `${esc(p.name)} · ${esc(p.author)} · ${esc(p.license)}`).join('<br>');
     const tiles = (items) => items.map((m) => `<button type="button" draggable="true" class="ed-tile${S.pendingFurniture === m.id ? ' on' : ''}" data-action="pick-furniture" data-type="${m.id}" title="${esc(nameOf(m))} · ${m.w} × ${m.d} cm">${modelTile(m)}<span>${esc(nameOf(m))}</span></button>`).join('');
+    const decalBtn = (surface, pic, text) => `<button type="button" class="ed-btn small" data-action="decal-add" data-surface="${surface}" data-picture="${pic ? 1 : 0}">${pic ? '🖼' : '▨'} ${text}</button>`;
     return `<h2>${T.furniture}</h2><p class="ed-note">${T.dragHint} ${T.catalogue}</p>
+      <h3>${T.decals}</h3><p class="ed-note">${T.decalNote}</p>
+      <div class="ed-row-btns">${decalBtn('floor', true, T.decalFloorPic)}${decalBtn('wall', true, T.decalWallPic)}${decalBtn('floor', false, T.decalFloorColour)}${decalBtn('wall', false, T.decalWallColour)}</div>
       <input type="text" id="furniture-search" placeholder="${esc(T.searchFurniture)}" value="${esc(S.furnitureSearch)}">
       ${groups.map(({ g, items }) => `<h3>${esc(g.name[LANG] || g.name.en)}</h3><div class="ed-grid">${tiles(items)}</div>`).join('')}
       <h3>${T.modelsBy}</h3><p class="ed-note">${credits}</p>`;
@@ -2050,12 +2380,44 @@
   /* -------------------------------------------------------- panel events */
 
   function setPath(path, value) {
-    const lv = level();
-    const [root, ...rest] = path.split('.');
-    let obj = root === 'level' ? lv : root === 'plan' ? S.plan : selectedObject();
-    for (let i = 0; i < rest.length - 1; i++) obj = obj[rest[i]];
-    const key = rest[rest.length - 1];
-    if (value === '' || value == null) delete obj[key]; else obj[key] = value;
+    const empty = value === '' || value == null;
+    const pp = pathParent(path, !empty);
+    if (!pp) return;
+    if (empty) { if (Array.isArray(pp.obj)) pp.obj[pp.key] = null; else delete pp.obj[pp.key]; } else pp.obj[pp.key] = value;
+  }
+
+  // A picture with its ratio kept: changing the width changes the height, and the other way round
+  function tieSize(el) {
+    const pp = pathParent(el.dataset.path, false);
+    const pic = pp && pp.obj;
+    if (!pic || !pic.ratio || pic.keepRatio === false) return;
+    const wide = el.dataset.psize === 'w';
+    if (wide) pic.h = round1(pic.w * pic.ratio); else pic.w = round1(pic.h / pic.ratio);
+    const other = document.querySelector('[data-path="' + el.dataset.path.replace(/.[wh]$/, '') + (wide ? '.h' : '.w') + '"]');
+    if (other) other.value = wide ? pic.h : pic.w;
+  }
+
+  // The real size of a decal: width and height (depth on the floor), with the picture's ratio kept when asked
+  function decalSize(el) {
+    const it = selectedObject();
+    const n = Number(el.value);
+    if (!it || !Number.isFinite(n) || n <= 0) return;
+    if (!S.typingSnap || S.typingSnap !== el) { snapshot(); S.typingSnap = el; }
+    const key = el.dataset.dsize;
+    it[key] = n;
+    if (it.src && it.ratio && it.lockRatio !== false) {
+      const vk = it.surface === 'wall' ? 'h' : 'd';
+      if (key === 'w') it[vk] = round1(n * it.ratio); else it.w = round1(n / it.ratio);
+      const other = document.querySelector('[data-dsize="' + (key === 'w' ? vk : 'w') + '"]');
+      if (other) other.value = key === 'w' ? it[vk] : it.w;
+    }
+    changed({ panel: false });
+  }
+
+  // A decal moved from the floor to a wall or back: its sides change place, and on a wall it goes against the nearest one
+  function swapSurface(it) {
+    if (!it || it.kind !== 'decal') return;
+    if (it.surface === 'wall') { it.h = it.d || 60; it.d = 2; it.z = it.z || 100; delete it.round; faceWall(it, {}); } else { it.d = it.h || 100; it.h = 0; it.z = 0; }
   }
 
   function onPanelInput(ev) {
@@ -2064,6 +2426,17 @@
     if (el.id === 'device-search') { S.deviceSearch = el.value; const pos = el.selectionStart; renderPanel(); const s = $('device-search'); s.focus(); s.setSelectionRange(pos, pos); return; }
     if (el.dataset.cal != null) { S.calendars[Number(el.dataset.cal)][el.dataset.key] = el.value; S.calendarsNote = ''; return; }
     if (el.dataset.house) { if (el.tagName !== 'SELECT' && !el.dataset.bool) setHouse(el); return; }
+    if (el.dataset.hex) {
+      const v = el.value.trim();
+      if (!/^#([0-9a-f]{3}|[0-9a-f]{6})$/i.test(v)) return;
+      if (!S.typingSnap || S.typingSnap !== el) { snapshot(); S.typingSnap = el; }
+      setPath(el.dataset.hex, v);
+      const picker = [...document.querySelectorAll('input[type=color][data-path]')].find((x) => x.dataset.path === el.dataset.hex);
+      if (picker) picker.value = hex6(v);
+      changed({ panel: false });
+      return;
+    }
+    if (el.dataset.dsize) { decalSize(el); return; }
     if (!el.dataset.path) return;
     if (ev.type === 'input' && el.tagName === 'SELECT') return;
     let value = el.value;
@@ -2083,6 +2456,8 @@
       }
     }
     setPath(el.dataset.path, value);
+    if (el.dataset.psize) tieSize(el);
+    if (el.dataset.path === 'sel.surface') swapSurface(selectedObject());
     if (el.dataset.path === 'sel.type' && S.sel.kind === 'item') {
       const c = core.CATALOGUE[value];
       const it = selectedObject();
@@ -2101,6 +2476,7 @@
     if (!el) return;
     const lv = level();
     const action = el.dataset.action;
+    if (SURFACE_ACTIONS.has(action)) { await surfaceAction(el, action); return; } // (other actions run at once, not a tick later)
     const armOrRun = (key, fn) => {
       if (S.armed === key) { S.armed = null; fn(); } else { S.armed = key; renderPanel(); }
     };
@@ -2167,6 +2543,7 @@
         const a = [0, 1].map((i) => Math.round(cur[i] + (prev[i] - cur[i]) * 0.4));
         const b = [0, 1].map((i) => Math.round(cur[i] + (next[i] - cur[i]) * 0.4));
         const c = [0, 1].map((i) => Math.round(cur[i] + (prev[i] - cur[i]) * 0.4 + (next[i] - cur[i]) * 0.4));
+        if (room.paint) delete room.paint.edges; // the walls after the new corners count differently now
         pts.splice(2, 1, a, c, b);
       }); break;
       case 'level-lower': case 'level-higher': {
@@ -2290,6 +2667,7 @@
 
   function onPanelChange(ev) {
     const el = ev.target;
+    if (el.dataset.edge) { S.paintEdge = el.value === '' ? null : Number(el.value); renderPanel(); draw(); return; }
     if (el.dataset.slopeSide) {
       commit(() => {
         const lv = level();

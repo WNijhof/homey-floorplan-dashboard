@@ -61,7 +61,9 @@ const tmpColor = new THREE.Color();
 // table) gets exactly that colour, without its texture; legs, metal and glass keep theirs.
 // The material that covers the largest surface wins (not the one with the most points: a kitchen unit's few
 // big wooden fronts outweigh the many small points of its handles and sink).
-function recolor(obj, color) {
+// Gives the materials of a model the colours chosen for them: colours[k] for the material with the k-th biggest surface, and the
+// finish (matte, satin, gloss, metal) to the coloured ones and the biggest one. A model with one texture has one material only.
+function recolor(obj, colors, finish) {
   const size = new Map();
   obj.updateMatrixWorld(true);
   const A = new THREE.Vector3(); const B = new THREE.Vector3(); const C = new THREE.Vector3();
@@ -84,16 +86,21 @@ function recolor(obj, color) {
       size.set(m, (size.get(m) || 0) + area);
     }
   });
-  let main = null;
-  for (const [m, n] of size) if (!main || n > size.get(main)) main = m;
-  if (!main) return;
-  const own = main.clone();
-  own.map = null;
-  own.color.set(color);
-  own.needsUpdate = true;
+  const ranked = [...size.entries()].sort((a, b) => b[1] - a[1]).map((e) => e[0]).slice(0, 6);
+  const swap = new Map();
+  ranked.forEach((m, k) => {
+    const color = colors[k];
+    if (!color && !(finish && k === 0)) return;
+    const own = m.clone();
+    if (color) { own.map = null; own.color.set(color); }
+    if (finish && FINISH[finish]) { own.roughness = FINISH[finish][0]; own.metalness = FINISH[finish][1]; }
+    own.needsUpdate = true;
+    swap.set(m, own);
+  });
+  if (!swap.size) return;
   obj.traverse((o) => {
     if (!o.isMesh) return;
-    o.material = Array.isArray(o.material) ? o.material.map((m) => (m === main ? own : m)) : (o.material === main ? own : o.material);
+    o.material = Array.isArray(o.material) ? o.material.map((m) => swap.get(m) || m) : (swap.get(o.material) || o.material);
   });
 }
 
@@ -115,7 +122,106 @@ function mat(color, opts) {
   return new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0, ...(opts || {}) });
 }
 
-function shapeGeometry(points, y) {
+// A cabinet drawn in code to the size, doors, glass and colours of the real one (a steel display cabinet with glass in the
+// top half of its two hinged doors, or a plain cupboard). In its own frame: width along x, depth along z (the front at +z),
+// standing on y = 0. Colours: 0 frame, 1 doors, 2 glass; item.glass is the share of each door that is glass, from the top.
+function buildCabinet(item) {
+  const g = new THREE.Group();
+  const W = Math.max(0.2, (item.w || 90) * CM); const D = Math.max(0.15, (item.d || 40) * CM); const H = Math.max(0.3, (item.h || 180) * CM);
+  const finish = FINISH[core.finishOf(item) || 'satin'];
+  const frameColor = core.slotColor(item, 0) || '#1b1c1f';
+  const body = new THREE.MeshStandardMaterial({ color: frameColor, roughness: finish[0], metalness: finish[1] });
+  const doorMat = new THREE.MeshStandardMaterial({ color: core.slotColor(item, 1) || frameColor, roughness: finish[0], metalness: finish[1] });
+  const glass = new THREE.MeshPhysicalMaterial({ color: core.slotColor(item, 2) || '#bcd7e6', transparent: true, opacity: 0.3, roughness: 0.05, metalness: 0, depthWrite: false });
+  const inside = new THREE.MeshStandardMaterial({ color: new THREE.Color(frameColor).multiplyScalar(0.8), roughness: 0.9, metalness: 0 });
+  const box = (w, h, d, m, x, y, z, shadow) => {
+    const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m);
+    mesh.position.set(x, y + h / 2, z);
+    if (shadow !== false) { mesh.castShadow = true; mesh.receiveShadow = true; }
+    g.add(mesh);
+    return mesh;
+  };
+  const fr = Math.min(0.03, Math.max(0.015, Math.min(W, D) * 0.045)); // thickness of the frame members
+  const base = Math.min(0.08, H * 0.04); // the plinth under the cabinet
+  const y0 = base + fr; const y1 = H - fr; // the opening for the doors
+  const innerW = W - 2 * fr; const innerH = y1 - y0;
+  // Carcass: a plinth, two sides, a bottom and a top, and a back
+  box(W - 0.04, base, D - 0.04, inside, 0, 0, 0);
+  box(fr, H - base, D, body, -W / 2 + fr / 2, base, 0);
+  box(fr, H - base, D, body, W / 2 - fr / 2, base, 0);
+  box(innerW, fr, D, body, 0, base, 0);
+  box(innerW, fr, D, body, 0, H - fr, 0);
+  box(innerW, innerH, 0.012, inside, 0, y0, -D / 2 + 0.006);
+  // The doors, hinged on the outer edges, closed: a solid part below and a glass part above
+  const doors = Math.max(1, Math.min(4, Math.round(item.doors || 2)));
+  const gap = 0.003; const dt = 0.02;
+  const share = Math.max(0, Math.min(1, Number.isFinite(Number(item.glass)) ? Number(item.glass) : 0));
+  const glassH = share * innerH; const solidH = innerH - glassH;
+  const dw = innerW / doors;
+  const zf = D / 2 - dt / 2 + 0.004; // the doors sit just proud of the carcass
+  const rail = Math.min(0.03, Math.max(0.018, dw * 0.05)); // the frame round the glass
+  for (let k = 0; k < doors; k++) {
+    const cx = -innerW / 2 + dw * (k + 0.5);
+    const w = dw - gap;
+    if (solidH > 0.005) box(w, solidH, dt, doorMat, cx, y0, zf);
+    if (glassH > 0.005) {
+      const top = y0 + solidH; // the glass part stands on the solid one
+      box(w, rail, dt, doorMat, cx, top, zf); // bottom rail
+      box(w, rail, dt, doorMat, cx, y1 - rail, zf); // top rail
+      box(rail, glassH - 2 * rail, dt, doorMat, cx - w / 2 + rail / 2, top + rail, zf); // stiles
+      box(rail, glassH - 2 * rail, dt, doorMat, cx + w / 2 - rail / 2, top + rail, zf);
+      const pane = new THREE.Mesh(new THREE.PlaneGeometry(w - 2 * rail, glassH - 2 * rail), glass);
+      pane.position.set(cx, top + glassH / 2, zf + 0.002);
+      pane.renderOrder = 2;
+      g.add(pane);
+    }
+    // the handle at the edge where the doors meet (the free edge of a single door)
+    const kind = item.handle === 'knob' || item.handle === 'none' ? item.handle : 'bar';
+    if (kind !== 'none') {
+      const meet = doors === 1 ? 1 : k % 2 === 0 ? 1 : -1; // pairs of doors: left door on its right edge, right door on its left
+      const hx = cx + meet * (w / 2 - 0.035);
+      const hy = Math.min(y1 - 0.15, Math.max(y0 + 0.15, y0 + innerH * 0.5));
+      if (kind === 'bar') box(0.014, Math.min(0.3, innerH * 0.18), 0.016, body, hx, hy - Math.min(0.3, innerH * 0.18) / 2, zf + dt / 2 + 0.008);
+      else { const knob = new THREE.Mesh(new THREE.SphereGeometry(0.016, 12, 10), body); knob.position.set(hx, hy, zf + dt / 2 + 0.014); g.add(knob); }
+    }
+  }
+  // Shelves behind the glass
+  const shelves = glassH > 0.05 ? Math.max(0, Math.min(8, Math.round(item.shelves != null ? item.shelves : 3))) : 0;
+  for (let s = 1; s <= shelves; s++) {
+    const y = y0 + solidH + (glassH * s) / (shelves + 1);
+    const shelf = new THREE.Mesh(new THREE.BoxGeometry(innerW, 0.012, D - 0.07), new THREE.MeshPhysicalMaterial({ color: '#cfe3ee', transparent: true, opacity: 0.55, roughness: 0.05, depthWrite: false }));
+    shelf.position.set(0, y, -0.01); shelf.renderOrder = 1;
+    g.add(shelf);
+  }
+  return g;
+}
+
+/* ------------------------------------------------------ pictures of the plan */
+
+// The decoded picture behind a data URI, shared by everything that shows it
+const imageCache = new Map();
+function loadImage(src) {
+  if (!imageCache.has(src)) {
+    imageCache.set(src, new Promise((resolve, reject) => { const img = new Image(); img.onload = () => resolve(img); img.onerror = reject; img.src = src; }));
+  }
+  return imageCache.get(src);
+}
+
+// A texture of its own (with its own repeat and offset) on the shared picture; `ready` runs when the picture has arrived
+function pictureTexture(src, ready) {
+  const tex = new THREE.Texture();
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.wrapS = THREE.RepeatWrapping; tex.wrapT = THREE.RepeatWrapping;
+  tex.anisotropy = 4;
+  tex.userData.picture = true;
+  loadImage(src).then((img) => { tex.image = img; tex.needsUpdate = true; if (ready) ready(); }).catch(() => {});
+  return tex;
+}
+
+// What a surface finish does to a material: [roughness, metalness]
+const FINISH = { matte: [0.95, 0], satin: [0.55, 0], gloss: [0.18, 0.05], metal: [0.32, 0.85] };
+
+function shapeGeometry(points, y, uvOf) {
   const contour = points.map((p) => new THREE.Vector2(p[0] * CM, p[1] * CM));
   const tris = THREE.ShapeUtils.triangulateShape(contour, []);
   const pos = []; const nor = []; const uv = [];
@@ -124,7 +230,10 @@ function shapeGeometry(points, y) {
     const [a, b, c] = t.map((i) => contour[i]);
     const cross = (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
     const order = cross > 0 ? [a, c, b] : [a, b, c];
-    for (const v of order) { pos.push(v.x, y, v.y); nor.push(0, 1, 0); uv.push(v.x, -v.y); }
+    for (const v of order) {
+      pos.push(v.x, y, v.y); nor.push(0, 1, 0);
+      if (uvOf) uv.push(...uvOf(v.x, v.y)); else uv.push(v.x, -v.y);
+    }
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
@@ -437,6 +546,8 @@ class View3D {
   clear() {
     this.root.traverse((o) => {
       if (o.isMesh && !o.userData.shared) { o.geometry.dispose(); }
+      // the pictures of the plan are textures of their own: free them with the scene
+      if (o.isMesh) for (const m of [].concat(o.material)) if (m && m.map && m.map.userData && m.map.userData.picture) m.map.dispose();
       if (o.isCSS2DObject && o.element.parentNode) o.element.parentNode.removeChild(o.element);
     });
     this.scene.remove(this.root);
@@ -571,7 +682,19 @@ class View3D {
         }
         floorMats.set(key, m);
       }
-      const floor = new THREE.Mesh(shapeGeometry(room.points, 0), floorMats.get(key));
+      // A picture of the floor repeats at its real size, turned and shifted as chosen
+      const fimg = core.floorImageOf(room);
+      let floorMat = floorMats.get(key);
+      let uvOf = null;
+      if (fimg) {
+        const rad = (fimg.rot * Math.PI) / 180; const cs = Math.cos(rad); const sn = Math.sin(rad);
+        uvOf = (xm, ym) => {
+          const x = xm / CM; const y = ym / CM;
+          return [(x * cs + y * sn - fimg.ox) / fimg.w, 1 - (-x * sn + y * cs - fimg.oy) / fimg.h];
+        };
+        floorMat = mat(t.night ? '#a6a6a6' : '#ffffff', { roughness: 0.7, map: pictureTexture(fimg.src, () => this.request()) });
+      }
+      const floor = new THREE.Mesh(shapeGeometry(room.points, 0, uvOf), floorMat);
       floor.receiveShadow = true;
       floor.userData.pick = { kind: 'room', id: room.id };
       this.root.add(floor);
@@ -650,6 +773,28 @@ class View3D {
             brick.map.offset.set(((a[0] + a[1]) * CM) / facade.wallSize[0] % 1, (piece.z0 * CM) / facade.wallSize[1] % 1);
             own[outside > 0 ? 4 : 5] = brick;
           }
+          // The paint of the room on each inside face: a colour or a picture at its real size, and bands over it
+          const painted = [];
+          for (const side of [1, -1]) {
+            if (side === outside || styled[wall.style]) continue;
+            const probe = core.geom.add(mid, core.geom.mul(n, side * (wall.t / 2 + 25)));
+            const room = (level.rooms || []).find((r) => r.paint && core.geom.pointInPolygon(probe, r.points));
+            const paint = room ? core.paintOf(room, core.roomEdgeNear(room, mid, wall.t / 2 + 6)) : null;
+            if (!paint) continue;
+            // the left end of the face, as seen from this side of the wall, measured along the wall
+            const along = core.geom.dot(core.geom.sub(side > 0 ? a : bb, wall.a), u);
+            const face = side > 0 ? 4 : 5;
+            const dim = t.night ? 0.8 : 1;
+            if (paint.color || paint.image) {
+              const m = own[face];
+              if (paint.image) {
+                m.map = this.wallPicture(paint.image, len, hgt, along, piece.z0);
+                m.color.set('#ffffff').multiplyScalar(dim);
+              } else m.color.set(paint.color).multiplyScalar(dim);
+              m.needsUpdate = true;
+            }
+            if (paint.bands.length) painted.push({ side, bands: paint.bands, along });
+          }
           const geo = new THREE.BoxGeometry(len, hgt, wall.t * CM);
           if (part.t0 !== part.t1) {
             // a sloping top: the top corners at each end go down to the ceiling there
@@ -665,6 +810,8 @@ class View3D {
           mesh.rotation.y = -Math.atan2(u[1], u[0]);
           mesh.castShadow = true; mesh.receiveShadow = true;
           mesh.userData.wall = true;
+          const bandMats = [];
+          for (const p of painted) bandMats.push(...this.paintBands(mesh, p, { len, hgt, thick: wall.t * CM, z0: piece.z0, top: Math.min(part.t0, part.t1), night: t.night }));
           // a soft dark edge on the floor beside the wall, and skirting boards on both sides at floor level;
           // they stay when the wall is lowered for the view
           if (piece.z0 <= 1 && len > 0.2) {
@@ -682,7 +829,7 @@ class View3D {
             this.root.add(skirt);
           }
           this.root.add(mesh);
-          this.walls.push({ mesh, mats: own, z0: piece.z0 * CM, h: hgt, nx: n[0] * outside, nz: n[1] * outside, exterior: outside !== 0, cur: hgt, target: hgt, alpha: 1, alphaTarget: 1, see: wall.style === 'glass' ? 0.35 : 1 });
+          this.walls.push({ mesh, mats: own.concat(bandMats), a, b: bb, u, len, decals: [], z0: piece.z0 * CM, h: hgt, nx: n[0] * outside, nz: n[1] * outside, exterior: outside !== 0, cur: hgt, target: hgt, alpha: 1, alphaTarget: 1, see: wall.style === 'glass' ? 0.35 : 1 });
         }
       }
     }
@@ -694,6 +841,7 @@ class View3D {
     for (const item of level.items) {
       if (item.kind === 'furniture' && showFurniture) this.buildFurniture(item, t);
       if (item.kind === 'device') this.buildDevice(item, t);
+      if (item.kind === 'decal') this.buildDecal(item, t);
     }
 
     // Room labels.
@@ -710,6 +858,79 @@ class View3D {
     }
     this.updateCutaway();
     this.scene.updateMatrixWorld(true);
+  }
+
+  // A picture on a wall face at its real size: the face is len x hgt metres, starts `along` cm from the start of the wall
+  // and z0 cm above the floor; the pattern shifts by the image's own ox and oy.
+  wallPicture(image, len, hgt, along, z0) {
+    const tex = pictureTexture(image.src, () => this.request());
+    tex.repeat.set(len / (image.w * CM), hgt / (image.h * CM));
+    tex.offset.set((along - image.ox) / image.w, (z0 - image.oy) / image.h);
+    return tex;
+  }
+
+  // The bands of paint over a wall face (a painted wainscot, a frieze): flat panels just in front of it, as children of the
+  // wall piece so they sink and fade with it. Returns their materials.
+  paintBands(mesh, p, d) {
+    const mats = [];
+    for (const b of p.bands) {
+      const lo = Math.max(b.from, d.z0); const hi = Math.min(b.to, d.top);
+      if (hi - lo < 0.5) continue;
+      const hM = (hi - lo) * CM;
+      const m = new THREE.MeshStandardMaterial({ color: '#ffffff', roughness: 0.85, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 });
+      if (b.image) {
+        m.map = this.wallPicture(b.image, d.len, hM, p.along, lo);
+        if (d.night) m.color.multiplyScalar(0.8);
+      } else {
+        m.color.set(b.color);
+        if (d.night) m.color.multiplyScalar(0.8);
+      }
+      const plane = new THREE.Mesh(new THREE.PlaneGeometry(d.len, hM), m);
+      plane.position.set(0, ((lo + hi) / 2 - d.z0) * CM - d.hgt / 2, p.side * (d.thick / 2 + 0.0008));
+      if (p.side < 0) plane.rotation.y = Math.PI;
+      plane.receiveShadow = true;
+      mesh.add(plane);
+      mats.push(m);
+    }
+    return mats;
+  }
+
+  // A decal: a picture or coloured area of a real size, flat on the floor or hanging against a wall.
+  buildDecal(item, t) {
+    const dec = core.decalOf(item);
+    if (!dec) return;
+    const w = Math.max(1, item.w || 100) * CM;
+    const h = Math.max(1, (dec.wall ? item.h : item.d) || 100) * CM;
+    const m = new THREE.MeshStandardMaterial({
+      color: dec.src ? (t.night ? '#b8b8b8' : '#ffffff') : new THREE.Color(dec.color).multiplyScalar(t.night ? 0.8 : 1),
+      roughness: 0.85, transparent: true, opacity: dec.opacity, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3,
+    });
+    if (dec.src) m.map = pictureTexture(dec.src, () => this.request());
+    const mesh = dec.round ? new THREE.Mesh(new THREE.CircleGeometry(1, 64), m) : new THREE.Mesh(new THREE.PlaneGeometry(w, h), m);
+    if (dec.round) mesh.scale.set(w / 2, h / 2, 1);
+    mesh.receiveShadow = true;
+    mesh.renderOrder = 1;
+    const holder = new THREE.Group();
+    this.placeItem(holder, { x: item.x, y: item.y, z: 0, rot: item.rot });
+    if (dec.wall) {
+      // the picture hangs on the wall, its back against the face; the item's depth is the gap to the wall's middle
+      mesh.position.set(0, ((item.z || 0) * CM) + h / 2, -((item.d || 2) * CM) / 2 + 0.0008);
+    } else {
+      mesh.rotation.x = -Math.PI / 2;
+      mesh.position.y = 0.004 + (item.z || 0) * CM;
+    }
+    holder.add(mesh);
+    if (this.hooks.editing) holder.userData.pick = { kind: 'item', id: item.id };
+    this.root.add(holder);
+    if (dec.wall) {
+      // it goes with the wall it hangs on when that is lowered for the view
+      let best = null;
+      for (const e of this.walls) {
+        const pr = core.geom.projectOnSegment([item.x, item.y], e.a, e.b);
+        if (pr.d < 40 && (!best || pr.d < best.d)) best = { e, d: pr.d };
+      }
+      if (best) best.e.decals.push(holder);
+    }
   }
 
   buildOpening(o, t) {
@@ -808,10 +1029,13 @@ class View3D {
     }
     if (entry && entry.parts === 'table_round') {
       holder.add(roundTable(item, item.color || (entry.colors && entry.colors[0]) || '#edbc7c'));
+    } else if (entry && entry.build === 'cabinet') {
+      holder.add(buildCabinet(item));
     } else if (entry && entry.file) {
       loadModel(entry.file).then((model) => {
         const fitted = fitModel(model, entry, item.w, item.d, item.h);
-        if (item.color) recolor(fitted, item.color);
+        const slots = [0, 1, 2, 3, 4, 5].map((k) => core.slotColor(item, k));
+        if (slots.some(Boolean) || core.finishOf(item)) recolor(fitted, slots, core.finishOf(item));
         holder.add(fitted);
         this.request();
       }).catch(() => holder.add(this.partsMesh(item, t)));
@@ -1470,6 +1694,7 @@ class View3D {
       w.mesh.scale.y = Math.max(0.001, w.cur / w.h);
       w.mesh.position.y = w.z0 + w.cur / 2;
       w.mesh.visible = w.alpha > 0.01;
+      for (const dc of w.decals || []) dc.visible = w.mesh.visible && w.cur > w.h * 0.98;
       const fading = w.alpha * (w.see || 1) < 0.99;
       for (const m of w.mats) {
         if (m.transparent !== fading) { m.transparent = fading; m.needsUpdate = true; }
