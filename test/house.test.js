@@ -354,6 +354,8 @@ test('the drawn garden is measured from the middle of the house, in metres, with
   assert.deepStrictEqual([g.things[0].w, g.things[0].d], [1, 2], 'a quarter turn swaps width and depth');
   assert.deepStrictEqual(g.fences[0].a, [-5, -10]);
   assert.strictEqual(g.fences[0].fence, true);
+  // everything drawn knows its level, so a tap on it in the 3D house opens that level
+  assert.ok([...g.patches, ...g.plants, ...g.things, ...g.fences].every((x) => x.level === 'lg'));
   // The plan turned so that its top is the front: the same garden lies at the front
   assert.deepStrictEqual(house.garden(plan('top')).patches[0].pts[0], [4, 7]);
   // Off, or not a house in the shape of its plan: nothing
@@ -389,6 +391,7 @@ test('a room called shed on the garden level is a building with its doors and wi
   assert.strictEqual(s.kind, 'shed');
   assert.strictEqual(s.height, 2.3);
   assert.deepStrictEqual(s.pts[0], [2, -13]);
+  assert.strictEqual(s.level, 'lg');
   assert.strictEqual(s.openings.length, 2, 'only the openings in its walls');
   const door = s.openings.find((o) => o.door);
   assert.strictEqual(door.edge, 2, 'the door in the edge facing the house');
@@ -612,6 +615,13 @@ test('an air conditioner without power of its own takes the reading of its energ
   assert.strictEqual(running.on, true);
   assert.strictEqual(running.watts, 640);
   assert.strictEqual(summarize([ac], {}).airco[0].watts, null, 'without a meter nothing changes');
+  // an air conditioner that always reports 0 W (Daikin, MELCloud) and says it is off while its meter shows 800 W
+  const zero = { ...ac, capabilities: ['onoff', 'measure_power'], capabilitiesObj: { onoff: { value: false }, measure_power: { value: 0 } } };
+  const lit = summarize([zero, { ...meter(800), name: 'HomeWizard Airco', class: 'socket' }], {}).airco[0];
+  assert.strictEqual(lit.on, true);
+  assert.strictEqual(lit.watts, 800);
+  const own = { ...zero, capabilitiesObj: { onoff: { value: true }, measure_power: { value: 450 } } };
+  assert.strictEqual(summarize([own, meter(800)], {}).airco[0].watts, 450, 'its own reading wins');
 });
 
 test('a sloping side of the top storey under a flat roof, in the frame of the house', () => {
@@ -687,4 +697,19 @@ test('a roof terrace is outside the block, and a sloping top storey under a flat
   assert.ok(rails.every((p) => p.fence && p.h === 1));
   // Under a pitched roof the sloping level is still the space in the roof
   assert.strictEqual(house.shape({ levels, house: { form: 'plan', roof: 'gable' } }).attic.levelId, 't');
+});
+
+test('the driveway, the battery and the heat pump can be put on a side of the house', () => {
+  const set = (h) => house.settings({ house: h });
+  const d = set({});
+  assert.deepStrictEqual([d.driveSide, d.objects.battery.side, d.objects.heatpump.side], ['auto', 'auto', 'auto']);
+  const bad = set({ driveSide: 'up', objects: { battery: { side: 'front' }, heatpump: { side: 'both' } } });
+  assert.deepStrictEqual([bad.driveSide, bad.objects.battery.side, bad.objects.heatpump.side], ['auto', 'auto', 'auto']);
+  assert.strictEqual(house.freeSide(set({})).cs, 1, 'on the right unless chosen');
+  assert.strictEqual(house.freeSide(set({ driveSide: 'left' })).cs, -1, 'the drive on the left without a carport');
+  assert.strictEqual(house.freeSide(set({ driveSide: 'left', carport: 'right' })).cs, 1, 'a carport decides the side');
+  assert.strictEqual(house.freeSide(set({ type: 'semi', neighbour: 'left', driveSide: 'left' })).cs, 1, 'not against the neighbour');
+  assert.strictEqual(house.freeSide(set({ type: 'semi', neighbour: 'left', driveSide: 'right' })).cs, 1);
+  assert.strictEqual(house.freeSide(set({ type: 'semi', neighbour: 'right' })).cs, -1, 'the free side of a semi-detached house');
+  assert.strictEqual(house.freeSide(set({ type: 'terraced', driveSide: 'left' })).cs, 1, 'no side to drive along in a row');
 });

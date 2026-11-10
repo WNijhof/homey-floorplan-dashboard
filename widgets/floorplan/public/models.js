@@ -269,7 +269,13 @@
   m('own:stairs', 'Trap, recht', 'Straight stairs', 'structure', [90, 300, 260], { parts: 'stairs' });
   m('own:stairsL', 'Trap, kwartslag', 'Quarter-turn stairs', 'structure', [200, 260, 260], { parts: 'stairs_l' });
   m('own:stairsSpiral', 'Wenteltrap', 'Spiral stairs', 'structure', [160, 160, 260], { parts: 'stairs_spiral' });
-  m('own:car', 'Auto', 'Car', 'other', [180, 450, 150], { parts: 'car' });
+  // A car drawn in code (wheels, body, a cabin with sloping windows): see buildCar in web/view3d.js; the 2D drawing keeps its two blocks
+  m('own:car', 'Auto', 'Car', 'other', [180, 450, 150], {
+    parts: 'car', build: 'car',
+    defaults: { finish: 'gloss', color: '#3a5f8f', colors: [null, '#1e2733'] },
+    slots: [['Carrosserie', 'Body'], ['Ramen', 'Windows']],
+    materials: ['#3a5f8f', '#1e2733'],
+  });
 
   const BY_ID = new Map(LIST.map((x) => [x.id, x]));
 

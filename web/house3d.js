@@ -425,12 +425,9 @@ class House3D {
     this.wallHover.emissiveIntensity = 0.22;
 
     const W = shape.width; const D = shape.depth;
-    // The carport goes on the free side of a semi-detached house.
-    let carport = set.carport;
-    if (set.oneSide && carport === set.neighbour) carport = carport === 'left' ? 'right' : 'left';
-    if (set.between) carport = 'none';
-    // the free side of the house: the carport, or else the driveway, and the side the camera looks at
-    const cs = carport === 'left' || (carport === 'none' && set.oneSide && set.neighbour === 'right') ? -1 : 1;
+    // The carport goes on the free side of a semi-detached house; the free side of the house is the carport's, or else
+    // the driveway's (the side the owner chose), and the side the camera looks at
+    const { carport, cs } = HC.freeSide(set);
     this.carportSide = cs < 0 ? 'left' : 'right';
     this.carportCenter = null;
     // The side of the front where the power comes in (the meter cupboard, the grid cabinet and the heat pump by it):
@@ -447,6 +444,8 @@ class House3D {
     const ms = meterAt ? (meterAt.n[0] || Math.sign(meterAt.x) || -cs) : gridAt === 'left' ? -1 : gridAt === 'right' ? 1 : -cs;
     this.meterSide = ms;
     this.meterAt = meterAt;
+    // The side of the front the heat pump stands at: by the meter cupboard, or where the owner put it
+    this.heatSide = set.objects.heatpump.side === 'left' ? -1 : set.objects.heatpump.side === 'right' ? 1 : ms;
     // Garages and sheds, and how far the garden reaches for them
     this.yard = HC.yard(this.plan);
     // Whether a spot of the garden (a tree, a garden light) is free of them, with some room around
@@ -463,10 +462,10 @@ class House3D {
     this.sun.position.copy(south.clone().multiplyScalar(26)).add(new THREE.Vector3(-8, 30, 0));
     this.sun.target.position.set(0, 0, 0);
 
+    this.shape = shape;
     this.buildGround(t, W, D, carport, cs);
     if (set.scene === 'garden') this.buildGardenLights(t, W, D, carport, cs);
     else this.lights = this.outdoor.door.length ? { door: { door: true } } : {};
-    this.shape = shape;
     const anchors = this.buildHouse(t, set, shape, W, D);
     const body = shape.form ? shape.form.main : { x: 0 };
     this.buildNeighbours(t, set, shape, W, D);
@@ -589,6 +588,14 @@ class House3D {
       if (g.place === 'side') { if (carport === 'none' && !this.shows.car) paved(g.x - g.w / 2, g.z + g.d / 2, g.x + g.w / 2, D / 2 + 5); } // else the driveway is there
       else paved(g.x - 0.5, g.z + g.d / 2, g.x + 0.5, -D / 2 - 3.2);
     }
+    // A driveway in front of a garage door in the facade (a garage that is part of the plan), as wide as the door
+    const shell0 = this.shape && this.shape.form && this.shape.form.floors[0];
+    for (const o of (shell0 && shell0.openings) || []) {
+      if (o.passage || !o.door || o.w < 2) continue;
+      const hw = o.w / 2 + 0.3; const len = 5;
+      if (Math.abs(o.n[1]) > 0.5) paved(o.x - hw, o.n[1] > 0 ? o.z : o.z - len, o.x + hw, o.n[1] > 0 ? o.z + len : o.z);
+      else paved(o.n[0] > 0 ? o.x : o.x - len, o.z - hw, o.n[0] > 0 ? o.x + len : o.x, o.z + hw);
+    }
     // A garden drawn with its own fences or walls takes the place of the made-up one: no hedges, trees or shrubs
     if (own && own.fences.length) { this.buildOwnGarden(own); return; }
     // Hedges along the plot and a few trees and shrubs
@@ -612,13 +619,14 @@ class House3D {
     for (const [x, z, s, seed] of [[-W / 2 - 4, -D / 2 - 4.5, 1.15, 1], [W / 2 + 4.5, -D / 2 - 5, 0.95, 2], [-W / 2 - 4.5, D / 2 + 1.5, 0.8, 3]]) {
       if (own && own.plants.length) break; // the plants of the garden drawn take their place
       if (!this.free(x, z, 1.4)) continue; // a garage or shed stands here
+      if (!this.set.between && (carport !== 'none' || this.shows.car) && Math.sign(x) === cs && z > D / 2 - 7.8) continue; // the driveway is here
       const tr = LOOK.tree(s, M, seed);
       tr.position.set(x, 0, z);
       this.root.add(tr);
     }
     for (const x of [-W / 2 + 0.9, -W / 2 + 2.2, W / 2 - 2.2, W / 2 - 0.9]) {
       if (Math.abs(x) < 1.3) continue;
-      if (this.shows.heatpump && !(this.set.roof === 'flat' && this.set.objects.heatpump.place === 'roof') && Math.sign(x) === this.meterSide && Math.abs(x) < W / 2 - 1.2) continue; // the heat pump stands here
+      if (this.shows.heatpump && !(this.set.roof === 'flat' && this.set.objects.heatpump.place === 'roof') && Math.sign(x) === this.heatSide && Math.abs(x) < W / 2 - 1.2) continue; // the heat pump stands here
       const bush = new THREE.Mesh(LOOK.blob(0.42, x), M.leaves);
       bush.position.set(x, 0.32, D / 2 + 0.95); bush.scale.y = 0.75; bush.castShadow = true;
       this.root.add(bush);
@@ -635,36 +643,38 @@ class House3D {
     const ground = { lawn: soft('#79a85a', '#3f5d34'), bed: soft('#5b4636', '#3a2d23'), gravel: soft('#b9b3a5', '#6e6a60'), paving: M.pavers };
     ground.pond = new THREE.MeshStandardMaterial({ color: night ? '#2f5870' : '#5fa3c7', roughness: 0.25 });
     const lift = { lawn: 0.012, paving: 0.018, gravel: 0.02, pond: 0.022, bed: 0.026 };
+    // Everything drawn on a garden level opens that level when tapped (the lamps in it keep their own tap)
+    const tap = (o, level) => { if (level) o.userData.pick = { kind: 'level', id: level }; return o; };
     for (const p of own.patches) {
       // the shape lies in the x-y plane, which is turned flat: its y becomes -z
       const mesh = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(p.pts.map(([x, z]) => new THREE.Vector2(x, -z)))), p.color ? soft(p.color, p.color) : ground[p.kind]);
       mesh.rotation.x = -Math.PI / 2;
       mesh.position.y = lift[p.kind];
       mesh.receiveShadow = true;
-      this.root.add(mesh);
+      this.root.add(tap(mesh, p.level));
     }
     own.plants.forEach((p, i) => {
       if (p.h >= 1.5) { // a tree
         const tree = LOOK.tree(Math.max(0.3, Math.min(1.2, p.h / 4.5)), M, 10 + i);
         tree.position.set(p.x, 0, p.z);
-        this.root.add(tree);
+        this.root.add(tap(tree, p.level));
       } else { // a shrub
         const r = Math.max(p.w, p.d) / 2 + 0.1;
         const bush = new THREE.Mesh(LOOK.blob(r, 10 + i), M.leaves);
         bush.position.set(p.x, r * 0.75, p.z);
         bush.scale.y = 0.8;
         bush.castShadow = true;
-        this.root.add(bush);
+        this.root.add(tap(bush, p.level));
       }
     });
-    for (const o of own.things) this.root.add(LOOK.box(o.w, o.h, o.d, soft(o.color || '#a8947c', o.color || '#7a6b5a'), o.x, o.z0, o.z));
+    for (const o of own.things) this.root.add(tap(LOOK.box(o.w, o.h, o.d, soft(o.color || '#a8947c', o.color || '#7a6b5a'), o.x, o.z0, o.z), o.level));
     for (const f of own.fences) {
       const dx = f.b[0] - f.a[0]; const dz = f.b[1] - f.a[1];
       const len = Math.hypot(dx, dz);
       if (len < 0.05) continue;
       const bar = LOOK.box(len, f.h, Math.max(0.05, f.t), f.fence ? M.wood : M.wall, (f.a[0] + f.b[0]) / 2, 0, (f.a[1] + f.b[1]) / 2);
       bar.rotation.y = -Math.atan2(dz, dx);
-      this.root.add(bar);
+      this.root.add(tap(bar, f.level));
     }
     // A shed or garage drawn as a room of the garden: walls along its edges, a flat roof, its doors and windows
     for (const s of own.sheds || []) {
@@ -677,7 +687,7 @@ class House3D {
         const len = Math.hypot(dx, dz);
         if (len < 0.05) return;
         const turn = -Math.atan2(dz, dx);
-        const put = (mesh) => { mesh.rotation.y = turn; this.root.add(mesh); };
+        const put = (mesh) => { mesh.rotation.y = turn; this.root.add(tap(mesh, s.level)); };
         put(LOOK.box(len + 0.1, h, 0.1, wallMat, (a[0] + b[0]) / 2, 0, (a[1] + b[1]) / 2));
         for (const o of s.openings.filter((q) => q.edge === i)) {
           const x = a[0] + (dx / len) * o.s; const z = a[1] + (dz / len) * o.s;
@@ -690,7 +700,7 @@ class House3D {
       roof.position.y = h;
       roof.castShadow = true;
       roof.receiveShadow = true;
-      this.root.add(roof);
+      this.root.add(tap(roof, s.level));
     }
   }
 
@@ -866,11 +876,13 @@ class House3D {
         const wh = real ? real.top - real.sill : winH;
         const wy = real ? y0 + (real.sill + real.top) / 2 : winY;
         const win = LOOK.windowPart(w, wh, { frame: M.frame, glass, sill: M.sill, reveal: M.reveal }, real && real.door ? { door: true } : undefined);
-        win.group.position.set(x, wy, z);
+        const nx = Math.sin(ry); const nz = Math.cos(ry);
+        // A window or glass door that starts on the ground stands in front of the plinth (which sticks out 2 cm), not behind it
+        const out = i === 0 && real && real.sill < 0.36 ? 0.03 : 0;
+        win.group.position.set(x + nx * out, wy, z + nz * out);
         win.group.rotation.y = ry;
         fg.add(win.group);
         if (!t.night) return;
-        const nx = Math.sin(ry); const nz = Math.cos(ry);
         const halo = new THREE.Mesh(new THREE.PlaneGeometry(w * 2.6, wh * 2.3), haloMat);
         halo.position.set(x + nx * 0.03, wy, z + nz * 0.03);
         halo.rotation.y = ry;
@@ -1666,11 +1678,14 @@ class House3D {
   }
 
   buildBattery(t, set, W, D, cs, carport, meter) {
-    const underCarport = set.objects.battery.place === 'carport' && carport !== 'none';
-    // in view: without a carport on the free side, which the camera looks at
-    const side = underCarport || carport === 'none' ? cs : -cs;
-    // In a row of houses the sides are party walls: on the back wall, at its corner
+    // On the wall the owner chose, unless a neighbour stands there (in a row of houses it is the corner of the back wall)
     const terraced = set.between;
+    const want = set.objects.battery.side === 'left' ? -1 : set.objects.battery.side === 'right' ? 1 : 0;
+    const forced = want && (terraced || !(set.oneSide && set.neighbour === (want < 0 ? 'left' : 'right'))) ? want : 0;
+    const underCarport = set.objects.battery.place === 'carport' && carport !== 'none' && (!forced || forced === cs);
+    // in view: without a carport on the free side, which the camera looks at
+    const side = forced || (underCarport || carport === 'none' ? cs : -cs);
+    // In a row of houses the sides are party walls: on the back wall, at its corner
     // on a free piece of wall between two windows, also for its cable
     const sideCols = Math.max(1, Math.round(D / 3.4));
     const wall = terraced ? this.wallSpot(this.shape, 0, -1, side * (W / 2 - 0.5), 0.5)
@@ -1753,7 +1768,7 @@ class House3D {
   buildHeatpump(t, W, D, cs, meter) {
     if (this.set.roof === 'flat' && this.set.objects.heatpump.place === 'roof' && this.roofFrame) return this.buildHeatpumpOnRoof(t, W, D, cs, meter);
     // At the front, by the meter cupboard: far from the battery and the charger, with a cable of its own
-    const spot = this.frontSpot(this.shape, this.meterSide * (W / 2 - 2.3), 0.6);
+    const spot = this.frontSpot(this.shape, this.heatSide * (W / 2 - 2.3), 0.6);
     const { x } = spot; const z = spot.z + 0.27;
     const g = new THREE.Group();
     g.add(box(1.05, 0.85, 0.42, mat(t.unit, { roughness: 0.5 }), 0, 0, 0));

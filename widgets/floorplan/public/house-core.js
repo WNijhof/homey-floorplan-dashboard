@@ -57,6 +57,8 @@
     objects.solar.kwp = clamp(o.solar && o.solar.kwp, 0, 100, 0); // 0: estimated from the panels, for the forecast
     objects.solar.layout = pick(o.solar && o.solar.layout, ['sunny', 'both'], 'sunny'); // both: on both roof halves, such as east and west
     objects.battery.place = pick(o.battery && o.battery.place, BATTERY_PLACES, 'carport');
+    objects.battery.side = pick(o.battery && o.battery.side, ['auto', 'left', 'right'], 'auto'); // the wall it stands against
+    objects.heatpump.side = pick(o.heatpump && o.heatpump.side, ['auto', 'left', 'right'], 'auto'); // the side of the front it stands at
     objects.heatpump.place = pick(o.heatpump && o.heatpump.place, ['ground', 'roof'], 'ground'); // roof: lying flat on a flat roof
     objects.grid.place = pick(o.grid && o.grid.place, GRID_PLACES, 'auto');
     objects.airco.place = pick(o.airco && o.airco.place, AIRCO_PLACES, 'auto');
@@ -113,6 +115,7 @@
       form: pick(h.form, ['simple', 'plan'], 'simple'), // a neat block, or the real form of the floor plan
       extension: pick(h.extension, ['none', 'back', 'side'], 'none'),
       carport: pick(h.carport, ['none', 'left', 'right'], 'none'),
+      driveSide: pick(h.driveSide, ['auto', 'left', 'right'], 'auto'), // the side of the drive, the car and the charger when there is no carport
       facade: pick(h.facade, ['darkplaster', 'brick', 'darkbrick', 'yellowbrick', 'plaster'], 'darkplaster'),
       scene: pick(h.scene, ['garden', 'studio'], 'garden'), // in its garden, or the house alone
       nightLight: pick(h.nightLight, ['dark', 'normal', 'bright'], 'normal'), // how light the house is after sunset
@@ -545,7 +548,10 @@
     let carport = set.carport;
     if (set.oneSide && carport === set.neighbour) carport = carport === 'left' ? 'right' : 'left';
     if (set.between) carport = 'none';
-    const cs = carport === 'left' || (carport === 'none' && set.oneSide && set.neighbour === 'right') ? -1 : 1;
+    // The drive on the side the owner chose, unless a neighbour stands there; else on the free side
+    const chosen = set.driveSide === 'left' || set.driveSide === 'right' ? set.driveSide : null;
+    const free = chosen && !set.between && !(set.oneSide && chosen === set.neighbour) ? chosen : null;
+    const cs = carport === 'left' || (carport === 'none' && free === 'left') || (carport === 'none' && !free && set.oneSide && set.neighbour === 'right') ? -1 : 1;
     return { carport, cs };
   }
 
@@ -674,11 +680,11 @@
             const w = clamp((o.width || 90) / 100, 0.3, Math.max(0.3, best.L - 0.1), 0.9);
             openings.push({ edge: best.edge, s: clamp(best.s, w / 2, best.L - w / 2, best.L / 2), w, door: o.type !== 'window' });
           }
-          out.sheds.push({ id: r.id, name: r.name || '', kind, pts, height: kind === 'garage' ? 2.6 : 2.3, openings });
+          out.sheds.push({ level: l.id, id: r.id, name: r.name || '', kind, pts, height: kind === 'garage' ? 2.6 : 2.3, openings });
           continue;
         }
         const hit = GARDEN_KINDS.find(([, re]) => re.test(r.name || ''));
-        out.patches.push({ id: r.id, name: r.name || '', kind: hit ? hit[0] : 'paving', color: typeof r.color === 'string' && /^#[0-9a-f]{6}$/i.test(r.color) ? r.color : null, pts: r.points.map(at) });
+        out.patches.push({ level: l.id, id: r.id, name: r.name || '', kind: hit ? hit[0] : 'paving', color: typeof r.color === 'string' && /^#[0-9a-f]{6}$/i.test(r.color) ? r.color : null, pts: r.points.map(at) });
       }
       for (const it of l.items || []) {
         if (it.kind !== 'furniture' || !Number.isFinite(it.x) || !Number.isFinite(it.y)) continue;
@@ -686,12 +692,12 @@
         const turnedBy90 = (Math.round((it.rot || 0) / 90) % 2 !== 0) !== sideways; // the plan turned a quarter: width and depth swap
         const w = clamp((turnedBy90 ? it.d : it.w) / 100, 0.1, 20, 0.5); const d = clamp((turnedBy90 ? it.w : it.d) / 100, 0.1, 20, 0.5);
         const h = clamp((it.h || 0) / 100, 0.05, 6, 0.5);
-        if (PLANT.test(`${it.type || ''} ${it.label || ''}`)) out.plants.push({ x, z, w, d, h });
-        else out.things.push({ x, z, w, d, h, z0: clamp((it.z || 0) / 100, 0, 3, 0), color: typeof it.color === 'string' && /^#[0-9a-f]{6}$/i.test(it.color) ? it.color : null });
+        if (PLANT.test(`${it.type || ''} ${it.label || ''}`)) out.plants.push({ level: l.id, x, z, w, d, h });
+        else out.things.push({ level: l.id, x, z, w, d, h, z0: clamp((it.z || 0) / 100, 0, 3, 0), color: typeof it.color === 'string' && /^#[0-9a-f]{6}$/i.test(it.color) ? it.color : null });
       }
       for (const w of l.walls || []) {
         if (!w.a || !w.b) continue;
-        out.fences.push({ a: at(w.a), b: at(w.b), h: clamp((w.height || 100) / 100, 0.2, 3, 1), t: clamp((w.t || 10) / 100, 0.03, 0.6, 0.1), fence: w.style === 'fence' });
+        out.fences.push({ level: l.id, a: at(w.a), b: at(w.b), h: clamp((w.height || 100) / 100, 0.2, 3, 1), t: clamp((w.t || 10) / 100, 0.03, 0.6, 0.1), fence: w.style === 'fence' });
       }
     }
     return out.patches.length || out.plants.length || out.things.length || out.fences.length || out.sheds.length ? out : null;
@@ -1057,11 +1063,8 @@
     const W = sh.width; const D = sh.depth;
     // E: where the roof starts; for a flat that is the top of the block, above the storeys of the flat
     const E = sh.eaves + (sh.above || 0);
-    let carport = set.carport;
-    if (set.oneSide && carport === set.neighbour) carport = carport === 'left' ? 'right' : 'left';
-    if (set.between) carport = 'none';
     // Seen from the carport side: mirror x when the carport is on the left
-    const sx = carport === 'left' || (carport === 'none' && set.oneSide && set.neighbour === 'right') ? -1 : 1;
+    const { carport, cs: sx } = freeSide(set);
     const view = [sx, 1.2, 1];
     const faces = [];
     const face = (pts, fill, center, extra) => faces.push(Object.assign({ pts, fill, center }, extra || {}));
