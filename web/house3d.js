@@ -1118,7 +1118,10 @@ class House3D {
     parent.add(rg);
     const pitch = THREE.MathUtils.degToRad(set.pitch);
     const rise = (S / 2) * Math.tan(pitch);
-    const x0 = -L / 2 - ov; const x1 = L / 2 + ov; const z0 = -S / 2 - ov; const z1 = S / 2 + ov;
+    // Beside a neighbour the roof ends at the party wall, without the overhang: else the two roofs lie over each other
+    const nb = (sd) => set.between || (set.oneSide && set.neighbour === (sd < 0 ? 'left' : 'right'));
+    const ovA = !turned && nb(-1) ? 0 : ov; const ovB = !turned && nb(1) ? 0 : ov; // at the left and right end of the ridge
+    const x0 = -L / 2 - ovA; const x1 = L / 2 + ovB; const z0 = -S / 2 - ov; const z1 = S / 2 + ov;
     const drop = ov * Math.tan(pitch);
     const pick = { kind: 'level', id: shape.attic ? shape.attic.levelId : shape.floors[shape.floors.length - 1].levelId };
     const T = LOOK.TILE_SIZE;
@@ -1158,7 +1161,7 @@ class House3D {
       if (ridge1 > ridge0) rg.add(LOOK.bar([ridge0, rise + lift + 0.05, 0], [ridge1, rise + lift + 0.05, 0], 0.09, M.roof));
       for (const z of [z1, z0]) {
         const s = Math.sign(z);
-        rg.add(LOOK.box(x1 - x0, 0.22, 0.03, M.trim, 0, -drop + lift - 0.2, z + s * 0.01));
+        rg.add(LOOK.box(x1 - x0, 0.22, 0.03, M.trim, (x0 + x1) / 2, -drop + lift - 0.2, z + s * 0.01));
         rg.add(LOOK.bar([x0, -drop + lift - 0.12, z + s * 0.09], [x1, -drop + lift - 0.12, z + s * 0.09], 0.07, M.zinc));
       }
       // A chimney on the back slope, unless the owner switched it off
@@ -1212,8 +1215,10 @@ class House3D {
     } else if (set.dormer && set.roof === 'gable' && !turned) {
       const tan = Math.tan(pitch);
       const full = set.dormerSize === 'full';
-      const dw0 = full ? Math.max(1.6, L - 1.2) : Math.min(set.dormerSize === 'wide' ? 5 : 3, L * (set.dormerSize === 'wide' ? 0.6 : 0.35));
-      const dw = set.dormerWidth ? Math.min(L - 0.6, Math.max(0.8, set.dormerWidth)) : dw0; // the width the owner gave
+      // A dormer stands back from a free end of the roof, and reaches the party wall beside a neighbour (to join theirs)
+      const mA = ovA ? 0.3 : 0; const mB = ovB ? 0.3 : 0;
+      const dw0 = full ? Math.max(1.6, L - 2 * mA - 2 * mB) : Math.min(set.dormerSize === 'wide' ? 5 : 3, L * (set.dormerSize === 'wide' ? 0.6 : 0.35));
+      const dw = set.dormerWidth ? Math.min(L - mA - mB, Math.max(0.8, set.dormerWidth)) : dw0; // the width the owner gave
       const zf = -S / 2 + 0.6;
       const yf = 0.6 * tan + lift;
       const dh = full ? (rise - yf) * 0.85 : Math.min(1.5, (rise - yf) * 0.7);
@@ -1223,7 +1228,7 @@ class House3D {
         const mz = (z) => (front ? -z : z);
         // where the owner put it, from the middle (+ is right as seen from the front), kept on the roof
         const shift = set.dormerShift != null ? (front ? set.dormerShift : -set.dormerShift) : null;
-        const dx = Math.max(-L / 2 + 0.3 + dw / 2, Math.min(L / 2 - 0.3 - dw / 2, shift != null ? shift : full ? 0 : -L / 4));
+        const dx = Math.max(-L / 2 + mA + dw / 2, Math.min(L / 2 - mB - dw / 2, shift != null ? shift : full ? (mA - mB) / 2 : -L / 4));
         const dormer = LOOK.box(dw, yf + dh, zr - zf, M.trim, dx, 0, mz((zf + zr) / 2));
         add(dormer);
         dormerBox = { side: front ? 'front' : 'back', x0: dx - dw / 2, x1: dx + dw / 2 };
@@ -1236,7 +1241,8 @@ class House3D {
           win.group.position.set(dx - dw / 2 + (i + 0.5) * (dw / n), yf + dh * 0.5, mz(zf - 0.005)); win.group.rotation.y = front ? 0 : Math.PI;
           rg.add(win.group);
         }
-        rg.add(LOOK.box(dw + 0.25, 0.14, zr - zf + 0.25, new THREE.MeshStandardMaterial({ color: '#3a3d42', roughness: 0.6 }), dx, yf + dh, mz((zf + zr) / 2)));
+        const capA = ovA ? 0.125 : 0; const capB = ovB ? 0.125 : 0; // no overhang against a neighbour
+        rg.add(LOOK.box(dw + capA + capB, 0.14, zr - zf + 0.25, new THREE.MeshStandardMaterial({ color: '#3a3d42', roughness: 0.6 }), dx + (capB - capA) / 2, yf + dh, mz((zf + zr) / 2)));
       }
     }
     this.roofGroup = rg;

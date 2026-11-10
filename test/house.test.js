@@ -713,3 +713,15 @@ test('the driveway, the battery and the heat pump can be put on a side of the ho
   assert.strictEqual(house.freeSide(set({ type: 'semi', neighbour: 'right' })).cs, -1, 'the free side of a semi-detached house');
   assert.strictEqual(house.freeSide(set({ type: 'terraced', driveSide: 'left' })).cs, 1, 'no side to drive along in a row');
 });
+
+test('an outdoor lamp never hangs on the party wall of a row house', () => {
+  const lamp = (type) => {
+    const plan = stackedPlan();
+    plan.house = Object.assign({}, plan.house, { type });
+    plan.levels[0].items.push({ id: 'i3', kind: 'device', deviceId: 'w1', x: 790, y: 300 });
+    return house.outdoorLamps(plan, new Map([['w1', { id: 'w1', name: 'Buitenlamp rechts', cls: 'light' }]])).spots;
+  };
+  assert.deepStrictEqual(lamp('detached').map((s) => s.n), [[1, 0]], 'a detached house: on the right wall');
+  assert.ok(lamp('terraced').every((s) => s.n[0] === 0), 'in a row the side walls are party walls');
+  assert.deepStrictEqual(lamp('semi').map((s) => s.n), [[1, 0]], 'semi-detached, neighbour on the left: the right wall is free');
+});
