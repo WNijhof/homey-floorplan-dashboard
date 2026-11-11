@@ -99,7 +99,7 @@
         var control = '';
         if (d && typeof d.caps.target_temperature === 'number') {
           var u = (d.units && d.units.target_temperature) || {};
-          var step = u.step > 0 ? u.step : u.decimals === 0 ? 1 : 0.5;
+          var step = core.tempStep(plan, d.id, u, room);
           control = '<div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="' + esc(d.id) + '" data-cap="target_temperature" data-step="' + (-step) + '">−</button><b>' + d.caps.target_temperature.toFixed(step >= 1 ? 0 : 1) + '°</b><button type="button" class="fp-step" data-act="step" data-dev="' + esc(d.id) + '" data-cap="target_temperature" data-step="' + step + '">+</button></div>';
           var modes = d.units && d.units.thermostat_mode && d.units.thermostat_mode.values;
           if (modes) {

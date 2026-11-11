@@ -508,6 +508,51 @@ export function car(color, env) {
   return g;
 }
 
+/**
+ * A car drawn in code to a size (metres): wheels, a body, and a cabin whose windows slope front and back. Length along z
+ * (the nose at +z), width along x, standing on y = 0. bodyColor and glassColor are hex or empty; finish is [roughness,
+ * metalness]. Used by the room view (a car in the plan) and the 3D house (a car drawn in the garden).
+ */
+export function drawnCar(W, L, H, bodyColor, glassColor, finish) {
+  finish = finish || [0.18, 0.05];
+  const g = new THREE.Group();
+  const bodyMat = new THREE.MeshStandardMaterial({ color: bodyColor || '#3a5f8f', roughness: finish[0], metalness: Math.max(finish[1], 0.15) });
+  const glassMat = new THREE.MeshStandardMaterial({ color: glassColor || '#1e2733', roughness: 0.15, metalness: 0.2 });
+  const tyre = new THREE.MeshStandardMaterial({ color: '#16181b', roughness: 0.9 });
+  const add = (mesh) => { mesh.castShadow = true; mesh.receiveShadow = true; g.add(mesh); return mesh; };
+  const box = (w, h, d, m, x, y, z) => { const mesh = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); mesh.position.set(x, y + h / 2, z); return add(mesh); };
+  const clear = H * 0.17; const beltline = H * 0.57;
+  const r = Math.min(0.34, H * 0.22);
+  for (const wz of [-L * 0.31, L * 0.3]) {
+    for (const s of [-1, 1]) {
+      const wheel = new THREE.Mesh(new THREE.CylinderGeometry(r, r, W * 0.13, 20), tyre);
+      wheel.rotation.z = Math.PI / 2;
+      wheel.position.set(s * (W / 2 - W * 0.06), r, wz);
+      add(wheel);
+    }
+  }
+  box(W, beltline - clear, L * 0.97, bodyMat, 0, clear, 0); // the body, with its bonnet and boot
+  // The cabin: a side profile with a raked windscreen and rear window, pushed out across the width
+  const prof = new THREE.Shape();
+  const zb = [-L * 0.3, L * 0.2]; const zt = [-L * 0.2, L * 0.02]; // [rear, front] at the belt line and at the roof
+  prof.moveTo(zb[0], beltline); prof.lineTo(zb[1], beltline); prof.lineTo(zt[1], H - 0.04); prof.lineTo(zt[0], H - 0.04); prof.closePath();
+  const cabW = W * 0.9;
+  const cabin = new THREE.ExtrudeGeometry(prof, { depth: cabW, bevelEnabled: false });
+  cabin.rotateY(-Math.PI / 2); // the profile's x runs along z, its extrusion along -x
+  cabin.translate(cabW / 2, 0, 0);
+  add(new THREE.Mesh(cabin, glassMat));
+  box(cabW * 0.96, 0.05, zt[1] - zt[0] + 0.06, bodyMat, 0, H - 0.05, (zt[0] + zt[1]) / 2); // the roof
+  // A pillar in the middle of each side, so the windows are not one dark lump
+  for (const s of [-1, 1]) box(0.05, H - 0.04 - beltline, 0.07, bodyMat, s * cabW / 2, beltline, (zb[0] + zb[1] + zt[0] + zt[1]) / 4);
+  const lamp = new THREE.MeshStandardMaterial({ color: '#fff3c4', emissive: new THREE.Color('#fff3c4'), emissiveIntensity: 0.25 });
+  const tail = new THREE.MeshStandardMaterial({ color: '#b3262b', emissive: new THREE.Color('#b3262b'), emissiveIntensity: 0.25 });
+  for (const s of [-1, 1]) {
+    box(W * 0.2, 0.09, 0.03, lamp, s * W * 0.34, beltline - 0.17, L * 0.485);
+    box(W * 0.2, 0.08, 0.03, tail, s * W * 0.34, beltline - 0.16, -L * 0.485);
+  }
+  return g;
+}
+
 /* ------------------------------------------------- floors and walls inside */
 
 // Light grey patterns; the room's floor colour tints them (material colour × texture).

@@ -725,3 +725,67 @@ test('an outdoor lamp never hangs on the party wall of a row house', () => {
   assert.ok(lamp('terraced').every((s) => s.n[0] === 0), 'in a row the side walls are party walls');
   assert.deepStrictEqual(lamp('semi').map((s) => s.n), [[1, 0]], 'semi-detached, neighbour on the left: the right wall is free');
 });
+
+test('a room without walls that is open to the outside is no part of the block: a niche or a canopy', () => {
+  const room = (id, name, x0, y0, x1, y1, extra) => Object.assign({ id, name, points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] }, extra);
+  // a hall with a recessed entrance in front of it, between two wings; the entrance room has no walls of its own
+  const plan = (walls) => ({ house: { form: 'plan' }, levels: [{
+    id: 'g', name: 'Begane grond',
+    rooms: [room('w1', 'Woonkamer', 0, 0, 300, 800), room('hall', 'Hal', 300, 0, 700, 500), room('w2', 'Keuken', 700, 0, 1000, 800), room('niche', 'Voordeur', 300, 500, 700, 800, walls === false ? { walls: false } : {})],
+    openings: [{ id: 'door', type: 'door', x: 500, y: 500, width: 90 }],
+  }] });
+  const closed = house.shape(plan(true)).form.floors[0];
+  assert.strictEqual(closed.openings.find((o) => o.id === 'door'), undefined, 'a niche with walls is inside the house: the door is not in an outer wall');
+  const notched = house.shape(plan(false)).form.floors[0];
+  const door = notched.openings.find((o) => o.id === 'door');
+  assert.ok(door, 'the door stands in the back wall of the niche, which is an outer wall now');
+  assert.deepStrictEqual([door.n, door.z], [[0, 1], 1]);
+  assert.ok(notched.rects.length > 1 && notched.rects.every((r) => !(r.x === 0 && r.z > 1)), 'the niche is not a block');
+  // a bare room with a wall drawn on its free edge, or a room beside it, is still part of the house
+  const walled = plan(false); walled.levels[0].walls = [{ id: 'f', a: [300, 800], b: [700, 800] }];
+  assert.strictEqual(house.shape(walled).form.floors[0].openings.find((o) => o.id === 'door'), undefined);
+  const inside = plan(false); inside.levels[0].rooms[3].points = [[300, 300], [700, 300], [700, 500], [300, 500]]; inside.levels[0].rooms[1].points = [[300, 0], [700, 0], [700, 300], [300, 300]];
+  assert.ok(house.shape(inside).form.floors[0].rects.length >= 1);
+});
+
+test('a roller shutter linked to a window is passed on, and a lamp keeps the height and the strip of its plan item', () => {
+  const rooms = [{ id: 'r', points: [[0, 0], [1000, 0], [1000, 800], [0, 800]] }];
+  const openings = [{ id: 'w1', type: 'window', x: 300, y: 800, width: 200, devices: ['shutter-1', 7] }, { id: 'w2', type: 'window', x: 700, y: 800, width: 200 }];
+  const plan = { levels: [{ id: 'g', name: 'Begane grond', rooms, openings }], house: { form: 'plan' } };
+  const f = house.shape(plan).form.floors[0];
+  assert.deepStrictEqual(f.openings.find((o) => o.id === 'w1').devices, ['shutter-1']);
+  assert.deepStrictEqual(f.openings.find((o) => o.id === 'w2').devices, []);
+
+  const lamps = stackedPlan();
+  lamps.levels.push({ id: 'tuin', name: 'Tuin', role: 'garden', rooms: [{ id: 't', name: 'Tuin', points: [[-300, 1000], [1100, 1000], [1100, 1400], [-300, 1400]] }], openings: [], items: [
+    { id: 'l1', kind: 'device', deviceId: 'a', x: 800, y: 300, z: 170 },
+    { id: 'l2', kind: 'device', deviceId: 'b', x: 800, y: 350, z: 255, fixture: 'fx:strip', w: 150 },
+  ] });
+  const spots = house.outdoorLamps(lamps, new Map([['a', { id: 'a', name: 'Wandlamp', cls: 'light' }], ['b', { id: 'b', name: 'Strip', cls: 'light' }]])).spots;
+  const a = spots.find((s) => s.id === 'a'); const b = spots.find((s) => s.id === 'b');
+  assert.strictEqual(a.h, 1.7);
+  assert.ok(!a.strip);
+  assert.deepStrictEqual([b.h, b.strip, b.len], [2.55, true, 1.5]);
+});
+
+test('the car of the plan in the garden is drawn as a car with its colours', () => {
+  const plan = stackedPlan({ house: { form: 'plan', gardenOwn: true } });
+  plan.levels.push({ id: 'tuin', name: 'Tuin', role: 'garden', rooms: [], openings: [], items: [
+    { id: 'c', kind: 'furniture', type: 'own-car', x: 400, y: -300, w: 180, d: 450, h: 150, color: '#aa1111', colors: [null, '#223344'], finish: 'matte' },
+    { id: 'k', kind: 'furniture', type: 'k-table', x: 300, y: -300, w: 80, d: 80, h: 70 },
+  ] });
+  const g = house.garden(plan);
+  const car = g.things.find((t) => t.car);
+  assert.deepStrictEqual(car.car, { body: '#aa1111', glass: '#223344', finish: 'matte' });
+  assert.strictEqual(g.things.filter((t) => !t.car).length, 1, 'other things stay blocks');
+});
+
+test('an air conditioner meter without a switch runs while it draws power, and the card shows the one that runs', () => {
+  const ac = (id, name, caps) => ({ id, name, class: 'airconditioning', capabilities: Object.keys(caps), capabilitiesObj: Object.fromEntries(Object.entries(caps).map(([k, v]) => [k, { value: v }])) });
+  const list = (w) => summarize([ac('a', 'Airco', { onoff: false }), ac('b', 'Airco Slaapkamer', { onoff: false }), ac('m', 'Homewizard Airco', { measure_power: w })], {}).airco;
+  assert.strictEqual(list(0).find((x) => x.id === 'm').on, false, 'drawing nothing: off');
+  const running = list(640).find((x) => x.id === 'm');
+  assert.strictEqual(running.on, true);
+  assert.strictEqual(running.watts, 640);
+  assert.strictEqual(list(640).find((x) => x.id === 'a').on, false, 'a switch that says off stays off');
+});

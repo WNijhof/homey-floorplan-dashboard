@@ -340,3 +340,13 @@ test('a door or window off its wall goes onto the nearest wall, or is left out',
   assert.strictEqual(fit.find((o) => o.id === 'near').y, 300);
   assert.strictEqual(fit[0], level.openings[0], 'one in its wall stays as it is');
 });
+
+test('the step of a target temperature: chosen for the room, else the device, else by its decimals', () => {
+  const plan = { levels: [{ rooms: [{ id: 'r1', climateDevice: 'toshiba', tempStep: 1 }, { id: 'r2', climateDevice: 'tado' }] }] };
+  assert.strictEqual(core.tempStep(plan, 'toshiba', { decimals: 1 }), 1, 'the room that has the device decides');
+  assert.strictEqual(core.tempStep(plan, 'tado', { decimals: 1 }), 0.5, 'nothing chosen: half a degree');
+  assert.strictEqual(core.tempStep(plan, 'tado', { step: 0.1, decimals: 1 }), 0.1, 'the device own step');
+  assert.strictEqual(core.tempStep(plan, 'x', { decimals: 0 }), 1);
+  assert.strictEqual(core.tempStep(plan, 'tado', { step: 0.1 }, { tempStep: 0.5 }), 0.5, 'a room choice beats the device');
+  assert.strictEqual(core.tempStep(null, 'x', null), 0.5);
+});

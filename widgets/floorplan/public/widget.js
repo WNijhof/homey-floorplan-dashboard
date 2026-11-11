@@ -51,8 +51,8 @@
 
   const $ = (id) => document.getElementById(id);
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-  // The step of a target temperature: the device's own, a whole degree when it has no decimals, else half a degree
-  const stepOf = (u) => (u && u.step > 0 ? u.step : u && u.decimals === 0 ? 1 : 0.5);
+  // The step of a target temperature: the one chosen for the room, else the device's own, a whole degree when it has no decimals, else half a degree
+  const stepOf = (u, deviceId, room) => core.tempStep(state.plan, deviceId, u, room);
 
   const state = {
     Homey: null,
@@ -690,7 +690,7 @@
     if ('windowcoverings_state' in c) rows.push(`<div class="fp-btns"><button type="button" class="fp-btn" data-act="set" data-dev="${esc(dev.id)}" data-cap="windowcoverings_state" data-value="up">${T.open}</button><button type="button" class="fp-btn" data-act="set" data-dev="${esc(dev.id)}" data-cap="windowcoverings_state" data-value="idle">${T.stop}</button><button type="button" class="fp-btn" data-act="set" data-dev="${esc(dev.id)}" data-cap="windowcoverings_state" data-value="down">${T.close}</button></div>`);
     if (typeof c.target_temperature === 'number') {
       const u = (dev.units && dev.units.target_temperature) || {};
-      rows.push(`<div class="fp-row"><span class="fp-name">${T.target}</span><div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="${esc(dev.id)}" data-cap="target_temperature" data-step="${-stepOf(u)}">−</button><span class="fp-big">${c.target_temperature}°</span><button type="button" class="fp-step" data-act="step" data-dev="${esc(dev.id)}" data-cap="target_temperature" data-step="${stepOf(u)}">+</button></div></div>`);
+      rows.push(`<div class="fp-row"><span class="fp-name">${T.target}</span><div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="${esc(dev.id)}" data-cap="target_temperature" data-step="${-stepOf(u, dev.id)}">−</button><span class="fp-big">${c.target_temperature}°</span><button type="button" class="fp-step" data-act="step" data-dev="${esc(dev.id)}" data-cap="target_temperature" data-step="${stepOf(u, dev.id)}">+</button></div></div>`);
     }
     for (const cap of ['thermostat_mode', 'fan_mode']) {
       const values = dev.units && dev.units[cap] && dev.units[cap].values;
@@ -758,7 +758,7 @@
       if (rd.climateId) {
         const climate = state.devices.get(rd.climateId);
         const u = (climate.units && climate.units.target_temperature) || {};
-        parts.push(`<div class="fp-row"><span class="fp-name">${T.target}</span><div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="${esc(climate.id)}" data-cap="target_temperature" data-step="${-stepOf(u)}">−</button><span class="fp-big">${rd.target}°</span><button type="button" class="fp-step" data-act="step" data-dev="${esc(climate.id)}" data-cap="target_temperature" data-step="${stepOf(u)}">+</button></div></div>`);
+        parts.push(`<div class="fp-row"><span class="fp-name">${T.target}</span><div class="fp-steps"><button type="button" class="fp-step" data-act="step" data-dev="${esc(climate.id)}" data-cap="target_temperature" data-step="${-stepOf(u, climate.id, room)}">−</button><span class="fp-big">${rd.target}°</span><button type="button" class="fp-step" data-act="step" data-dev="${esc(climate.id)}" data-cap="target_temperature" data-step="${stepOf(u, climate.id, room)}">+</button></div></div>`);
       }
       const devs = itemsInRoom(level, room).map((i) => ({ item: i, dev: state.devices.get(i.deviceId) })).filter((x) => x.dev);
       const lights = devs.filter((x) => core.deviceKind(x.dev) === 'light' && 'onoff' in x.dev.caps);

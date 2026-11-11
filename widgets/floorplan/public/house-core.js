@@ -371,6 +371,33 @@
     return { sides, knee: clamp(sl.knee, 0, H, Math.min(100, H)), pitch: clamp(sl.pitch, 15, 75, 45) };
   }
 
+  // A room drawn without walls (room.walls === false) with an edge that nothing stands beside: no other room, no wall drawn
+  // on it. It is open to the outside, a canopy or an entrance niche, so it is not part of the block of the house: the
+  // walls and doors of the rooms beside it face the open space.
+  function openRoom(room, all, level) {
+    if (room.walls !== false) return false;
+    const ps = room.points;
+    const frees = ((level && level.walls) || []).filter((w) => Array.isArray(w.a) && Array.isArray(w.b));
+    const near = (p, a, b) => {
+      const dx = b[0] - a[0]; const dy = b[1] - a[1];
+      const t = Math.max(0, Math.min(1, ((p[0] - a[0]) * dx + (p[1] - a[1]) * dy) / (dx * dx + dy * dy || 1)));
+      return Math.hypot(p[0] - a[0] - dx * t, p[1] - a[1] - dy * t) < 30;
+    };
+    for (let i = 0; i < ps.length; i++) {
+      const a = ps[i]; const b = ps[(i + 1) % ps.length];
+      const L = Math.hypot(b[0] - a[0], b[1] - a[1]);
+      if (L < 60) continue;
+      const m = [(a[0] + b[0]) / 2, (a[1] + b[1]) / 2];
+      const n = [-(b[1] - a[1]) / L, (b[0] - a[0]) / L];
+      let o = [m[0] + n[0] * 40, m[1] + n[1] * 40];
+      if (inPolygon(o[0], o[1], ps)) o = [m[0] - n[0] * 40, m[1] - n[1] * 40];
+      if (all.some((q) => q !== room && inPolygon(o[0], o[1], q.points))) continue;
+      if (frees.some((w) => near(m, w.a, w.b))) continue;
+      return true;
+    }
+    return false;
+  }
+
   function planForm(floors, front) {
     const turn = TURNS[front];
     // The sloping sides of a level in the frame of the house: each with the way it faces (n) and how far out its eaves
@@ -394,9 +421,10 @@
     const rooms = (l) => (l.rooms || []).filter((r) => (r.points || []).length >= 3);
     const polys = floors.map((l) => rooms(l).map((r) => r.points.map(turn)));
     const outside = floors.map((l) => rooms(l).map((r) => TERRACE.test(r.name || '')));
+    const openAir = floors.map((l, i) => rooms(l).map((r, k, all) => !outside[i][k] && openRoom(r, all, l)));
     // The polygons are turned with the front at the bottom, so the choices, made as the house is seen, apply as they are
     const moved = stackStoreys(polys, floors.map(stackOf));
-    const indoorOf = (i) => polys[i].filter((_, k) => !outside[i][k]);
+    const indoorOf = (i) => polys[i].filter((_, k) => !outside[i][k] && !openAir[i][k]);
     const terracesOf = (i) => polys[i].filter((_, k) => outside[i][k]);
     const all = polys.flat(2);
     if (!all.length) return null;
@@ -449,7 +477,7 @@
         const list = rooms(floors[i]);
         const roofAt = (r, c) => {
           const x = (cols[c] + cols[c + 1]) / 2; const y = (rows[r] + rows[r + 1]) / 2;
-          const k = list.findIndex((room, n) => !outside[i][n] && (room.roof === 'flat' || room.roof === 'lean') && inPolygon(x, y, polys[i][n]));
+          const k = list.findIndex((room, n) => !outside[i][n] && !openAir[i][n] && (room.roof === 'flat' || room.roof === 'lean') && inPolygon(x, y, polys[i][n]));
           return k >= 0 ? list[k].roof : '';
         };
         const kinds = plain.map((row, r) => row.map((on, c) => (on ? roofAt(r, c) : null)));
@@ -489,7 +517,8 @@
           const sill = door ? 0 : (o.sill != null ? o.sill : 90) / 100;
           const top = (door ? o.height || 210 : o.top || 210) / 100;
           if (top - sill < 0.3) continue;
-          f.openings.push({ id: o.id, door, x: best.x, z: best.z, n: best.n, w: Math.max(0.4, Math.min(6, (o.width || 90) / 100)), sill, top });
+          // devices: what is linked to it (a roller shutter), so the 3D house can show how far it is closed
+          f.openings.push({ id: o.id, door, x: best.x, z: best.z, n: best.n, w: Math.max(0.4, Math.min(6, (o.width || 90) / 100)), sill, top, devices: Array.isArray(o.devices) ? o.devices.filter((d) => typeof d === 'string') : [] });
         }
         return f;
       }),
@@ -693,7 +722,13 @@
         const w = clamp((turnedBy90 ? it.d : it.w) / 100, 0.1, 20, 0.5); const d = clamp((turnedBy90 ? it.w : it.d) / 100, 0.1, 20, 0.5);
         const h = clamp((it.h || 0) / 100, 0.05, 6, 0.5);
         if (PLANT.test(`${it.type || ''} ${it.label || ''}`)) out.plants.push({ level: l.id, x, z, w, d, h });
-        else out.things.push({ level: l.id, x, z, w, d, h, z0: clamp((it.z || 0) / 100, 0, 3, 0), color: typeof it.color === 'string' && /^#[0-9a-f]{6}$/i.test(it.color) ? it.color : null });
+        else {
+          const hex = (c) => (typeof c === 'string' && /^#[0-9a-f]{6}$/i.test(c) ? c : null);
+          const thing = { level: l.id, x, z, w, d, h, z0: clamp((it.z || 0) / 100, 0, 3, 0), color: hex(it.color) };
+          // The car of the plan (a piece with a drawn model) is drawn as a car, with its colours and finish, not as a block
+          if (it.type === 'own-car') thing.car = { body: hex(it.color), glass: hex(it.colors && it.colors[1]), finish: it.finish || null };
+          out.things.push(thing);
+        }
       }
       for (const w of l.walls || []) {
         if (!w.a || !w.b) continue;
@@ -840,6 +875,13 @@
     // A wall against a neighbour (the party wall of a row of houses) has no outside to hang a lamp on
     const runs = form.floors[0].runs.filter((r) => !(set.between && r.n[0] !== 0) && !(set.oneSide && r.n[0] === (set.neighbour === 'left' ? -1 : 1)));
     const spots = [];
+    // The height the lamp was given in the plan (cm), and whether it is a strip: a long thin lamp along the wall
+    const lampLook = (it) => {
+      const out = {};
+      if (Number.isFinite(it.z) && it.z > 0) out.h = clamp(it.z / 100, 0.1, 8, 2.2);
+      if (it.fixture === 'fx:strip') { out.strip = true; out.len = clamp((it.w || 120) / 100, 0.2, 8, 1.2); }
+      return out;
+    };
     for (const l of (plan && plan.levels) || []) {
       const garden = isGardenLevel(l);
       if (!garden && l.id !== ground) continue;
@@ -852,7 +894,7 @@
         if (garden) {
           // Placed against an outer wall of the house (within half a metre): it hangs on that wall, else it stands
           const by = nearestRun(runs, x, z);
-          if (by && by.off <= 0.5) spots.push({ id: d.id, x: by.x, z: by.z, n: by.n, wall: true });
+          if (by && by.off <= 0.5) spots.push(Object.assign({ id: d.id, x: by.x, z: by.z, n: by.n, wall: true }, lampLook(it)));
           else spots.push({ id: d.id, x, z, wall: false });
           continue;
         }
@@ -861,7 +903,7 @@
         const inRoom = (l.rooms || []).some((r) => (r.points || []).length >= 3 && inPolygon(it.x, it.y, r.points));
         const wall = nearestRun(runs, x, z);
         if (!wall || (inRoom && wall.off > 0.6) || (!inRoom && wall.off > 1.5)) continue;
-        spots.push({ id: d.id, x: wall.x, z: wall.z, n: wall.n, wall: true });
+        spots.push(Object.assign({ id: d.id, x: wall.x, z: wall.z, n: wall.n, wall: true }, lampLook(it)));
       }
     }
     return spots;
