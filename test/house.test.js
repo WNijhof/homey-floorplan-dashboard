@@ -590,6 +590,39 @@ test('meter cupboard room, a placed air conditioner and outdoor lamps from the p
   assert.ok(g2 && g2.wall, 'by the wall');
 });
 
+test('an air conditioner is also a placed indoor unit or a climate device named airco', () => {
+  const plan = stackedPlan();
+  const devices = new Map([
+    ['ac', { id: 'ac', name: 'Toshiba', cls: 'airconditioning', caps: { onoff: true } }],
+    ['sp', { id: 'sp', name: 'Slaapkamer split', cls: 'heater', caps: { onoff: true, target_temperature: 21 } }],
+    ['th', { id: 'th', name: 'Airco kantoor', cls: 'thermostat', caps: { target_temperature: 20 } }],
+    ['t2', { id: 't2', name: 'Thermostaat hal', cls: 'thermostat', caps: { target_temperature: 20 } }],
+    ['h1', { id: 'h1', name: 'Airco heater', cls: 'heater', caps: { onoff: true } }],
+  ]);
+  plan.levels[1].items.push(
+    { id: 'i1', kind: 'device', deviceId: 'sp', fixture: 'fx-split', x: 790, y: 700 },
+    { id: 'i2', kind: 'device', deviceId: 't2', x: 100, y: 100 },
+    { id: 'i3', kind: 'device', deviceId: 'th', x: 790, y: 650 },
+  );
+  assert.deepStrictEqual(house.aircoIds(plan, devices).sort(), ['ac', 'sp', 'th'], 'class, indoor unit model, and a climate device with airco in its name; a plain thermostat is none');
+  assert.deepStrictEqual(house.aircoIds(plan, null), ['sp'], 'without devices only the indoor unit model counts');
+  const spot = house.deviceWallSpot(plan, ['sp']);
+  assert.strictEqual(spot.floor, 1);
+  assert.deepStrictEqual(spot.n, [1, 0], 'its outdoor unit goes on the right wall of the first floor');
+});
+
+test('solar settings: panels lie upright or on their side, per row, on the house or a wing roof', () => {
+  const s0 = house.settings({}).objects.solar;
+  assert.strictEqual(s0.turn, 'portrait');
+  assert.strictEqual(s0.perRow, 0);
+  assert.strictEqual(s0.roof, 'house');
+  assert.strictEqual(s0.slope, 'auto');
+  const s1 = house.settings({ house: { objects: { solar: { turn: 'landscape', perRow: 3.4, roof: 'wing', slope: 'right' } } } }).objects.solar;
+  assert.deepStrictEqual([s1.turn, s1.perRow, s1.roof, s1.slope], ['landscape', 3, 'wing', 'right']);
+  const s2 = house.settings({ house: { objects: { solar: { turn: 'diagonal', perRow: -4, roof: 'moon', slope: 'up' } } } }).objects.solar;
+  assert.deepStrictEqual([s2.turn, s2.perRow, s2.roof, s2.slope], ['portrait', 0, 'house', 'auto']);
+});
+
 test('a plug placed as a lamp, or a dimmable plug, is an outdoor lamp too', () => {
   const plan = stackedPlan();
   const devices = new Map([

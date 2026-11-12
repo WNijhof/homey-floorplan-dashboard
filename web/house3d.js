@@ -374,14 +374,15 @@ class House3D {
     this.T = texts || {};
     const set = HC.settings(plan);
     const shape = HC.shape(plan);
-    const present = (energy && energy.present) || {};
+    // Where the air conditioner is placed in the plan: its outdoor unit hangs on the outer wall nearest to it. An air
+    // conditioner is also a device placed with the indoor unit model, or a climate device named airco.
+    const aircos = HC.aircoIds(plan, devices instanceof Map ? devices : null);
+    const present = Object.assign({}, energy && energy.present, aircos.length ? { airco: true } : {});
     const shows = {};
     for (const k of HC.OBJECTS) shows[k] = HC.shows(set, k, present);
     shows.water = !!present.water; shows.gas = !!present.gas;
     const outdoor = HC.outdoorLamps(plan, devices instanceof Map ? devices : null);
     const own = HC.garden(plan);
-    // Where the air conditioner is placed in the plan: its outdoor unit hangs on the outer wall nearest to it
-    const aircos = devices instanceof Map ? [...devices.values()].filter((d) => d.cls === 'airconditioning').map((d) => d.id) : [];
     const aircoAt = HC.deviceWallSpot(plan, aircos);
     const key = JSON.stringify([plan.id, set, shape, shows, !!dark, this.lang, outdoor, levelRooms(plan), HC.outbuildings(plan), own, aircoAt]);
     if (key !== this.key) {
@@ -858,6 +859,7 @@ class House3D {
     const lamps = [];
     this.floorGroups = [];
     this.liftWith = [];
+    this.wingRoofs = [];
     const size = M.tx.wallSize;
     const form = shape.form;
     const entry = this.entry;
@@ -1415,6 +1417,8 @@ class House3D {
     const L = along ? b.w : b.d; const S = along ? b.d : b.w;
     const rise = Math.min((S / 2) * Math.tan(THREE.MathUtils.degToRad(set.roof === 'flat' ? 35 : set.pitch)), 4);
     const ov = 0.25; const lift = 0.1;
+    // (for the solar panels, which can lie on this roof)
+    (this.wingRoofs = this.wingRoofs || []).push({ x: b.x, y: y1, z: b.z, L, S, along, lift, pitch: Math.atan(rise / (S / 2)) });
     const drop = (ov * rise) / (S / 2);
     // x along the ridge, z across it, y up from the top of the walls
     const P = (x, y, z) => (along ? [b.x + x, y1 + y, b.z + z] : [b.x + z, y1 + y, b.z + x]);
@@ -1650,7 +1654,9 @@ class House3D {
   buildSolar(t, set, shape, W, D, anchors, meter) {
     const sides = HC.solarSides(set);
     const total = set.objects.solar.panels;
-    const placed = sides.map((side, i) => {
+    // On the roof of a room with its own gable roof, when chosen and there is one; else on the roof of the house
+    const wing = set.objects.solar.roof === 'wing' ? this.panelsOnWing(total, t) : null;
+    const placed = wing ? [wing] : sides.map((side, i) => {
       const share = i === 0 ? Math.ceil(total / sides.length) : Math.floor(total / sides.length);
       return total > 0 && !share ? null : this.panelsOn(side, share, t, shape);
     }).filter(Boolean);
@@ -1670,10 +1676,108 @@ class House3D {
     // house and along the wall to the meter cupboard
     const onRoof = panels.localToWorld(new THREE.Vector3(centre || 0, 0.09, -0.42));
     const atGutter = panels.localToWorld(new THREE.Vector3(centre || 0, 0.09, 0.02));
+    if (wing) {
+      // The roof of a wing: down its corner to the ground and from there to the meter cupboard
+      const ground = new THREE.Vector3(atGutter.x, 0.25, atGutter.z);
+      this.addFlow('solar', [onRoof, atGutter, ground, ...this.cableRoute(ground, meter)]);
+      return;
+    }
     const wall = this.onWall(atGutter);
     const front = Math.abs(wall.z) >= D / 2;
     const corner = new THREE.Vector3(front ? Math.sign(meter.x) * (W / 2 - 0.3) : wall.x, shape.eaves + (shape.above || 0) - 0.12, front ? wall.z : Math.sign(meter.z) * (D / 2 - 0.3));
     this.addFlow('solar', [onRoof, atGutter, new THREE.Vector3(corner.x, atGutter.y, front ? atGutter.z : corner.z), corner, ...this.cableRoute(corner, meter)]);
+  }
+
+  // The size of a panel as it lies on the roof (m): long side up the slope, or along it when turned
+  panelSize() {
+    const landscape = this.set.objects.solar.turn === 'landscape';
+    return { panelW: landscape ? 1.72 : 1.05, panelH: landscape ? 1.05 : 1.72, gap: 0.04 };
+  }
+
+  // How many panels per row and how many rows, for `wanted` panels (0: as many as fit nicely) where `along` fit in a
+  // row and `up` rows: rows of the number the owner chose, else as even as possible
+  panelGrid(wanted, along, up) {
+    const perRow = this.set.objects.solar.perRow;
+    const wide = perRow ? Math.min(along, perRow) : along;
+    if (wanted > 0) {
+      const cols = perRow ? wide : Math.min(along, Math.ceil(wanted / up));
+      return { cols, rows: Math.min(up, Math.ceil(wanted / cols)), target: wanted };
+    }
+    const rows = Math.min(up, 2);
+    return { cols: wide, rows, target: wide * rows };
+  }
+
+  // The panels as a group in the slope frame (local -z up the slope, y out of the roof), starting half a metre above the
+  // eaves, with the glow underneath; middle: where that glow lies along z
+  panelBlock(t, cols, rows, target, panelW, panelH, gap, shiftX, tent, start = 0.5) {
+    if (!this.panelMat) this.panelMat = new THREE.MeshPhysicalMaterial({ map: this.M.tx.panel, roughness: 0.18, metalness: 0.3, envMapIntensity: 1.3, clearcoat: 0.6 });
+    const panelMat = this.panelMat;
+    const frame = mat(t.panelFrame);
+    const panels = new THREE.Group();
+    let n = 0;
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols && n < target; c++, n++) {
+        const x = shiftX + (c - (cols - 1) / 2) * (panelW + gap);
+        const s = start + r * (panelH + gap) + panelH / 2 - (tent ? 0.5 + (rows * (panelH + gap)) / 2 : 0);
+        const p = new THREE.Mesh(new THREE.BoxGeometry(panelW, 0.04, panelH), panelMat);
+        p.position.set(x, 0.06, -s);
+        p.castShadow = true;
+        const edge = new THREE.Mesh(new THREE.BoxGeometry(panelW + 0.02, 0.03, panelH + 0.02), frame);
+        edge.position.set(x, 0.04, -s);
+        if (tent) { p.rotation.x = r % 2 ? 0.17 : -0.17; edge.rotation.x = p.rotation.x; }
+        panels.add(edge, p);
+      }
+    }
+    // The glow underneath: stronger the more the panels make
+    // a soft spill of warm light around the panels, fading out (not a hard frame)
+    const gw = cols * (panelW + gap) + 1.6; const gh = rows * (panelH + gap) + 1.6;
+    const glowTex = (() => {
+      const c = document.createElement('canvas'); c.width = 128; c.height = 128;
+      const g2 = c.getContext('2d');
+      const gr = g2.createRadialGradient(64, 64, 10, 64, 64, 64);
+      gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.55, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
+      g2.fillStyle = gr; g2.fillRect(0, 0, 128, 128);
+      return new THREE.CanvasTexture(c);
+    })();
+    const glow = new THREE.Mesh(new THREE.PlaneGeometry(gw, gh), new THREE.MeshBasicMaterial({ color: '#ffc23d', alphaMap: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
+    glow.rotation.x = -Math.PI / 2;
+    const middle = tent ? 0 : -(start + (rows * (panelH + gap)) / 2);
+    glow.position.set(shiftX, 0.03, middle);
+    panels.add(glow);
+    this.glows.push(glow);
+    panels.userData.pick = { kind: 'solar' };
+    return { panels, middle };
+  }
+
+  // Panels on a slope of a room's own gable roof (a garage or wing): the biggest such roof, on the slope the owner chose,
+  // else the one that looks to the sun (when neither slope does, the right or the front one).
+  panelsOnWing(wanted, t) {
+    const wing = (this.wingRoofs || []).slice().sort((a, b) => b.L * b.S - a.L * a.S)[0];
+    if (!wing) return null;
+    const sol = this.set.objects.solar;
+    const pair = wing.along ? ['front', 'back'] : ['right', 'left'];
+    const sun = HC.sunnySide(this.set);
+    const side = pair.indexOf(sol.slope) >= 0 ? sol.slope : pair.indexOf(sun) >= 0 ? sun : pair[0];
+    const { panelW, panelH, gap } = this.panelSize();
+    const slopeLen = wing.S / 2 / Math.cos(wing.pitch);
+    const along = Math.floor((wing.L - 1) / (panelW + gap));
+    const up = Math.min(Math.floor((slopeLen - 0.5 + gap) / (panelH + gap)), sol.perRow ? 6 : 3); // 0.3 m from the eaves, 0.2 m from the ridge
+    if (along < 1 || up < 1) return null;
+    const { cols, rows, target } = this.panelGrid(wanted, along, up);
+    const { panels, middle } = this.panelBlock(t, cols, rows, target, panelW, panelH, gap, 0, false, 0.3);
+    // Slope frame, as on the roof of the house: origin on the eave edge, local -z up the slope, local y out of the roof
+    const holder = new THREE.Group();
+    holder.position.set(wing.x, wing.y, wing.z);
+    holder.rotation.y = { front: 0, back: Math.PI, left: -Math.PI / 2, right: Math.PI / 2 }[side];
+    const slope = new THREE.Group();
+    slope.position.set(0, wing.lift, wing.S / 2);
+    slope.rotation.x = wing.pitch;
+    slope.add(panels);
+    holder.add(slope);
+    holder.userData.pick = { kind: 'solar' };
+    this.root.add(holder);
+    this.liftWith.push(holder);
+    return { panels, middle, centre: 0, wing: true };
   }
 
   // Panels on one face of the roof: as many as asked and as fit (0: as many as fit nicely).
@@ -1681,10 +1785,7 @@ class House3D {
     const info = this.roofInfo;
     let shiftX = 0; // where the panels sit along the slope: in the middle, or beside a dormer
     const group = new THREE.Group();
-    const panelW = 1.05; const panelH = 1.72; const gap = 0.04;
-    if (!this.panelMat) this.panelMat = new THREE.MeshPhysicalMaterial({ map: this.M.tx.panel, roughness: 0.18, metalness: 0.3, envMapIntensity: 1.3, clearcoat: 0.6 });
-    const panelMat = this.panelMat;
-    const frame = mat(t.panelFrame);
+    const { panelW, panelH, gap } = this.panelSize();
     let cols; let rows; let along; let up;
     let target = wanted;
     // On a flat roof with both directions: rows that lean in turn to the east and the west
@@ -1729,42 +1830,11 @@ class House3D {
       along = Math.max(1, Math.floor((length - 1 - hipCut * slope) / (panelW + gap)));
       if (sideways && this.set.roof === 'hip') { along = Math.max(1, Math.floor(along * 0.5)); up = Math.min(up, 2); }
     }
-    up = Math.min(up, 3);
-    if (target > 0) { cols = Math.min(along, Math.ceil(target / up)); rows = Math.min(up, Math.ceil(target / cols)); } else { cols = along; rows = Math.min(up, 2); target = cols * rows; }
-    const panels = new THREE.Group();
+    const perRow = this.set.objects.solar.perRow;
+    up = Math.min(up, perRow ? 6 : 3);
+    ({ cols, rows, target } = this.panelGrid(target, along, up));
+    const { panels, middle: midGlow } = this.panelBlock(t, cols, rows, target, panelW, panelH, gap, shiftX, tent);
     this.liftWith.push(panels);
-    let n = 0;
-    for (let r = 0; r < rows; r++) {
-      for (let c = 0; c < cols && n < target; c++, n++) {
-        const x = shiftX + (c - (cols - 1) / 2) * (panelW + gap);
-        const s = 0.5 + r * (panelH + gap) + panelH / 2 - (tent ? 0.5 + (rows * (panelH + gap)) / 2 : 0);
-        const p = new THREE.Mesh(new THREE.BoxGeometry(panelW, 0.04, panelH), panelMat);
-        p.position.set(x, 0.06, -s);
-        p.castShadow = true;
-        const edge = new THREE.Mesh(new THREE.BoxGeometry(panelW + 0.02, 0.03, panelH + 0.02), frame);
-        edge.position.set(x, 0.04, -s);
-        if (tent) { p.rotation.x = r % 2 ? 0.17 : -0.17; edge.rotation.x = p.rotation.x; }
-        panels.add(edge, p);
-      }
-    }
-    // The glow underneath: stronger the more the panels make
-    // a soft spill of warm light around the panels, fading out (not a hard frame)
-    const gw = cols * (panelW + gap) + 1.6; const gh = rows * (panelH + gap) + 1.6;
-    const glowTex = (() => {
-      const c = document.createElement('canvas'); c.width = 128; c.height = 128;
-      const g2 = c.getContext('2d');
-      const gr = g2.createRadialGradient(64, 64, 10, 64, 64, 64);
-      gr.addColorStop(0, 'rgba(255,255,255,1)'); gr.addColorStop(0.55, 'rgba(255,255,255,0.55)'); gr.addColorStop(1, 'rgba(255,255,255,0)');
-      g2.fillStyle = gr; g2.fillRect(0, 0, 128, 128);
-      return new THREE.CanvasTexture(c);
-    })();
-    const glow = new THREE.Mesh(new THREE.PlaneGeometry(gw, gh), new THREE.MeshBasicMaterial({ color: '#ffc23d', alphaMap: glowTex, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }));
-    glow.rotation.x = -Math.PI / 2;
-    const middle = tent ? 0 : -(0.5 + (rows * (panelH + gap)) / 2);
-    glow.position.set(shiftX, 0.03, middle);
-    panels.add(glow);
-    this.glows.push(glow);
-    panels.userData.pick = { kind: 'solar' };
 
     if (side === 'top') {
       if (tent) {
@@ -1793,7 +1863,7 @@ class House3D {
       holder.add(slope);
       this.roofGroup.add(holder);
     }
-    return { panels, middle, centre: shiftX };
+    return { panels, middle: midGlow, centre: shiftX };
   }
 
   buildGrid(t, W, D, meter, ms) {
@@ -2208,7 +2278,17 @@ class House3D {
       const total = e.airco.reduce((s, x) => s + (x.on ? x.watts || 0 : 0), 0);
       if (this.aircoFan) this.aircoFan.on = a.on === true;
       this.setCard('airco', T.airco, a.on ? (total ? fmtW(total, lang) : T.on) : (typeof a.temperature === 'number' ? `${a.temperature.toLocaleString(lang)}°` : T.off), { idle: !a.on });
-    } else this.setCard('airco', T.airco, '–', { idle: true });
+    } else {
+      // An air conditioner that Energy does not know (a split unit that Homey classes as a heater): the card shows what the device itself says
+      const list = devices instanceof Map ? HC.aircoIds(plan, devices).map((id) => devices.get(id)).filter(Boolean) : [];
+      const d = list.find((x) => x.caps && x.caps.onoff === true) || list[0];
+      if (d) {
+        const on = !!(d.caps && d.caps.onoff === true);
+        const temp = d.caps && typeof d.caps.measure_temperature === 'number' ? d.caps.measure_temperature : null;
+        if (this.aircoFan) this.aircoFan.on = on;
+        this.setCard('airco', T.airco, on ? T.on : (temp !== null ? `${temp.toLocaleString(lang)}°` : T.off), { idle: !on });
+      } else this.setCard('airco', T.airco, '–', { idle: true });
+    }
     this.setCard('home', T.home, fmtW(e.homeW, lang));
     // What was used today; the meter itself only while that is not known
     if (this.cards.boiler) {
