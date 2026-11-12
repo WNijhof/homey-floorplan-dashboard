@@ -789,3 +789,38 @@ test('an air conditioner meter without a switch runs while it draws power, and t
   assert.strictEqual(running.watts, 640);
   assert.strictEqual(list(640).find((x) => x.id === 'a').on, false, 'a switch that says off stays off');
 });
+
+test('the day of an air conditioner is read from its own power, or else from the meter on its supply', () => {
+  const { aircoPower } = require('../lib/EnergyHub');
+  const dev = (id, name, cls, caps) => ({ id, name, class: cls, capabilitiesObj: Object.fromEntries(Object.entries(caps).map(([k, v]) => [k, { value: v }])) });
+  // Hullie: two units with only a switch and a HomeWizard meter that was given the class air conditioner
+  assert.deepStrictEqual(aircoPower([dev('a', 'Airco', 'airconditioning', { onoff: true }), dev('m', 'Homewizard Airco', 'airconditioning', { measure_power: 1200 })]).map((d) => d.id), ['m']);
+  // units that report nothing (or a fixed 0 W) and a kWh meter named airco on their supply: the meter
+  assert.deepStrictEqual(aircoPower([dev('a', 'Daikin', 'airconditioning', { onoff: true, measure_power: 0 }), dev('k', 'kWh meter airco', 'sensor', { measure_power: 900 }), dev('x', 'Lamp', 'light', { measure_power: 5 })]).map((d) => d.id), ['k']);
+  // without a meter: the units themselves
+  assert.deepStrictEqual(aircoPower([dev('a', 'Daikin', 'airconditioning', { onoff: true })]).map((d) => d.id), ['a']);
+});
+
+test('walls on a garden level follow its wall height: none when it is set to 0', () => {
+  const plan = (wallHeight, height) => ({
+    house: { form: 'plan', front: 'bottom' },
+    levels: [
+      { id: 'l0', name: 'Ground floor', rooms: [{ id: 'r1', name: 'Living room', points: [[0, 0], [1000, 0], [1000, 800], [0, 800]] }] },
+      { id: 'lg', name: 'Tuin', wallHeight, rooms: [{ id: 'g', name: 'Gras', points: [[-500, -900], [1500, -900], [1500, -100], [-500, -100]] }], walls: [{ id: 'w', a: [0, 0], b: [1000, 0], height }] },
+    ],
+  });
+  assert.deepStrictEqual(house.garden(plan(1)).fences, [], 'wall height 0 (kept as 1 cm): no walls round the house');
+  assert.strictEqual(house.garden(plan(50)).fences[0].h, 0.5);
+  assert.strictEqual(house.garden(plan(260)).fences[0].h, 1, 'a normal level: a metre, as before');
+  assert.strictEqual(house.garden(plan(1, 180)).fences[0].h, 1.8, 'a wall with a height of its own keeps it');
+});
+
+test('a room can have a gable roof of its own where nothing stands on it', () => {
+  const plan = { house: { form: 'plan' }, levels: [
+    { id: 'g', name: 'Begane grond', rooms: [{ id: 'h', name: 'Huis', points: [[0, 0], [800, 0], [800, 800], [0, 800]] }, { id: 'gar', name: 'Garage', roof: 'gable', points: [[800, 200], [1150, 200], [1150, 800], [800, 800]] }] },
+    { id: 'e', name: 'Eerste verdieping', rooms: [{ id: 'k', name: 'Kamer', points: [[0, 0], [800, 0], [800, 800], [0, 800]] }] },
+  ] };
+  const roofs = house.shape(plan).form.floors[0].roofs;
+  assert.deepStrictEqual(roofs.map((r) => r.roof), ['gable']);
+  assert.deepStrictEqual([roofs[0].w, roofs[0].d], [3.5, 6]);
+});

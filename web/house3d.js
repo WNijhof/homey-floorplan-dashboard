@@ -150,6 +150,25 @@ function flatPart(sl, b, H) {
   return Object.assign({}, b, { x: (x0 + x1) / 2, z: (z0 + z1) / 2, w: x1 - x0, d: z1 - z0 });
 }
 
+// A gable roof that goes on from the sloping sides of the top storey: when that storey slopes down on exactly the two
+// sides the roof slopes to (a storey half in the roof, under an attic), the roof starts on its knee wall with its pitch,
+// one slope from the eaves to the ridge instead of a second roof on top of the first. The block it covers, in metres:
+// { x, z, w, d, knee, pitch }; null otherwise.
+function roofOnSlope(set, form) {
+  if (!form || set.roof !== 'gable') return null;
+  const shell = form.floors[form.floors.length - 1];
+  const sl = shell && shell.slope;
+  if (!sl || sl.sides.length !== 2) return null;
+  const axis = set.ridge === 'depth' ? 0 : 1;
+  const plus = sl.sides.find((s) => s.n[axis] > 0); const minus = sl.sides.find((s) => s.n[axis] < 0);
+  if (!plus || !minus) return null;
+  const lo = -minus.edge; const hi = plus.edge;
+  if (hi - lo < 2) return null;
+  const m = form.main;
+  const b = axis ? { x: m.x, w: m.w, z: (lo + hi) / 2, d: hi - lo } : { x: (lo + hi) / 2, w: hi - lo, z: m.z, d: m.d };
+  return Object.assign(b, { knee: sl.knee, pitch: (Math.atan(sl.tan) * 180) / Math.PI });
+}
+
 // Points along a line, without the ones where the line goes straight on.
 function straight(pts) {
   const out = [pts[0]];
@@ -842,6 +861,7 @@ class House3D {
     const size = M.tx.wallSize;
     const form = shape.form;
     const entry = this.entry;
+    const onSlope = roofOnSlope(set, form);
     shape.floors.forEach((f, i) => {
       const fg = new THREE.Group();
       fg.userData.pick = { kind: 'level', id: f.levelId };
@@ -963,13 +983,14 @@ class House3D {
           for (const b0 of shell.roofs) {
             const b = shell.slope ? flatPart(shell.slope, b0, f.height) : b0;
             if (!b) continue;
-            if ((b.roof || set.lowRoof) === 'lean' && !b.terrace) low.add(this.buildLeanRoof(b, y1, this.highSide(b, form, i), f.height, set));
+            if (b.roof === 'gable' && !b.terrace) low.add(this.buildWingRoof(b, y1, set));
+            else if ((b.roof || set.lowRoof) === 'lean' && !b.terrace) low.add(this.buildLeanRoof(b, y1, this.highSide(b, form, i), f.height, set));
             else low.add(LOOK.box(b.w + 0.25, 0.25, b.d + 0.25, M.trim, b.x, y1, b.z));
           }
           g.add(low);
           this.liftWith.push(low);
         }
-        if (shell.slope) {
+        if (shell.slope && !onSlope) { // (a roof that goes on from the slope covers it itself)
           const slope = this.buildSlope(shell, y0, f.height, hAt);
           slope.userData.pick = { kind: 'level', id: f.levelId };
           g.add(slope);
@@ -1081,14 +1102,40 @@ class House3D {
       ext.add(win.group);
       g.add(ext);
     }
-    if (!form) return this.buildRoof(t, set, shape, W, D, g, eaves);
+    if (!form) {
+      const roof = this.buildRoof(t, set, shape, W, D, g, eaves);
+      this.roofRooms(set, W, D);
+      return roof;
+    }
+    const topFloor = shape.floors[shape.floors.length - 1];
+    if (onSlope) {
+      // The roof starts on the knee wall of the top storey, with its pitch; the gable ends above that storey's walls
+      const roof = this.buildRoof(t, Object.assign({}, set, { pitch: onSlope.pitch }), shape, onSlope.w, onSlope.d, g, topFloor.base + onSlope.knee, true, { gableFrom: topFloor.height - onSlope.knee });
+      this.roofGroup.position.x = onSlope.x;
+      this.roofGroup.position.z = onSlope.z;
+      this.roofRooms(set, W, D);
+      return roof;
+    }
     // Under a sloping side of the top storey the flat roof only covers where the ceiling is level
     const topShell = form.floors[form.floors.length - 1];
-    const main = (topShell.slope && flatPart(topShell.slope, form.main, shape.floors[shape.floors.length - 1].height)) || form.main;
+    const main = (topShell.slope && flatPart(topShell.slope, form.main, topFloor.height)) || form.main;
     const roof = this.buildRoof(t, set, shape, main.w, main.d, g, eaves);
     this.roofGroup.position.x = main.x;
     this.roofGroup.position.z = main.z;
+    this.roofRooms(set, W, D);
     return roof;
+  }
+
+  // The windows in the roof (dormer, ridge raise) light with the room behind them, like the windows in the walls
+  roofRooms(set, W, D) {
+    const rg = this.roofGroup;
+    if (!rg || !this.roofLights || !this.roofLights.length) return;
+    const level = (this.plan.levels || []).find((l) => l.id === this.roofLights[0].w.levelId);
+    if (!level) return;
+    for (const { w, x, z } of this.roofLights) {
+      const p = new THREE.Vector3(x, 0, z).applyEuler(rg.rotation).add(rg.position);
+      w.room = HC.roomBehind(level, set, Math.min(0.97, Math.max(0.03, p.x / W + 0.5)), Math.min(0.97, Math.max(0.03, p.z / D + 0.5)));
+    }
   }
 
   // The sloping roof of a storey with a sloping side, over its blocks where the ceiling is lower than the walls: a
@@ -1136,7 +1183,8 @@ class House3D {
 
   // The roof in its own frame: length L along x, span S along z; turned when the ridge runs front to back.
   // live: the windows in the roof light up with the lamps of the top storey (not so for a neighbour's roof)
-  buildRoof(t, set, shape, W, D, parent, eaves, live = true) {
+  // opts.gableFrom: the brick gable ends start that high above the eaves (the walls of the storey below fill the rest)
+  buildRoof(t, set, shape, W, D, parent, eaves, live = true, opts = {}) {
     const M = this.M;
     const turned = set.ridge === 'depth' && set.roof !== 'flat';
     const L = turned ? D : W; const S = turned ? W : D;
@@ -1157,9 +1205,18 @@ class House3D {
     const T = LOOK.TILE_SIZE;
     const lift = 0.12; // roof thickness above the walls
     let top = eaves;
+    let chimneyBox = null; // the slope with the chimney and where it stands along the ridge, for the solar panels
     const add = (m) => { m.userData.pick = pick; rg.add(m); return m; };
     // A window of the roof is that of the top storey: it shines when a lamp there is on
-    const shining = (glass) => { if (live) this.windows.push({ levelId: pick.id, room: null, glass, haloMat: LOOK.lightMaterial('#ffb765', 0), poolMat: LOOK.lightMaterial('#ffb765', 0) }); return glass; };
+    // (x, z: where it is on the roof, so that roofRooms can find the room behind it)
+    if (live) this.roofLights = [];
+    const shining = (glass, x, z) => {
+      if (!live) return glass;
+      const w = { levelId: pick.id, room: null, glass, haloMat: LOOK.lightMaterial('#ffb765', 0), poolMat: LOOK.lightMaterial('#ffb765', 0) };
+      this.windows.push(w);
+      if (x !== undefined) this.roofLights.push({ w, x, z });
+      return glass;
+    };
     if (set.roof === 'flat') {
       // Parapet with an aluminium coping, a gravel roof inside
       const h = 0.45;
@@ -1182,8 +1239,12 @@ class House3D {
         for (const [ax, az] of [[x1, z1], [x1, z0], [x0, z1], [x0, z0]]) rg.add(LOOK.bar([ax, -drop + lift + 0.04, az], [Math.sign(ax) * r, rise + lift + 0.05, 0], 0.06, M.roof));
       } else {
         // the gable ends in brick, with white verge boards along the slopes
-        add(LOOK.poly([[-L / 2, 0, -S / 2], [-L / 2, 0, S / 2], [-L / 2, rise, 0]], M.wall, M.tx.wallSize));
-        add(LOOK.poly([[L / 2, 0, S / 2], [L / 2, 0, -S / 2], [L / 2, rise, 0]], M.wall, M.tx.wallSize));
+        const g0 = Math.max(0, opts.gableFrom || 0);
+        if (g0 < rise - 0.05) {
+          const zh = (S / 2) * (1 - g0 / rise);
+          add(LOOK.poly([[-L / 2, g0, -zh], [-L / 2, g0, zh], [-L / 2, rise, 0]], M.wall, M.tx.wallSize));
+          add(LOOK.poly([[L / 2, g0, zh], [L / 2, g0, -zh], [L / 2, rise, 0]], M.wall, M.tx.wallSize));
+        }
         for (const x of [x0, x1]) {
           rg.add(LOOK.bar([x, -drop + lift - 0.05, z1], [x, rise + lift - 0.05, 0], 0.05, M.trim, true));
           rg.add(LOOK.bar([x, -drop + lift - 0.05, z0], [x, rise + lift - 0.05, 0], 0.05, M.trim, true));
@@ -1203,6 +1264,7 @@ class House3D {
         if (set.dormer && (set.dormerSize === 'full' || set.dormerSize === 'ridge') && cz !== 0) cz = set.dormerAt === 'front' ? -S / 4 : S / 4;
         const ch = LOOK.box(0.6, rise * 0.5 + 0.9, 0.6, M.wall, cx, rise * 0.5 + lift - 0.2, cz);
         add(ch);
+        if (cz !== 0) chimneyBox = { side: this.dormerSide(turned, cz > 0), x0: cx - 0.3, x1: cx + 0.3 };
         rg.add(LOOK.box(0.72, 0.08, 0.72, M.sill, cx, rise + lift + 0.7, cz));
       }
       top = eaves + rise + lift;
@@ -1231,12 +1293,11 @@ class House3D {
       rg.add(LOOK.bar([x0, yTop + 0.05, 0], [x1, yTop + 0.05, 0], 0.09, M.roof));
       // roof windows in the lifted slope
       const n = Math.max(1, Math.round(L / 3));
-      const winMat = shining(M.glass());
       for (let i = 0; i < n; i++) {
         const wx = -L / 2 + (i + 0.5) * (L / n);
         const along = 0.45; // halfway up the slope
         const wz = ze * (1 - along); const wy = (-drop + lift) + (yTop + drop - lift) * along + 0.03;
-        const win = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1.1), winMat);
+        const win = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 1.1), shining(M.glass(), wx, wz));
         win.position.set(wx, wy, wz);
         // lying in the slope, facing out of it
         const h = yTop + drop - lift;
@@ -1265,13 +1326,15 @@ class House3D {
         const dormer = LOOK.box(dw, yf + dh, zr - zf, M.trim, dx, 0, mz((zf + zr) / 2));
         add(dormer);
         dormerBox = { side: this.dormerSide(turned, front), x0: dx - dw / 2, x1: dx + dw / 2 };
-        const glass = shining(M.glass());
-        // one window, or a row of them across a wide dormer
+        // one window, or a row of them across a wide dormer, each lit by the room behind it
         const n = full ? Math.max(1, Math.round(dw / 2.4)) : 1;
         const ww = full ? Math.min(1.6, (dw / n) * 0.7) : dw * 0.7;
         for (let i = 0; i < n; i++) {
+          const wx = dx - dw / 2 + (i + 0.5) * (dw / n);
+          // (the room is looked up a little inside the dormer, behind the window)
+          const glass = shining(M.glass(), wx, mz(zf + 0.8));
           const win = LOOK.windowPart(ww, dh * 0.75, { frame: M.frame, glass, sill: M.sill, reveal: M.reveal });
-          win.group.position.set(dx - dw / 2 + (i + 0.5) * (dw / n), yf + dh * 0.5, mz(zf - 0.005)); win.group.rotation.y = front ? 0 : Math.PI;
+          win.group.position.set(wx, yf + dh * 0.5, mz(zf - 0.005)); win.group.rotation.y = front ? 0 : Math.PI;
           rg.add(win.group);
         }
         const capA = ovA ? 0.125 : 0; const capB = ovB ? 0.125 : 0; // no overhang against a neighbour
@@ -1279,7 +1342,7 @@ class House3D {
       }
     }
     this.roofGroup = rg;
-    this.roofInfo = { L, S, rise, pitch, turned, ov, lift, dormer: dormerBox };
+    this.roofInfo = { L, S, rise, pitch, turned, ov, lift, dormer: dormerBox, chimney: chimneyBox };
     return { top, rise };
   }
 
@@ -1340,6 +1403,37 @@ class House3D {
       g.add(face([pt(0, v, y1), pt(run, v, y1), pt(run, v, yLow + rise), pt(flat, v, yLow), pt(0, v, yLow)], [right[0] * s, 0, right[1] * s], M.wall, M.tx.wallSize));
     }
     g.add(face([pt(run - 0.03, -across / 2, y1), pt(run - 0.03, across / 2, y1), pt(run - 0.03, across / 2, yLow + rise), pt(run - 0.03, -across / 2, yLow + rise)], [hN[0], 0, hN[1]], M.wall, M.tx.wallSize));
+    return g;
+  }
+
+  // A gable roof of its own over a block b (a room whose roof is set to gable, such as a wing or a garage with a storey
+  // on it): the ridge along the long side, brick gable ends at the short sides, the pitch of the house roof.
+  buildWingRoof(b, y1, set) {
+    const M = this.M;
+    const g = new THREE.Group();
+    const along = b.w >= b.d; // the ridge along x, else along z
+    const L = along ? b.w : b.d; const S = along ? b.d : b.w;
+    const rise = Math.min((S / 2) * Math.tan(THREE.MathUtils.degToRad(set.roof === 'flat' ? 35 : set.pitch)), 4);
+    const ov = 0.25; const lift = 0.1;
+    const drop = (ov * rise) / (S / 2);
+    // x along the ridge, z across it, y up from the top of the walls
+    const P = (x, y, z) => (along ? [b.x + x, y1 + y, b.z + z] : [b.x + z, y1 + y, b.z + x]);
+    const dir = (x, y, z) => (along ? [x, y, z] : [z, y, x]);
+    const face = (pts, outward, mat, size) => {
+      const a = pts[0]; const q = pts[1]; const c = pts[2];
+      const u = [q[0] - a[0], q[1] - a[1], q[2] - a[2]]; const w = [c[0] - a[0], c[1] - a[1], c[2] - a[2]];
+      const n = [u[1] * w[2] - u[2] * w[1], u[2] * w[0] - u[0] * w[2], u[0] * w[1] - u[1] * w[0]];
+      return LOOK.poly(n[0] * outward[0] + n[1] * outward[1] + n[2] * outward[2] < 0 ? [...pts].reverse() : pts, mat, size);
+    };
+    const x0 = -L / 2 - ov; const x1 = L / 2 + ov;
+    for (const s of [-1, 1]) {
+      const ze = s * (S / 2 + ov);
+      g.add(face([P(x0, lift - drop, ze), P(x1, lift - drop, ze), P(x1, rise + lift, 0), P(x0, rise + lift, 0)], dir(0, 1, s), M.roof, LOOK.TILE_SIZE));
+      g.add(face([P(s * L / 2, 0, -S / 2), P(s * L / 2, 0, S / 2), P(s * L / 2, rise, 0)], dir(s, 0, 0), M.wall, M.tx.wallSize));
+      g.add(LOOK.bar(P(x0, lift - drop - 0.12, ze + s * 0.09), P(x1, lift - drop - 0.12, ze + s * 0.09), 0.07, M.zinc));
+      for (const x of [x0, x1]) g.add(LOOK.bar(P(x, lift - drop - 0.05, ze), P(x, rise + lift - 0.05, 0), 0.05, M.trim, true));
+    }
+    g.add(LOOK.bar(P(x0, rise + lift + 0.05, 0), P(x1, rise + lift + 0.05, 0), 0.09, M.roof));
     return g;
   }
 
@@ -1608,19 +1702,31 @@ class House3D {
       let length = sideways ? info.S : info.L;
       // A dormer on this slope keeps its width: the panels go beside it, on the wider side. Where nothing is left they
       // go on the other slope.
-      const dm = info.dormer && info.dormer.side === side ? info.dormer : null;
-      if (dm) {
+      // The room left beside something on the slope (a dormer, the chimney): its length and middle
+      const beside = (box) => {
         const flip = side === 'back' || (info.turned && side === 'left') ? -1 : 1; // the panels of the back (and left) slope are turned half round
-        const a = Math.min(flip * dm.x0, flip * dm.x1); const b = Math.max(flip * dm.x0, flip * dm.x1);
+        const a = Math.min(flip * box.x0, flip * box.x1); const b = Math.max(flip * box.x0, flip * box.x1);
         const lo = -length / 2 + 0.5; const hi = length / 2 - 0.5;
         const left = a - 0.3 - lo; const right = hi - (b + 0.3);
-        const free = Math.max(left, right);
-        if (free < panelW + gap) return null;
-        length = free + 1; // the margin of the formula below
-        shiftX = left >= right ? (lo + (a - 0.3)) / 2 : ((b + 0.3) + hi) / 2;
+        return { free: Math.max(left, right), middle: left >= right ? (lo + (a - 0.3)) / 2 : ((b + 0.3) + hi) / 2 };
+      };
+      const dm = info.dormer && info.dormer.side === side ? info.dormer : null;
+      if (dm) {
+        const room = beside(dm);
+        if (room.free < panelW + gap) return null;
+        length = room.free + 1; // the margin of the formula below
+        shiftX = room.middle;
+      }
+      up = Math.max(1, Math.floor((slope - 0.8) / (panelH + gap)));
+      // The chimney on this slope: the panels go beside it when they all fit there, else they stay in the middle
+      const ch = !dm && info.chimney && info.chimney.side === side ? info.chimney : null;
+      if (ch) {
+        const room = beside(ch);
+        const fits = Math.floor((room.free - hipCut * slope) / (panelW + gap));
+        const needed = wanted > 0 ? Math.ceil(wanted / Math.min(up, 3)) : Math.floor((length - 1 - hipCut * slope) / (panelW + gap));
+        if (fits >= needed) { length = room.free + 1; shiftX = room.middle; }
       }
       along = Math.max(1, Math.floor((length - 1 - hipCut * slope) / (panelW + gap)));
-      up = Math.max(1, Math.floor((slope - 0.8) / (panelH + gap)));
       if (sideways && this.set.roof === 'hip') { along = Math.max(1, Math.floor(along * 0.5)); up = Math.min(up, 2); }
     }
     up = Math.min(up, 3);

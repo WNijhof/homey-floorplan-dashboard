@@ -278,7 +278,14 @@ export function environment(renderer, dark) {
 export function poly(pts, material, size) {
   const p = pts.map((q) => new THREE.Vector3(q[0], q[1], q[2]));
   const u = p[1].clone().sub(p[0]).normalize();
-  const n = p[1].clone().sub(p[0]).cross(p[2].clone().sub(p[0])).normalize();
+  // The normal from all corners (Newell), not from the first three: those can lie on one line, such as the foot of a
+  // wall under a slope that starts at the floor, and then the texture had no direction and the wall came out grey
+  const n = new THREE.Vector3();
+  for (let i = 0; i < p.length; i++) {
+    const a = p[i]; const b = p[(i + 1) % p.length];
+    n.x += (a.y - b.y) * (a.z + b.z); n.y += (a.z - b.z) * (a.x + b.x); n.z += (a.x - b.x) * (a.y + b.y);
+  }
+  n.normalize();
   const v = n.clone().cross(u).normalize();
   const pos = []; const uv = [];
   const sz = size || [1, 1];

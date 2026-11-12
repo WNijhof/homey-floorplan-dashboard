@@ -398,6 +398,9 @@
     return false;
   }
 
+  // The roofs a room can have of its own where nothing stands on it: flat, sloping (lean-to) or a gable roof of its own
+  const ROOM_ROOFS = ['flat', 'lean', 'gable'];
+
   function planForm(floors, front) {
     const turn = TURNS[front];
     // The sloping sides of a level in the frame of the house: each with the way it faces (n) and how far out its eaves
@@ -477,11 +480,11 @@
         const list = rooms(floors[i]);
         const roofAt = (r, c) => {
           const x = (cols[c] + cols[c + 1]) / 2; const y = (rows[r] + rows[r + 1]) / 2;
-          const k = list.findIndex((room, n) => !outside[i][n] && !openAir[i][n] && (room.roof === 'flat' || room.roof === 'lean') && inPolygon(x, y, polys[i][n]));
+          const k = list.findIndex((room, n) => !outside[i][n] && !openAir[i][n] && ROOM_ROOFS.indexOf(room.roof) >= 0 && inPolygon(x, y, polys[i][n]));
           return k >= 0 ? list[k].roof : '';
         };
         const kinds = plain.map((row, r) => row.map((on, c) => (on ? roofAt(r, c) : null)));
-        const own = ['', 'flat', 'lean'].flatMap((kind) => maskRects(kinds.map((row) => row.map((k) => k === kind))).map((b) => (kind ? Object.assign(box(b), { roof: kind }) : box(b))));
+        const own = ['', ...ROOM_ROOFS].flatMap((kind) => maskRects(kinds.map((row) => row.map((k) => k === kind))).map((b) => (kind ? Object.assign(box(b), { roof: kind }) : box(b))));
         return {
           rects: maskRects(mask).map(box),
           roofs: [...own, ...maskRects(under).map((b) => Object.assign(box(b), { terrace: true }))],
@@ -730,9 +733,14 @@
           out.things.push(thing);
         }
       }
+      // A wall without a height of its own is a metre high, or as high as the walls of the level when those are lower;
+      // a level with its wall height set to (nearly) 0 has no walls in the garden
+      const levelH = Number(l.wallHeight) > 0 && Number(l.wallHeight) < 100 ? Number(l.wallHeight) : 100;
       for (const w of l.walls || []) {
         if (!w.a || !w.b) continue;
-        out.fences.push({ level: l.id, a: at(w.a), b: at(w.b), h: clamp((w.height || 100) / 100, 0.2, 3, 1), t: clamp((w.t || 10) / 100, 0.03, 0.6, 0.1), fence: w.style === 'fence' });
+        const h = Number(w.height) > 0 ? Number(w.height) : levelH;
+        if (h < 10) continue;
+        out.fences.push({ level: l.id, a: at(w.a), b: at(w.b), h: clamp(h / 100, 0.1, 3, 1), t: clamp((w.t || 10) / 100, 0.03, 0.6, 0.1), fence: w.style === 'fence' });
       }
     }
     return out.patches.length || out.plants.length || out.things.length || out.fences.length || out.sheds.length ? out : null;
