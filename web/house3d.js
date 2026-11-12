@@ -860,6 +860,7 @@ class House3D {
     this.floorGroups = [];
     this.liftWith = [];
     this.wingRoofs = [];
+    this.wingWindows = [];
     const size = M.tx.wallSize;
     const form = shape.form;
     const entry = this.entry;
@@ -985,7 +986,7 @@ class House3D {
           for (const b0 of shell.roofs) {
             const b = shell.slope ? flatPart(shell.slope, b0, f.height) : b0;
             if (!b) continue;
-            if (b.roof === 'gable' && !b.terrace) low.add(this.buildWingRoof(b, y1, set));
+            if (b.roof === 'gable' && !b.terrace) low.add(this.buildWingRoof(b, y1, set, f.levelId));
             else if ((b.roof || set.lowRoof) === 'lean' && !b.terrace) low.add(this.buildLeanRoof(b, y1, this.highSide(b, form, i), f.height, set));
             else low.add(LOOK.box(b.w + 0.25, 0.25, b.d + 0.25, M.trim, b.x, y1, b.z));
           }
@@ -1062,7 +1063,7 @@ class House3D {
       this.floorMeshes.push({ levelId: f.levelId, walls });
       this.floorGroups.push({ levelId: f.levelId, group: fg });
     });
-    this.windows = lamps;
+    this.windows = lamps.concat(this.wingWindows);
     // The storey under the roof (a level called attic, or with a sloping roof) gets its name tag too, in the roof
     if (shape.attic && !shape.above) {
       const tag = document.createElement('div');
@@ -1410,15 +1411,16 @@ class House3D {
 
   // A gable roof of its own over a block b (a room whose roof is set to gable, such as a wing or a garage with a storey
   // on it): the ridge along the long side, brick gable ends at the short sides, the pitch of the house roof.
-  buildWingRoof(b, y1, set) {
+  buildWingRoof(b, y1, set, levelId) {
     const M = this.M;
     const g = new THREE.Group();
     const along = b.w >= b.d; // the ridge along x, else along z
     const L = along ? b.w : b.d; const S = along ? b.d : b.w;
     const rise = Math.min((S / 2) * Math.tan(THREE.MathUtils.degToRad(set.roof === 'flat' ? 35 : set.pitch)), 4);
     const ov = 0.25; const lift = 0.1;
-    // (for the solar panels, which can lie on this roof)
-    (this.wingRoofs = this.wingRoofs || []).push({ x: b.x, y: y1, z: b.z, L, S, along, lift, pitch: Math.atan(rise / (S / 2)) });
+    // (for the solar panels, which can lie on this roof; wing.dormer is filled in below)
+    const wing = { x: b.x, y: y1, z: b.z, L, S, along, lift, pitch: Math.atan(rise / (S / 2)), dormer: null };
+    (this.wingRoofs = this.wingRoofs || []).push(wing);
     const drop = (ov * rise) / (S / 2);
     // x along the ridge, z across it, y up from the top of the walls
     const P = (x, y, z) => (along ? [b.x + x, y1 + y, b.z + z] : [b.x + z, y1 + y, b.z + x]);
@@ -1438,7 +1440,38 @@ class House3D {
       for (const x of [x0, x1]) g.add(LOOK.bar(P(x, lift - drop - 0.05, ze), P(x, rise + lift - 0.05, 0), 0.05, M.trim, true));
     }
     g.add(LOOK.bar(P(x0, rise + lift + 0.05, 0), P(x1, rise + lift + 0.05, 0), 0.09, M.roof));
+    if (b.dormer) this.wingDormer(g, b, wing, { P, rise, S, L, lift, levelId });
     return g;
+  }
+
+  // A dormer on one slope of a gable roof of its own, like the one on the roof of the house: a box with a flat cap that
+  // stands back from the eaves, one window in front lit by the room that asked for it. It sits in the middle of the ridge.
+  // The slope is the one the owner chose when the roof has it (front or back with the ridge along the front, else left or right).
+  wingDormer(g, b, wing, { P, rise, S, L, lift, levelId }) {
+    const M = this.M;
+    const tan = rise / (S / 2);
+    const pair = wing.along ? ['front', 'back'] : ['right', 'left'];
+    const side = pair.indexOf(b.dormer) >= 0 ? b.dormer : pair[0];
+    const s = side === 'front' || side === 'right' ? 1 : -1; // which side of the ridge, in the frame of the roof
+    const dw = Math.max(1.2, Math.min(2.4, L * 0.4));
+    const zf = s * (S / 2 - 0.6); // the front face, set back from the eaves
+    const yf = 0.6 * tan + lift;
+    const dh = Math.min(1.5, (rise - yf) * 0.75);
+    const zr = (rise + lift - yf - dh) / tan; // where its flat cap meets the slope, towards the ridge
+    if (dh < 0.55 || zr > S / 2 - 0.9) return; // the roof is too low or too narrow for a dormer
+    const box = (w, h, d, mat, x, y, z) => LOOK.box(wing.along ? w : d, h, wing.along ? d : w, mat, ...P(x, y, z));
+    const depth = Math.abs(zf) - zr;
+    const mid = s * ((Math.abs(zf) + zr) / 2);
+    g.add(box(dw, yf + dh, depth, M.trim, 0, 0, mid));
+    const w = { levelId, room: b.room || null, glass: M.glass(), haloMat: LOOK.lightMaterial('#ffb765', 0), poolMat: LOOK.lightMaterial('#ffb765', 0) };
+    if (levelId) this.wingWindows.push(w); // (joins the windows of the storeys when they are done)
+    const win = LOOK.windowPart(dw * 0.7, dh * 0.75, { frame: M.frame, glass: w.glass, sill: M.sill, reveal: M.reveal });
+    const at = P(0, yf + dh * 0.5, zf + s * 0.005);
+    win.group.position.set(at[0], at[1], at[2]);
+    win.group.rotation.y = Math.atan2(wing.along ? 0 : s, wing.along ? s : 0);
+    g.add(win.group);
+    g.add(box(dw, 0.14, depth + 0.25, new THREE.MeshStandardMaterial({ color: '#3a3d42', roughness: 0.6 }), 0, yf + dh, mid));
+    wing.dormer = { side, s, x0: -dw / 2, x1: dw / 2 };
   }
 
   buildNeighbours(t, set, shape, W, D) {
@@ -1757,14 +1790,29 @@ class House3D {
     const sol = this.set.objects.solar;
     const pair = wing.along ? ['front', 'back'] : ['right', 'left'];
     const sun = HC.sunnySide(this.set);
-    const side = pair.indexOf(sol.slope) >= 0 ? sol.slope : pair.indexOf(sun) >= 0 ? sun : pair[0];
+    const chosen = pair.indexOf(sol.slope) >= 0;
+    let side = chosen ? sol.slope : pair.indexOf(sun) >= 0 ? sun : pair[0];
+    // A dormer takes the middle of its slope: without a choice of the owner the panels go on the other slope
+    if (!chosen && wing.dormer && wing.dormer.side === side) side = pair[1 - pair.indexOf(side)];
     const { panelW, panelH, gap } = this.panelSize();
     const slopeLen = wing.S / 2 / Math.cos(wing.pitch);
-    const along = Math.floor((wing.L - 1) / (panelW + gap));
+    // On the slope of the dormer the panels go beside it, on the wider side (as on the roof of the house)
+    let length = wing.L; let shiftX = 0;
+    const dm = wing.dormer && wing.dormer.side === side ? wing.dormer : null;
+    if (dm) {
+      const flip = { front: 1, back: -1, right: -1, left: 1 }[side]; // the slope frame runs along the ridge the other way on these slopes
+      const a = Math.min(flip * dm.x0, flip * dm.x1); const e = Math.max(flip * dm.x0, flip * dm.x1);
+      const lo = -wing.L / 2 + 0.5; const hi = wing.L / 2 - 0.5;
+      const left = a - 0.3 - lo; const right = hi - (e + 0.3);
+      if (Math.max(left, right) < panelW + gap) return null;
+      length = Math.max(left, right) + 1;
+      shiftX = left >= right ? (lo + a - 0.3) / 2 : (e + 0.3 + hi) / 2;
+    }
+    const along = Math.floor((length - 1) / (panelW + gap));
     const up = Math.min(Math.floor((slopeLen - 0.5 + gap) / (panelH + gap)), sol.perRow ? 6 : 3); // 0.3 m from the eaves, 0.2 m from the ridge
     if (along < 1 || up < 1) return null;
     const { cols, rows, target } = this.panelGrid(wanted, along, up);
-    const { panels, middle } = this.panelBlock(t, cols, rows, target, panelW, panelH, gap, 0, false, 0.3);
+    const { panels, middle } = this.panelBlock(t, cols, rows, target, panelW, panelH, gap, shiftX, false, 0.3);
     // Slope frame, as on the roof of the house: origin on the eave edge, local -z up the slope, local y out of the roof
     const holder = new THREE.Group();
     holder.position.set(wing.x, wing.y, wing.z);
@@ -1777,7 +1825,7 @@ class House3D {
     holder.userData.pick = { kind: 'solar' };
     this.root.add(holder);
     this.liftWith.push(holder);
-    return { panels, middle, centre: 0, wing: true };
+    return { panels, middle, centre: shiftX, wing: true };
   }
 
   // Panels on one face of the roof: as many as asked and as fit (0: as many as fit nicely).

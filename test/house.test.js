@@ -848,6 +848,19 @@ test('walls on a garden level follow its wall height: none when it is set to 0',
   assert.strictEqual(house.garden(plan(1, 180)).fences[0].h, 1.8, 'a wall with a height of its own keeps it');
 });
 
+test('a room with a gable roof of its own can ask for a dormer on one slope', () => {
+  const make = (dormer) => ({ house: { form: 'plan' }, levels: [
+    { id: 'g', name: 'Begane grond', rooms: [{ id: 'h', name: 'Huis', points: [[0, 0], [800, 0], [800, 800], [0, 800]] }, { id: 'gar', name: 'Garage', roof: 'gable', dormer, points: [[800, 200], [1150, 200], [1150, 800], [800, 800]] }] },
+    { id: 'e', name: 'Eerste verdieping', rooms: [{ id: 'k', name: 'Kamer', points: [[0, 0], [800, 0], [800, 800], [0, 800]] }] },
+  ] });
+  const roof = (plan) => house.shape(plan).form.floors[0].roofs[0];
+  assert.deepStrictEqual([roof(make('left')).dormer, roof(make('left')).room], ['left', 'gar']);
+  assert.strictEqual(roof(make('sideways')).dormer, undefined, 'an unknown slope is ignored');
+  assert.strictEqual(roof(make('')).dormer, undefined);
+  const flat = make('left'); flat.levels[0].rooms[1].roof = 'flat';
+  assert.strictEqual(roof(flat).dormer, undefined, 'only a gable roof carries a dormer');
+});
+
 test('a room can have a gable roof of its own where nothing stands on it', () => {
   const plan = { house: { form: 'plan' }, levels: [
     { id: 'g', name: 'Begane grond', rooms: [{ id: 'h', name: 'Huis', points: [[0, 0], [800, 0], [800, 800], [0, 800]] }, { id: 'gar', name: 'Garage', roof: 'gable', points: [[800, 200], [1150, 200], [1150, 800], [800, 800]] }] },
