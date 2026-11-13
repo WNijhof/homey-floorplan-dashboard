@@ -59,7 +59,7 @@
     objects.solar.turn = pick(o.solar && o.solar.turn, ['portrait', 'landscape'], 'portrait'); // the long side of a panel up the slope, or along it
     objects.solar.perRow = Math.round(clamp(o.solar && o.solar.perRow, 0, 30, 0)); // panels in a row (3 3 3 1 for 10 panels at 3); 0: as many as fit
     objects.solar.roof = pick(o.solar && o.solar.roof, ['house', 'wing'], 'house'); // wing: on the roof of a room with its own gable roof
-    objects.solar.slope = pick(o.solar && o.solar.slope, ['auto', 'left', 'right', 'front', 'back'], 'auto'); // which slope of that roof
+    objects.solar.slope = pick(o.solar && o.solar.slope, ['auto', 'left', 'right', 'front', 'back'], 'auto'); // which slope of that roof, or the side the panels on a flat roof look at
     objects.battery.place = pick(o.battery && o.battery.place, BATTERY_PLACES, 'carport');
     objects.battery.side = pick(o.battery && o.battery.side, ['auto', 'left', 'right'], 'auto'); // the wall it stands against
     objects.heatpump.side = pick(o.heatpump && o.heatpump.side, ['auto', 'left', 'right'], 'auto'); // the side of the front it stands at
@@ -406,6 +406,8 @@
   const ROOM_ROOFS = ['flat', 'lean', 'gable'];
   // The slope of a room's own gable roof that gets a dormer, seen from the front of the house
   const ROOM_DORMERS = ['left', 'right', 'front', 'back'];
+  // The way a room's own sloping roof falls (towards that side of the house); without a choice it falls away from the house
+  const ROOM_FALLS = ['left', 'right', 'front', 'back'];
 
   function planForm(floors, front) {
     const turn = TURNS[front];
@@ -488,7 +490,13 @@
           const x = (cols[c] + cols[c + 1]) / 2; const y = (rows[r] + rows[r + 1]) / 2;
           return list.findIndex((room, n) => !outside[i][n] && !openAir[i][n] && ROOM_ROOFS.indexOf(room.roof) >= 0 && inPolygon(x, y, polys[i][n]));
         };
-        const roofAt = (r, c) => { const k = roomAt(r, c); return k >= 0 ? list[k].roof : ''; };
+        // A sloping roof (lean-to) can be told which way it falls, seen from the front of the house: it then goes by its own
+        // kind, 'lean:front', so rooms that fall differently stay apart
+        const roofAt = (r, c) => {
+          const k = roomAt(r, c);
+          if (k < 0) return '';
+          return list[k].roof === 'lean' && ROOM_FALLS.indexOf(list[k].fall) >= 0 ? `lean:${list[k].fall}` : list[k].roof;
+        };
         const kinds = plain.map((row, r) => row.map((on, c) => (on ? roofAt(r, c) : null)));
         // A gable roof of its own can carry a dormer, asked for on one of the rooms under it: { dormer: slope, room: its id }
         const withDormer = (b) => {
@@ -501,7 +509,12 @@
           }
           return out;
         };
-        const own = ['', ...ROOM_ROOFS].flatMap((kind) => maskRects(kinds.map((row) => row.map((k) => k === kind))).map((b) => (kind === 'gable' ? withDormer(b) : kind ? Object.assign(box(b), { roof: kind }) : box(b))));
+        const own = ['', ...ROOM_ROOFS, ...ROOM_FALLS.map((f) => `lean:${f}`)].flatMap((kind) => maskRects(kinds.map((row) => row.map((k) => k === kind))).map((b) => {
+          if (kind === 'gable') return withDormer(b);
+          if (!kind) return box(b);
+          const [roof, fall] = kind.split(':');
+          return Object.assign(box(b), { roof }, fall ? { fall } : {});
+        }));
         return {
           rects: maskRects(mask).map(box),
           roofs: [...own, ...maskRects(under).map((b) => Object.assign(box(b), { terrace: true }))],
@@ -685,6 +698,8 @@
     ['gravel', /(grind|gravel|split|kiezel|schelpen)/i],
   ];
   const PLANT = /(plant|cactus|tree|boom|struik|shrub|bush|haag|hedge|bloem|flower)/i;
+  // A room with one of these names on a garden level is the outline of the plot, not a patch of ground: the hedges follow it
+  const PLOT = /(perceel|kavel|\berf\b|\bplot\b|\blot\b|parcel|property|terrein|boundary)/i;
 
   /**
    * The garden drawn on the levels called garden, terrace, driveway and the like, in metres around the middle of
@@ -700,11 +715,12 @@
     const [cx, cz] = sh.form.origin;
     const at = (p) => { const q = turn(p); return [Math.round(q[0] - cx) / 100, Math.round(q[1] - cz) / 100]; };
     const sideways = set.front === 'left' || set.front === 'right';
-    const out = { patches: [], plants: [], things: [], fences: [], sheds: [] };
+    const out = { patches: [], plants: [], things: [], fences: [], sheds: [], plots: [] };
     for (const l of (plan && plan.levels) || []) {
       if (!isGardenLevel(l)) continue;
       for (const r of l.rooms || []) {
         if ((r.points || []).length < 3) continue;
+        if (PLOT.test(r.name || '')) { out.plots.push({ level: l.id, id: r.id, name: r.name || '', pts: r.points.map(at) }); continue; }
         const kind = outbuildingKind(r.name);
         if (kind) {
           // A room called shed, garage or the like is a small building with walls and a flat roof, its doors and
@@ -760,7 +776,7 @@
         out.fences.push({ level: l.id, a: at(w.a), b: at(w.b), h: clamp(h / 100, 0.1, 3, 1), t: clamp((w.t || 10) / 100, 0.03, 0.6, 0.1), fence: w.style === 'fence' });
       }
     }
-    return out.patches.length || out.plants.length || out.things.length || out.fences.length || out.sheds.length ? out : null;
+    return out.patches.length || out.plants.length || out.things.length || out.fences.length || out.sheds.length || out.plots.length ? out : null;
   }
 
   /** Whether an object is on the house: chosen on or off, or (auto) when its kind of device is found. */
@@ -780,6 +796,18 @@
     const sides = set.roof === 'hip' ? ['front', 'back', 'left', 'right'] : along;
     const off = (a) => Math.abs(((a - 180 + 540) % 360) - 180);
     return sides.slice().sort((a, b) => off(dir[a]) - off(dir[b]))[0];
+  }
+
+  /**
+   * The side of the house the panels on a flat roof look at, 'front', 'back', 'left' or 'right' as seen from the front:
+   * the one the owner chose (Dakvlak/slope), else the one nearest to the south.
+   */
+  function flatSide(set) {
+    const chosen = set.objects.solar.slope;
+    if (['front', 'back', 'left', 'right'].indexOf(chosen) >= 0) return chosen;
+    const dir = { front: set.facing, back: (set.facing + 180) % 360, left: (set.facing + 90) % 360, right: (set.facing + 270) % 360 };
+    const off = (a) => Math.abs(((a - 180 + 540) % 360) - 180);
+    return ['front', 'back', 'left', 'right'].sort((a, b) => off(dir[a]) - off(dir[b]))[0];
   }
 
   /** The roof faces with panels: the sunny one, or both halves of the roof (a flat roof stays one face, with rows in two directions). */
@@ -924,7 +952,8 @@
     const lampLook = (it) => {
       const out = {};
       if (Number.isFinite(it.z) && it.z > 0) out.h = clamp(it.z / 100, 0.1, 8, 2.2);
-      if (it.fixture === 'fx:strip') { out.strip = true; out.len = clamp((it.w || 120) / 100, 0.2, 8, 1.2); }
+      // (the model is stored as fx-strip: the models turn the colon of their ids into a dash)
+      if (it.fixture === 'fx-strip' || it.fixture === 'fx:strip') { out.strip = true; out.len = clamp((it.w || 120) / 100, 0.2, 8, 1.2); }
       return out;
     };
     for (const l of (plan && plan.levels) || []) {
@@ -1346,5 +1375,5 @@
     return { svg: ground + parts.join('') + tags.join('') + cards.svg, viewBox: vb };
   }
 
-  return { wallSpotOf, meterRoomSpot, deviceWallSpot, aircoIds, levelRole, ROLES, stackOf, STACK_X, STACK_Y, settings, shape, shows, sunnySide, solarSides, sunPosition, isNight, outdoorLamps, roomBehind, weatherKind, drawing, photoView, freeSide, outbuildingKind, outbuildings, yard, garden, OBJECTS, TYPES, ROOFS, PLACES, OUT_PLACES, OUT_ROOFS, DOOR_AT, ROOM_DORMERS };
+  return { wallSpotOf, meterRoomSpot, deviceWallSpot, aircoIds, levelRole, ROLES, stackOf, STACK_X, STACK_Y, settings, shape, shows, sunnySide, flatSide, solarSides, sunPosition, isNight, outdoorLamps, roomBehind, weatherKind, drawing, photoView, freeSide, outbuildingKind, outbuildings, yard, garden, OBJECTS, TYPES, ROOFS, PLACES, OUT_PLACES, OUT_ROOFS, DOOR_AT, ROOM_DORMERS, ROOM_FALLS };
 }));

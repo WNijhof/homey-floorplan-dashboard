@@ -316,9 +316,21 @@ class FloorplanApp extends Homey.App {
     // Keep only primitive fields: the location (city, country) and screensaver data are not needed on a dashboard.
     const pick = (o) => Object.fromEntries(Object.entries(o || {})
       .filter(([k, v]) => !['city', 'country', 'screensaver', 'screensaverId', 'videoId', 'id'].includes(k) && v !== null && typeof v !== 'object'));
+    // The hours of the forecast carry the icon of the day ("clear_day") whatever the time: say for each hour whether the
+    // sun is down at that time, from the place of the Homey, so the dashboard can draw a moon.
+    const lat = this.homey.geolocation.getLatitude();
+    const lon = this.homey.geolocation.getLongitude();
+    const located = typeof lat === 'number' && typeof lon === 'number';
+    const hour = (h) => {
+      const item = pick(h);
+      const when = item.time != null ? item.time : (item.when || item.date || item.datetime || item.timestamp);
+      const at = when != null ? new Date(typeof when === 'number' && when < 1e12 ? when * 1000 : when) : null;
+      if (located && at && !isNaN(at)) item.night = house.isNight(lat, lon, at);
+      return item;
+    };
     const data = {
       now: pick(now),
-      hourly: (now.forecastHourly || []).map(pick),
+      hourly: (now.forecastHourly || []).map(hour),
       daily: (now.forecast || []).map(pick),
     };
     this.weatherCache = { at: Date.now(), data };

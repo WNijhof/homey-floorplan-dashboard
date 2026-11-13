@@ -792,7 +792,7 @@ test('a roller shutter linked to a window is passed on, and a lamp keeps the hei
   const lamps = stackedPlan();
   lamps.levels.push({ id: 'tuin', name: 'Tuin', role: 'garden', rooms: [{ id: 't', name: 'Tuin', points: [[-300, 1000], [1100, 1000], [1100, 1400], [-300, 1400]] }], openings: [], items: [
     { id: 'l1', kind: 'device', deviceId: 'a', x: 800, y: 300, z: 170 },
-    { id: 'l2', kind: 'device', deviceId: 'b', x: 800, y: 350, z: 255, fixture: 'fx:strip', w: 150 },
+    { id: 'l2', kind: 'device', deviceId: 'b', x: 800, y: 350, z: 255, fixture: 'fx-strip', w: 150 },
   ] });
   const spots = house.outdoorLamps(lamps, new Map([['a', { id: 'a', name: 'Wandlamp', cls: 'light' }], ['b', { id: 'b', name: 'Strip', cls: 'light' }]])).spots;
   const a = spots.find((s) => s.id === 'a'); const b = spots.find((s) => s.id === 'b');
@@ -869,4 +869,63 @@ test('a room can have a gable roof of its own where nothing stands on it', () =>
   const roofs = house.shape(plan).form.floors[0].roofs;
   assert.deepStrictEqual(roofs.map((r) => r.roof), ['gable']);
   assert.deepStrictEqual([roofs[0].w, roofs[0].d], [3.5, 6]);
+});
+
+test('a room with a sloping roof can say which way it falls', () => {
+  const make = (fall, roof = 'lean') => ({ house: { form: 'plan' }, levels: [
+    { id: 'g', name: 'Begane grond', rooms: [{ id: 'h', name: 'Huis', points: [[0, 0], [800, 0], [800, 800], [0, 800]] }, { id: 'hut', name: 'Tuinhuis', roof, fall, points: [[1000, 200], [1350, 200], [1350, 600], [1000, 600]] }] },
+    { id: 'e', name: 'Eerste verdieping', rooms: [{ id: 'k', name: 'Kamer', points: [[0, 0], [800, 0], [800, 800], [0, 800]] }] },
+  ] });
+  const roofs = (plan) => house.shape(plan).form.floors[0].roofs;
+  assert.deepStrictEqual(roofs(make('back')).map((r) => [r.roof, r.fall]), [['lean', 'back']]);
+  assert.deepStrictEqual(roofs(make('left')).map((r) => [r.roof, r.fall]), [['lean', 'left']]);
+  assert.deepStrictEqual(roofs(make(undefined)).map((r) => [r.roof, r.fall]), [['lean', undefined]], 'without a choice it falls away from the house');
+  assert.deepStrictEqual(roofs(make('upwards')).map((r) => [r.roof, r.fall]), [['lean', undefined]], 'an unknown side is ignored');
+  assert.strictEqual(roofs(make('back', 'flat'))[0].fall, undefined, 'only a sloping roof falls somewhere');
+  // two rooms side by side that fall differently stay two roofs
+  const two = make('back');
+  two.levels[0].rooms.push({ id: 'hut2', name: 'Berging', roof: 'lean', fall: 'front', points: [[1350, 200], [1700, 200], [1700, 600], [1350, 600]] });
+  assert.deepStrictEqual(roofs(two).map((r) => r.fall).sort(), ['back', 'front']);
+});
+
+test('a room called plot is the outline of the plot, not a patch of ground', () => {
+  const plan = stackedPlan({ house: { form: 'plan', gardenOwn: true } });
+  plan.levels.push({ id: 'tuin', name: 'Tuin', role: 'garden', rooms: [
+    { id: 'p', name: 'Perceel', points: [[-1500, -1500], [2300, -1500], [2300, 2500], [-1500, 2500]] },
+    { id: 'gr', name: 'Gazon', points: [[-300, 1000], [1100, 1000], [1100, 1400], [-300, 1400]] },
+  ], openings: [], items: [] });
+  const g = house.garden(plan);
+  assert.strictEqual(g.plots.length, 1);
+  assert.strictEqual(g.plots[0].pts.length, 4);
+  assert.ok(!g.patches.some((p) => p.name === 'Perceel'), 'the plot has no floor of its own');
+  // a plot alone is enough to have a garden of its own
+  const only = stackedPlan({ house: { form: 'plan', gardenOwn: true } });
+  only.levels.push({ id: 'tuin', name: 'Tuin', role: 'garden', rooms: [{ id: 'p', name: 'Kavel', points: [[-1500, -1500], [2300, -1500], [2300, 2500], [-1500, 2500]] }], openings: [], items: [] });
+  assert.strictEqual(house.garden(only).plots.length, 1);
+  for (const name of ['Erf', 'Plot', 'Parcel', 'Terrein']) {
+    const p = stackedPlan({ house: { form: 'plan', gardenOwn: true } });
+    p.levels.push({ id: 't', name: 'Tuin', role: 'garden', rooms: [{ id: 'x', name, points: [[0, 0], [100, 0], [100, 100], [0, 100]] }], openings: [], items: [] });
+    assert.strictEqual(house.garden(p).plots.length, 1, name);
+  }
+  const lot = stackedPlan({ house: { form: 'plan', gardenOwn: true } });
+  lot.levels.push({ id: 't', name: 'Tuin', role: 'garden', rooms: [{ id: 'x', name: 'Parkeerplaats', points: [[0, 0], [100, 0], [100, 100], [0, 100]] }], openings: [], items: [] });
+  assert.strictEqual(house.garden(lot).plots.length, 0, 'a word that only contains lot is not a plot');
+});
+
+test('panels on a flat roof look at the south, or at the side the owner chose', () => {
+  const set = (house_, solar) => house.settings({ house: Object.assign({ roof: 'flat' }, house_, { objects: { solar } }) });
+  assert.strictEqual(house.flatSide(set({ facing: 180 }, {})), 'front');
+  assert.strictEqual(house.flatSide(set({ facing: 0 }, {})), 'back');
+  // the front looks at the west: the south is on the right of someone in front of the house
+  assert.strictEqual(house.flatSide(set({ facing: 270 }, {})), 'right');
+  assert.strictEqual(house.flatSide(set({ facing: 90 }, {})), 'left');
+  assert.strictEqual(house.flatSide(set({ facing: 270 }, { slope: 'front' })), 'front', 'a choice of the owner wins');
+  assert.strictEqual(house.flatSide(set({ facing: 270 }, { slope: 'auto' })), 'right');
+  // the forecast follows the side that was chosen
+  const { solarPlanes } = require('../lib/EnergyDetails');
+  if (solarPlanes) {
+    const plane = (solar) => solarPlanes({ house: { roof: 'flat', facing: 270, objects: { solar } } })[0].azimuth;
+    assert.strictEqual(plane({}), 0, 'without a choice it looks at the south');
+    assert.strictEqual(plane({ slope: 'front' }), 90, 'towards the west: east negative, so +90');
+  }
 });

@@ -460,7 +460,7 @@
     if (!hours.length) return '';
     return `<div class="fp-hours fp-detail-hours">${hours.map((h) => {
       const d = toDate(h);
-      return `<div class="fp-hour"><span>${esc(d ? d.toLocaleTimeString(navigator.language, { hour: '2-digit' }) : '')}</span><div>${weatherIcon(h.iconId)}</div><b>${Math.round(pickTemp(h))}°</b></div>`;
+      return `<div class="fp-hour"><span>${esc(d ? d.toLocaleTimeString(navigator.language, { hour: '2-digit' }) : '')}</span><div>${weatherIcon(h.iconId, h.night)}</div><b>${Math.round(pickTemp(h))}°</b></div>`;
     }).join('')}</div>`;
   }
 
@@ -1115,17 +1115,18 @@
     return o.state || o.description || o.condition || o.summary || '';
   }
 
-  // Homey's iconId values look like "clear_day", "partly_cloudy_night", "rain", ...
-  function weatherIcon(id) {
-    const s = String(id || '');
+  // Homey's iconId values look like "clear_day", "partly_cloudy_night", "rain", ...; the hours of the forecast carry the
+  // icon of the day whatever the time, so for those `night` says the sun is down then (from the server)
+  function weatherIcon(id, night) {
+    const s = night === true ? String(id || '').replace(/_day\b/, '_night') : String(id || '');
     if (/thunder/.test(s)) return '⛈️';
     if (/snow|sleet/.test(s)) return '🌨️';
     if (/rain|drizzle|shower/.test(s)) return '🌧️';
     if (/fog|mist|haze/.test(s)) return '🌫️';
-    if (/partly/.test(s)) return /night/.test(s) ? '☁️' : '⛅';
+    if (/partly/.test(s)) return /night/.test(s) || night === true ? '☁️' : '⛅';
     if (/cloud|overcast/.test(s)) return '☁️';
     if (/wind/.test(s)) return '💨';
-    if (/clear/.test(s)) return /night/.test(s) ? '🌙' : '☀️';
+    if (/clear|sunny/.test(s)) return /night/.test(s) || night === true ? '🌙' : '☀️';
     return '';
   }
 
@@ -1150,7 +1151,7 @@
       const hourHtml = hours.map((h) => {
         const d = toDate(h);
         const label = d ? d.toLocaleTimeString(navigator.language, { hour: '2-digit' }) : '';
-        return `<div class="fp-hour"><span>${esc(label)}</span><div>${weatherIcon(h.iconId)}</div><b>${Math.round(pickTemp(h))}°</b></div>`;
+        return `<div class="fp-hour"><span>${esc(label)}</span><div>${weatherIcon(h.iconId, h.night)}</div><b>${Math.round(pickTemp(h))}°</b></div>`;
       }).join('');
       const dayHtml = days.map((h) => {
         const d = toDate(h);

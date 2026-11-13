@@ -631,13 +631,23 @@ class House3D {
     }
     const built = (s) => this.set.between || (this.set.oneSide && this.set.neighbour === (s < 0 ? 'left' : 'right'));
     const left = built(-1) ? -W / 2 : -side; const right = built(1) ? W / 2 : side;
-    this.root.add(LOOK.hedge([left, back], [right, back], 1.3, M));
-    this.root.add(LOOK.hedge([left, back], [left, built(-1) ? -D / 2 : D / 2 + 3], 1.2, M));
-    if (built(1)) this.root.add(LOOK.hedge([right, back], [right, -D / 2], 1.2, M));
-    else if (carport === 'none' || cs < 0) this.root.add(LOOK.hedge([right, back], [right, D / 2 + 3], 1.2, M));
-    else this.root.add(LOOK.hedge([right, back], [right, D / 2 - 7], 1.2, M));
+    // A room called plot (perceel, kavel) on a garden level is the plot: the hedges follow its outline instead (buildOwnGarden)
+    const plots = (own && own.plots) || [];
+    if (!plots.length) {
+      this.root.add(LOOK.hedge([left, back], [right, back], 1.3, M));
+      this.root.add(LOOK.hedge([left, back], [left, built(-1) ? -D / 2 : D / 2 + 3], 1.2, M));
+      if (built(1)) this.root.add(LOOK.hedge([right, back], [right, -D / 2], 1.2, M));
+      else if (carport === 'none' || cs < 0) this.root.add(LOOK.hedge([right, back], [right, D / 2 + 3], 1.2, M));
+      else this.root.add(LOOK.hedge([right, back], [right, D / 2 - 7], 1.2, M));
+    }
+    // A point inside one of the plots (ray casting)
+    const inPlot = (x, z) => plots.some((pl) => pl.pts.reduce((inside, a, i) => {
+      const b = pl.pts[(i + 1) % pl.pts.length];
+      return (a[1] > z) !== (b[1] > z) && x < ((b[0] - a[0]) * (z - a[1])) / (b[1] - a[1]) + a[0] ? !inside : inside;
+    }, false));
     for (const [x, z, s, seed] of [[-W / 2 - 4, -D / 2 - 4.5, 1.15, 1], [W / 2 + 4.5, -D / 2 - 5, 0.95, 2], [-W / 2 - 4.5, D / 2 + 1.5, 0.8, 3]]) {
       if (own && own.plants.length) break; // the plants of the garden drawn take their place
+      if (plots.length && !inPlot(x, z)) continue; // outside the plot drawn
       if (!this.free(x, z, 1.4)) continue; // a garage or shed stands here
       if (!this.set.between && (carport !== 'none' || this.shows.car) && Math.sign(x) === cs && z > D / 2 - 7.8) continue; // the driveway is here
       const tr = LOOK.tree(s, M, seed);
@@ -665,6 +675,19 @@ class House3D {
     const lift = { lawn: 0.012, paving: 0.018, gravel: 0.02, pond: 0.022, bed: 0.026 };
     // Everything drawn on a garden level opens that level when tapped (the lamps in it keep their own tap)
     const tap = (o, level) => { if (level) o.userData.pick = { kind: 'level', id: level }; return o; };
+    // The plot: a hedge along its edges, but not along the street (the edges that look to the front, where the way in is)
+    for (const plot of own.plots || []) {
+      const mid = plot.pts.reduce((m, p) => [m[0] + p[0] / plot.pts.length, m[1] + p[1] / plot.pts.length], [0, 0]);
+      plot.pts.forEach((a, i) => {
+        const b = plot.pts[(i + 1) % plot.pts.length];
+        const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+        if (len < 0.5) return;
+        let nx = (b[1] - a[1]) / len; let nz = -(b[0] - a[0]) / len; // the way this edge looks, pointing out of the plot
+        if (nx * ((a[0] + b[0]) / 2 - mid[0]) + nz * ((a[1] + b[1]) / 2 - mid[1]) < 0) { nx = -nx; nz = -nz; }
+        if (nz > 0.7) return;
+        this.root.add(tap(LOOK.hedge(a, b, 1.2, M), plot.level));
+      });
+    }
     for (const p of own.patches) {
       // the shape lies in the x-y plane, which is turned flat: its y becomes -z
       const mesh = new THREE.Mesh(new THREE.ShapeGeometry(new THREE.Shape(p.pts.map(([x, z]) => new THREE.Vector2(x, -z)))), p.color ? soft(p.color, p.color) : ground[p.kind]);
@@ -1352,6 +1375,8 @@ class House3D {
   // The side of a low roof b (a rectangle { x, z, w, d }) where it leans against the building above it or beside it, as a
   // unit normal [nx, nz]; that side is the high one. Else the side that looks at the main block of the house.
   highSide(b, form, floorIndex) {
+    // The owner said which way it falls: the high side is the other one
+    if (b.fall) return { left: [1, 0], right: [-1, 0], front: [0, -1], back: [0, 1] }[b.fall];
     const higher = [form.main, ...form.floors.slice(floorIndex + 1).flatMap((f) => f.rects)];
     let best = null;
     for (const [nx, nz] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
@@ -1718,7 +1743,9 @@ class House3D {
     const wall = this.onWall(atGutter);
     const front = Math.abs(wall.z) >= D / 2;
     const corner = new THREE.Vector3(front ? Math.sign(meter.x) * (W / 2 - 0.3) : wall.x, shape.eaves + (shape.above || 0) - 0.12, front ? wall.z : Math.sign(meter.z) * (D / 2 - 0.3));
-    this.addFlow('solar', [onRoof, atGutter, new THREE.Vector3(corner.x, atGutter.y, front ? atGutter.z : corner.z), corner, ...this.cableRoute(corner, meter)]);
+    // Along the roof in straight legs (sideways to the corner, then to the wall): panels in the middle of a flat roof must
+    // not have the cable cut across it
+    this.addFlow('solar', [onRoof, atGutter, new THREE.Vector3(corner.x, atGutter.y, atGutter.z), new THREE.Vector3(corner.x, atGutter.y, corner.z), corner, ...this.cableRoute(corner, meter)]);
   }
 
   // The size of a panel as it lies on the roof (m): long side up the slope, or along it when turned
@@ -1838,12 +1865,21 @@ class House3D {
     let target = wanted;
     // On a flat roof with both directions: rows that lean in turn to the east and the west
     const tent = side === 'top' && this.set.objects.solar.layout === 'both';
+    // On a flat roof the panels look at the side the owner chose, else at the one nearest to the south; towards the left or
+    // right the rows run along the depth of the roof
+    const look = side === 'top' && !tent ? HC.flatSide(this.set) : 'front';
     if (side === 'top') {
       const roofW = shape.form ? shape.form.main.w : shape.width; const roofD = shape.form ? shape.form.main.d : shape.depth;
-      const across = tent ? Math.min(roofW, roofD) : roofW;
-      const deep = tent ? across : roofD;
+      const sideways = look === 'left' || look === 'right';
+      const across = tent ? Math.min(roofW, roofD) : sideways ? roofD : roofW;
+      const deep = tent ? across : sideways ? roofW : roofD;
       along = Math.max(1, Math.floor((across - 1) / (panelW + gap)));
-      up = Math.max(1, Math.floor((deep - 1.5) / (panelH * Math.cos(0.26) + (tent ? 0.1 : 0.6))));
+      // The block lies as one tilted plane, so a row needs its own depth only; with a number of panels per row chosen the
+      // rows may stand closer, so that a layout of the owner's that nearly fits is not cut short
+      const chosen = this.set.objects.solar.perRow > 0 && !tent;
+      up = chosen
+        ? Math.max(1, Math.floor((deep - 0.8) / ((panelH + gap) * Math.cos(0.26))))
+        : Math.max(1, Math.floor((deep - 1.5) / (panelH * Math.cos(0.26) + (tent ? 0.1 : 0.6))));
     } else {
       const slope = info.S / 2 / Math.cos(info.pitch);
       const hipCut = this.set.roof === 'hip' ? 1 : 0;
@@ -1889,11 +1925,16 @@ class House3D {
         // the rows lean to the east and the west, whichever way the house faces
         panels.rotation.y = Math.abs(Math.sin(THREE.MathUtils.degToRad(this.set.facing))) > 0.7 ? 0 : Math.PI / 2;
         panels.position.set(0, 0.35, 0);
+        group.add(panels);
       } else {
         panels.rotation.x = 0.26;
         panels.position.set(0, 0.35, (rows * (panelH + gap)) / 2);
+        // turned to the side they look at (the panels face the front as built)
+        const turned = new THREE.Group();
+        turned.rotation.y = { front: 0, back: Math.PI, left: -Math.PI / 2, right: Math.PI / 2 }[look];
+        turned.add(panels);
+        group.add(turned);
       }
-      group.add(panels);
       group.position.y = this.roofFrame.y;
       if (shape.form) group.position.set(shape.form.main.x, this.roofFrame.y, shape.form.main.z);
       this.root.add(group);
@@ -2174,7 +2215,9 @@ class House3D {
     const passed = corners.map(([x, z, s]) => ({ x, z, d: ways >= 0 ? (s - s0 + whole) % whole : (s0 - s + whole) % whole }))
       .filter((c) => c.d > 0.001 && c.d < Math.abs(ways)).sort((p, q) => p.d - q.d);
     const at = (p) => new THREE.Vector3(p.x, y, p.z);
-    return [a, at(from), ...passed.map(at), at(to), b];
+    // In straight legs, none across the air or the facade: from the start to the wall at its own height (from and to lie
+    // at the height of a and b), up or down the wall to the row, round the corners, and at the end to the part
+    return [a, from, at(from), ...passed.map(at), at(to), to, b];
   }
 
   // A real cable on the wall: a thin dark line with clips, always there, and over it the current as moving light towards

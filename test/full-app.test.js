@@ -441,3 +441,11 @@ test('a switch with two buttons: the second button is a device of its own', asyn
     assert.strictEqual(refused.status, 500);
   });
 });
+
+test('the hours of the weather forecast say whether the sun is down then', async () => {
+  await withApp({}, async (_, get) => {
+    const w = (await get('/api/weather')).json;
+    assert.strictEqual(typeof w.hourly[0].night, 'boolean');
+    assert.strictEqual(w.now.night, undefined, 'only the hours carry it: the current icon already knows');
+  });
+});
