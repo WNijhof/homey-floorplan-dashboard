@@ -6,12 +6,13 @@ Homey serves the dashboard and the editor as web pages in your own home network,
 
 What you get:
 
-- The house from outside in 3D, set up to look like yours: detached, semi-detached or terraced, roof, facade, carport, dormer and extension. It lives with the day: the sun where it really stands, clouds, rain and snow from the forecast, and in the evening only the windows of rooms where a lamp is on
+- The house from outside in 3D, set up to look like yours: detached, semi-detached, terraced, corner house or apartment, roof, facade, carport, dormer and extension. It lives with the day: the sun where it really stands, clouds, rain and snow from the forecast, and in the evening only the windows of rooms where a lamp is on
 - Your real outdoor lamps on the house: along the path, the driveway and in the garden. They burn when the lamp is on, and a tap switches them
 - Tap a storey and the roof lifts off while you fly inside
 - Only what needs attention at the top: a window open while rain is coming, the bins tomorrow, the cheapest hours for electricity, a low battery, an alarm
 - An "I'm leaving" check: what is open, what is not locked and which lamps are on, with all lamps off in one go
-- Buttons for your moods and Flows, a calm clock at night for a tablet on the wall, and the doorbell over everything with the camera picture
+- The house can follow the shape of your floor plan, with sloping roofs, a roof terrace, a garage or shed, and the garden you draw yourself with lawn, terrace, pond and fences
+- Buttons for your moods and Flows (a Flow starts with the card "A HomeDeck button is pressed"), a calm clock at night for a tablet on the wall, and the doorbell over everything with the camera picture
 - Advice on what to do now: power to spare, the cheapest hours, a dear moment, or a sunny tomorrow for the car, also as Flow triggers
 - A Flow can show things on a screen: the camera when someone walks up, a message, a storey or the Energy page, on all screens or one, and the screen goes back by itself
 - The alarm from the screen, and an alarm, smoke or leak takes over every screen
@@ -25,7 +26,7 @@ What you get:
 - The Energy page with all blocks of Energy Dashboard: live flows, prices, costs, history, Sankey, gas, water, heating, warnings, and settings for your devices and contract
 - Floor plans in 2D and 3D, with real furniture, lamps of the right kind (ceiling, pendant, wall, floor and table lamps) and a wall thermostat that shows the room temperature
 - An editor in the browser: draw rooms of any shape and walls, place doors, windows, furniture and devices, resize and turn everything, copy and paste, undo. A quick start from your Homey zones puts every device in its room
-- Start from a picture: add a floor plan image or the PDF of the estate agent, set the scale, and the editor recognises walls, rooms, doors and windows. This happens in your browser; nothing is sent anywhere
+- Start from a picture: add a floor plan image or the PDF of the estate agent, set the scale, and the editor recognises walls (also at an angle), rooms, doors and windows. This happens in your browser; nothing is sent anywhere
 - Groups of lamps (made with a group app) work as one lamp
 - A widget for Homey dashboards, showing the plan or the house
 - On every screen you choose what it starts on, the house or a storey, and a simple view for slower tablets

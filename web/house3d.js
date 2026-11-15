@@ -1441,7 +1441,7 @@ class House3D {
     const g = new THREE.Group();
     const along = b.w >= b.d; // the ridge along x, else along z
     const L = along ? b.w : b.d; const S = along ? b.d : b.w;
-    const rise = Math.min((S / 2) * Math.tan(THREE.MathUtils.degToRad(set.roof === 'flat' ? 35 : set.pitch)), 4);
+    const rise = Math.min((S / 2) * Math.tan(THREE.MathUtils.degToRad(b.pitch || (set.roof === 'flat' ? 35 : set.pitch))), 4);
     const ov = 0.25; const lift = 0.1;
     // (for the solar panels, which can lie on this roof; wing.dormer is filled in below)
     const wing = { x: b.x, y: y1, z: b.z, L, S, along, lift, pitch: Math.atan(rise / (S / 2)), dormer: null };
@@ -1769,11 +1769,12 @@ class House3D {
 
   // The panels as a group in the slope frame (local -z up the slope, y out of the roof), starting half a metre above the
   // eaves, with the glow underneath; middle: where that glow lies along z
-  panelBlock(t, cols, rows, target, panelW, panelH, gap, shiftX, tent, start = 0.5) {
+  panelBlock(t, cols, rows, target, panelW, panelH, gap, shiftX, tent, start = 0.5, rowStep = 0) {
     if (!this.panelMat) this.panelMat = new THREE.MeshPhysicalMaterial({ map: this.M.tx.panel, roughness: 0.18, metalness: 0.3, envMapIntensity: 1.3, clearcoat: 0.6 });
     const panelMat = this.panelMat;
     const frame = mat(t.panelFrame);
     const panels = new THREE.Group();
+    const rowGroups = [];
     let n = 0;
     for (let r = 0; r < rows; r++) {
       for (let c = 0; c < cols && n < target; c++, n++) {
@@ -1781,6 +1782,16 @@ class House3D {
         const s = start + r * (panelH + gap) + panelH / 2 - (tent ? 0.5 + (rows * (panelH + gap)) / 2 : 0);
         const p = new THREE.Mesh(new THREE.BoxGeometry(panelW, 0.04, panelH), panelMat);
         p.position.set(x, 0.06, -s);
+        if (rowStep) {
+          // flat roof: every row on its own frame, leaning up from its front edge
+          if (!rowGroups[r]) { rowGroups[r] = new THREE.Group(); rowGroups[r].position.set(0, 0, -(start + r * rowStep)); rowGroups[r].rotation.x = 0.26; panels.add(rowGroups[r]); }
+          p.position.set(x, 0.06, -panelH / 2);
+          p.castShadow = true;
+          const e2 = new THREE.Mesh(new THREE.BoxGeometry(panelW + 0.02, 0.03, panelH + 0.02), frame);
+          e2.position.set(x, 0.04, -panelH / 2);
+          rowGroups[r].add(e2, p);
+          continue;
+        }
         p.castShadow = true;
         const edge = new THREE.Mesh(new THREE.BoxGeometry(panelW + 0.02, 0.03, panelH + 0.02), frame);
         edge.position.set(x, 0.04, -s);
@@ -1878,8 +1889,8 @@ class House3D {
       // rows may stand closer, so that a layout of the owner's that nearly fits is not cut short
       const chosen = this.set.objects.solar.perRow > 0 && !tent;
       up = chosen
-        ? Math.max(1, Math.floor((deep - 0.8) / ((panelH + gap) * Math.cos(0.26))))
-        : Math.max(1, Math.floor((deep - 1.5) / (panelH * Math.cos(0.26) + (tent ? 0.1 : 0.6))));
+        ? Math.max(1, Math.floor((deep - 0.8) / (panelH * Math.cos(0.26) + 0.3)))
+        : Math.max(1, Math.floor((deep - 1.5) / (panelH * Math.cos(0.26) + (tent ? 0.1 : 0.5))));
     } else {
       const slope = info.S / 2 / Math.cos(info.pitch);
       const hipCut = this.set.roof === 'hip' ? 1 : 0;
@@ -1917,7 +1928,9 @@ class House3D {
     const perRow = this.set.objects.solar.perRow;
     up = Math.min(up, perRow ? 6 : 3);
     ({ cols, rows, target } = this.panelGrid(target, along, up));
-    const { panels, middle: midGlow } = this.panelBlock(t, cols, rows, target, panelW, panelH, gap, shiftX, tent);
+    // A flat roof: every row leans on its own frame (one tilted plane for all rows is not what stands on a roof)
+    const rowStep = side === 'top' && !tent ? panelH * Math.cos(0.26) + (this.set.objects.solar.perRow > 0 ? 0.3 : 0.5) : 0;
+    const { panels, middle: midGlow } = this.panelBlock(t, cols, rows, target, panelW, panelH, gap, shiftX, tent, 0.5, rowStep);
     this.liftWith.push(panels);
 
     if (side === 'top') {
@@ -1927,8 +1940,7 @@ class House3D {
         panels.position.set(0, 0.35, 0);
         group.add(panels);
       } else {
-        panels.rotation.x = 0.26;
-        panels.position.set(0, 0.35, (rows * (panelH + gap)) / 2);
+        panels.position.set(0, 0.35, (rows * rowStep) / 2);
         // turned to the side they look at (the panels face the front as built)
         const turned = new THREE.Group();
         turned.rotation.y = { front: 0, back: Math.PI, left: -Math.PI / 2, right: Math.PI / 2 }[look];

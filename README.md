@@ -14,7 +14,7 @@ Heb je **Energie Dashboard** al, dan opent de knop ⚡ Energie die app, met zijn
 
 1. Installeer de app en open in de Homey-app *Apps → HomeDeck → Instellingen*.
 2. Kies **Editor openen**: de editor is een webpagina in je thuisnetwerk (`http://<homey>:8687/editor`). Teken je huis daar op een computer of tablet; dat werkt veel prettiger dan in de Homey-app.
-3. Stel in de editor onder **Huis** je huis in: soort woning, dak, gevel, omgeving, carport, zonnepanelen (ook oost-west), of je eigen foto met getekende klikgebieden.
+3. Stel in de editor onder **Huis** je huis in: soort woning (vrijstaand, twee-onder-een-kap, tussenwoning, hoekwoning of appartement), de vorm (eenvoudig blok of volgens de plattegrond), dak, gevel, omgeving, carport, zonnepanelen (ook oost-west), of je eigen foto met getekende klikgebieden.
 4. Open het **dashboard** (`http://<homey>:8687/`) op een tablet, of zet de widget **Plattegrond** op een Homey-dashboard.
 5. De **Energiepagina** staat op `http://<homey>:8687/energy/`, met de knop ⚡ Energie bovenaan het dashboard; onder het tandwiel daar kies je apparaten, contract en prijzen.
 

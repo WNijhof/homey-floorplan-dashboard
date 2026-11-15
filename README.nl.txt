@@ -6,12 +6,13 @@ Homey zet het dashboard en de editor als webpagina's in je eigen thuisnetwerk, d
 
 Wat je krijgt:
 
-- Het huis van buiten in 3D, zo ingesteld dat het op het jouwe lijkt: vrijstaand, twee-onder-een-kap of tussenwoning, dak, gevel, carport, dakkapel en aanbouw. Het leeft mee met de dag: de zon waar hij echt staat, wolken, regen en sneeuw uit de verwachting, en 's avonds alleen licht achter de ramen van kamers waar een lamp aan is
+- Het huis van buiten in 3D, zo ingesteld dat het op het jouwe lijkt: vrijstaand, twee-onder-een-kap, tussenwoning, hoekwoning of appartement, dak, gevel, carport, dakkapel en aanbouw. Het leeft mee met de dag: de zon waar hij echt staat, wolken, regen en sneeuw uit de verwachting, en 's avonds alleen licht achter de ramen van kamers waar een lamp aan is
 - Je echte buitenlampen op het huis: langs het pad, de oprit en in de tuin. Ze branden als de lamp aan is, en tikken schakelt ze
 - Tik op een verdieping en het dak tilt op terwijl je naar binnen vliegt
 - Bovenaan alleen wat aandacht vraagt: een raam open terwijl er regen komt, de container morgen, de goedkoopste uren voor stroom, een lege batterij, een alarm
 - Een "Ik ga weg"-check: wat staat open, wat is niet op slot en welke lampen zijn aan, met alle lampen in één keer uit
-- Knoppen voor je moods en Flows, een rustige klok 's nachts voor een tablet aan de muur, en de deurbel over alles heen met het camerabeeld
+- Het huis kan de vorm van je plattegrond volgen, met schuine daken, een dakterras, een garage of schuur, en de tuin die je zelf tekent met gazon, terras, vijver en schuttingen
+- Knoppen voor je moods en Flows (een Flow start met de kaart "Een HomeDeck-knop wordt ingedrukt"), een rustige klok 's nachts voor een tablet aan de muur, en de deurbel over alles heen met het camerabeeld
 - Advies over wat je nu het best doet: stroom over, de goedkoopste uren, een duur moment, of morgen veel zon voor de auto, ook als Flow-triggers
 - Een Flow kan iets op een scherm tonen: de camera als er iemand aankomt, een bericht, een verdieping of de Energiepagina, op alle schermen of één, en het scherm gaat vanzelf terug
 - Het alarm bedienen vanaf het scherm, en een alarm, rook of lekkage neemt elk scherm over
@@ -25,7 +26,7 @@ Wat je krijgt:
 - De Energiepagina met alle blokken van Energie Dashboard: live stromen, prijzen, kosten, geschiedenis, Sankey, gas, water, verwarming, waarschuwingen, en instellingen voor je apparaten en contract
 - Plattegronden in 2D en 3D, met echte meubels, lampen van de juiste soort (plafond-, hang-, wand-, staande en tafellampen) en een thermostaat aan de muur die de kamertemperatuur toont
 - Een editor in de browser: teken kamers van elke vorm en muren, plaats deuren, ramen, meubels en apparaten, pas maten en draaiing aan, kopieer en plak, maak ongedaan. Met de snelle start vanuit je Homey-zones staat elk apparaat meteen in zijn kamer
-- Begin met een afbeelding: voeg een plattegrond of de pdf van de makelaar toe, zet de schaal, en de editor herkent muren, kamers, deuren en ramen. Dat gebeurt in je browser; er wordt niets verstuurd
+- Begin met een afbeelding: voeg een plattegrond of de pdf van de makelaar toe, zet de schaal, en de editor herkent muren (ook schuine), kamers, deuren en ramen. Dat gebeurt in je browser; er wordt niets verstuurd
 - Groepen lampen (gemaakt met een groeps-app) werken als één lamp
 - Een widget voor Homey-dashboards, met de plattegrond of het huis
 - Op elk scherm kies je waarmee het start, het huis of een verdieping, en een eenvoudige weergave voor tragere tablets
