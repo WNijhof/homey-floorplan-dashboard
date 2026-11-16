@@ -753,7 +753,13 @@
             const w = clamp((o.width || 90) / 100, 0.3, Math.max(0.3, best.L - 0.1), 0.9);
             openings.push({ edge: best.edge, s: clamp(best.s, w / 2, best.L - w / 2, best.L / 2), w, door: o.type !== 'window' });
           }
-          out.sheds.push({ level: l.id, id: r.id, name: r.name || '', kind, pts, height: Number(r.wallHeight) > 0 ? clamp(Number(r.wallHeight) / 100, 1.5, 4, 2.3) : kind === 'garage' ? 2.6 : 2.3, openings });
+          // The roof the owner chose for this room (flat, sloping or gable) and the box it covers; without a choice it is flat
+          const roof = r.roof === 'lean' || r.roof === 'gable' ? r.roof : null;
+          const xs = pts.map((p) => p[0]); const zs = pts.map((p) => p[1]);
+          const box = { x: (Math.min(...xs) + Math.max(...xs)) / 2, z: (Math.min(...zs) + Math.max(...zs)) / 2, w: Math.max(...xs) - Math.min(...xs), d: Math.max(...zs) - Math.min(...zs) };
+          const pitch = Number(r.pitch) >= 15 && Number(r.pitch) <= 70 ? Number(r.pitch) : 0;
+          // (the way a sloping roof falls is given as seen from the front of the house, as for the roofs of the storeys)
+          out.sheds.push({ level: l.id, id: r.id, name: r.name || '', kind, pts, height: Number(r.wallHeight) > 0 ? clamp(Number(r.wallHeight) / 100, 1.5, 4, 2.3) : kind === 'garage' ? 2.6 : 2.3, openings, roof, fall: roof === 'lean' && ROOM_FALLS.indexOf(r.fall) >= 0 ? r.fall : null, pitch, box });
           continue;
         }
         const hit = GARDEN_KINDS.find(([, re]) => re.test(r.name || ''));

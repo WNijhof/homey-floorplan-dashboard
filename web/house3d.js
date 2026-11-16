@@ -748,6 +748,18 @@ class House3D {
           else put(LOOK.box(o.w, Math.min(0.7, h - 1.2), 0.14, M.glass(), x, Math.min(1.1, h - 0.9), z));
         }
       });
+      if (s.roof && s.box) {
+        // A sloping or gable roof chosen for this room: the same roofs as over a wing of the house, on the box of the room
+        const b = { x: s.box.x, z: s.box.z, w: s.box.w, d: s.box.d, pitch: s.pitch || 0 };
+        if (s.roof === 'gable') this.root.add(tap(this.buildWingRoof(b, h, this.set, null), s.level));
+        else {
+          // it falls the way the owner chose, else away from the house
+          b.fall = s.fall;
+          const hN = s.fall ? this.highSide(b, null, 0) : (Math.abs(b.x) > Math.abs(b.z) ? [Math.sign(-b.x) || 1, 0] : [0, Math.sign(-b.z) || 1]);
+          this.root.add(tap(this.buildLeanRoof(b, h, hN, 3, this.set), s.level));
+        }
+        continue;
+      }
       const roof = new THREE.Mesh(new THREE.ExtrudeGeometry(new THREE.Shape(s.pts.map(([x, z]) => new THREE.Vector2(x, -z))), { depth: 0.12, bevelEnabled: false }), M.trim);
       roof.rotation.x = -Math.PI / 2;
       roof.position.y = h;
@@ -1028,7 +1040,19 @@ class House3D {
           const len = Math.hypot(dx, dz);
           if (len < 0.05) continue;
           const floor = i > 0 ? y0 + 0.25 : 0;
-          const bar = LOOK.box(len + (p.fence ? 0 : p.t), p.h, Math.max(0.05, p.t), p.fence ? M.metal : M.wall, (p.a[0] + p.b[0]) / 2, floor, (p.a[1] + p.b[1]) / 2);
+          if (p.fence) {
+            // a railing, open between the rails: posts about every 1.2 m, a top rail and two lower rails (not a wall)
+            const rail = new THREE.Group();
+            rail.position.set((p.a[0] + p.b[0]) / 2, floor, (p.a[1] + p.b[1]) / 2);
+            rail.rotation.y = -Math.atan2(dz, dx);
+            const t = Math.max(0.04, Math.min(0.08, p.t));
+            const posts = Math.max(1, Math.ceil(len / 1.2));
+            for (let k = 0; k <= posts; k++) rail.add(LOOK.box(t, p.h, t, M.metal, -len / 2 + (len * k) / posts, 0, 0));
+            for (const y of [p.h - t, p.h * 0.5, 0.06]) rail.add(LOOK.box(len, t * 0.7, t * 0.7, M.metal, 0, y, 0));
+            fg.add(rail);
+            continue;
+          }
+          const bar = LOOK.box(len + p.t, p.h, Math.max(0.05, p.t), M.wall, (p.a[0] + p.b[0]) / 2, floor, (p.a[1] + p.b[1]) / 2);
           bar.rotation.y = -Math.atan2(dz, dx);
           fg.add(bar);
         }
@@ -1884,10 +1908,13 @@ class House3D {
       const sideways = look === 'left' || look === 'right';
       const across = tent ? Math.min(roofW, roofD) : sideways ? roofD : roofW;
       const deep = tent ? across : sideways ? roofW : roofD;
-      along = Math.max(1, Math.floor((across - 1) / (panelW + gap)));
       // The block lies as one tilted plane, so a row needs its own depth only; with a number of panels per row chosen the
-      // rows may stand closer, so that a layout of the owner's that nearly fits is not cut short
+      // rows may stand closer and a row may reach to 0.2 m from the edges, so that a layout of the owner's that nearly
+      // fits is not cut short (3 landscape panels of 1.72 m on a 5.8 m roof)
       const chosen = this.set.objects.solar.perRow > 0 && !tent;
+      along = chosen
+        ? Math.max(1, Math.floor((across - 0.4 + gap) / (panelW + gap)))
+        : Math.max(1, Math.floor((across - 1) / (panelW + gap)));
       up = chosen
         ? Math.max(1, Math.floor((deep - 0.8) / (panelH * Math.cos(0.26) + 0.3)))
         : Math.max(1, Math.floor((deep - 1.5) / (panelH * Math.cos(0.26) + (tent ? 0.1 : 0.5))));

@@ -1,4 +1,8 @@
 {
+  "0.2.25": {
+    "en": "A garden house or shed on a garden level gets the sloping or gable roof you chose for its room (it was always flat). The railing round a roof terrace is open (posts and rails) instead of a solid wall. Panels per row: three landscape panels now fit next to each other on a roof of 5.8 m.",
+    "nl": "Een tuinhuis of schuur op een tuinverdieping krijgt het schuine dak of zadeldak dat je voor zijn kamer koos (het was altijd plat). Het hekje rond een dakterras is open (palen en rails) in plaats van een dichte muur. Panelen per rij: drie liggende panelen passen nu naast elkaar op een dak van 5,8 m."
+  },
   "0.2.24": {
     "en": "A room can have its own wall height (for a shed, an extension or a room under a sloping roof) and its own gable roof slope. Solar panels on a flat roof stand in separate rows that each lean on their own frame. The backup (and the copies made before an update) can now also be restored from the start screen, when there is no floor plan left.",
     "nl": "Een kamer kan een eigen muurhoogte krijgen (voor een schuur, een aanbouw of een kamer onder een schuin dak) en een eigen helling van het zadeldak. Zonnepanelen op een plat dak staan in aparte rijen die elk op een eigen frame leunen. De back-up (en de kopieën van vóór een update) zijn nu ook terug te zetten vanaf het startscherm, als er geen plattegrond meer is."

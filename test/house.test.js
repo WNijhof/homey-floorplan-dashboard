@@ -398,6 +398,16 @@ test('a room called shed on the garden level is a building with its doors and wi
   assert.strictEqual(door.w, 0.8);
   assert.ok(Math.abs(door.s - 1.5) < 1e-9);
   assert.strictEqual(s.openings.find((o) => !o.door).edge, 1);
+  assert.strictEqual(s.roof, null, 'a flat roof without a choice');
+  // The roof chosen for the room is kept, with the way it falls and its box
+  const sloped = JSON.parse(JSON.stringify(plan));
+  Object.assign(sloped.levels.find((l) => l.id === 'lg').rooms.find((r) => r.id === 's'), { roof: 'lean', fall: 'left', pitch: 30 });
+  const t = house.garden(sloped).sheds[0];
+  assert.deepStrictEqual([t.roof, t.fall, t.pitch], ['lean', 'left', 30]);
+  assert.deepStrictEqual([t.box.w, t.box.d], [3, 3]);
+  Object.assign(sloped.levels.find((l) => l.id === 'lg').rooms.find((r) => r.id === 's'), { roof: 'gable', fall: 'left', pitch: 10 });
+  const u = house.garden(sloped).sheds[0];
+  assert.deepStrictEqual([u.roof, u.fall, u.pitch], ['gable', null, 0], 'no fall for a gable roof, a pitch out of range is ignored');
 });
 
 test('a garage or shed level can have a flat or a pitched roof of its own', () => {
