@@ -44,7 +44,7 @@
 
   /** plan.house with every field filled in and checked. */
   // The place of the front door along the front, from the left as you look at it (auto: the door drawn in the plan)
-  const DOOR_AT = { auto: null, left: 0.15, leftmid: 0.33, middle: 0.5, rightmid: 0.67, right: 0.85 };
+  const DOOR_AT = { auto: null, none: null, left: 0.15, leftmid: 0.33, middle: 0.5, rightmid: 0.67, right: 0.85 };
   // From plan coordinates (cm, y down) to the view of the house: the chosen front ends up at the bottom (+z).
   const TURNS = { bottom: (p) => [p[0], p[1]], top: (p) => [-p[0], -p[1]], left: (p) => [p[1], -p[0]], right: (p) => [-p[1], p[0]] };
 
@@ -481,8 +481,12 @@
         const under = open.map((row, r) => row.map((on, c) => on && !!(deck && deck[r][c])));
         const place = (p) => { const q = turn(p); return [q[0] + moved[i][0], q[1] + moved[i][1]]; };
         const metres = (p) => [Math.round(p[0] - cx) / 100, Math.round(p[1] - cz) / 100];
+        // The blocks stand on the grid lines, where edges a few cm apart are merged; the railing goes to the same lines, or
+        // it stands beside the roof it is on, further in on one side than on the other
+        const onGrid = (v, lines) => { const l = lines.reduce((best, x) => (Math.abs(x - v) < Math.abs(best - v) ? x : best), lines[0]); return Math.abs(l - v) <= 40 ? l : v; };
+        const snap = (p) => [onGrid(p[0], cols), onGrid(p[1], rows)];
         const parapets = terracesOf(i).length
-          ? terraceEdges(floors[i], terracesOf(i), indoorOf(i), place).map((e) => Object.assign(e, { a: metres(e.a), b: metres(e.b) }))
+          ? terraceEdges(floors[i], terracesOf(i), indoorOf(i), place).map((e) => Object.assign(e, { a: metres(snap(e.a)), b: metres(snap(e.b)) }))
           : [];
         // A room can have its own roof (flat or sloping) where nothing stands on it: the blocks split by that choice
         const list = rooms(floors[i]);

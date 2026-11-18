@@ -533,6 +533,7 @@ test('an open wall in an outer wall is an opening from the ground up; the front 
   assert.strictEqual(house.settings(plan).doorAt, 'auto');
   assert.strictEqual(house.settings({ house: { doorAt: 'leftmid' } }).doorAt, 'leftmid');
   assert.strictEqual(house.settings({ house: { doorAt: 'roof' } }).doorAt, 'auto');
+  assert.strictEqual(house.settings({ house: { doorAt: 'none' } }).doorAt, 'none', 'no front door on the front is a choice');
   assert.strictEqual(house.DOOR_AT.left < house.DOOR_AT.right, true);
 });
 
@@ -740,6 +741,21 @@ test('a roof terrace is outside the block, and a sloping top storey under a flat
   assert.ok(rails.every((p) => p.fence && p.h === 1));
   // Under a pitched roof the sloping level is still the space in the roof
   assert.strictEqual(house.shape({ levels, house: { form: 'plan', roof: 'gable' } }).attic.levelId, 't');
+});
+
+test('the railing round a terrace stands on the edges of the roof under it, not a few cm beside them', () => {
+  const room = (id, name, x0, y0, x1, y1) => ({ id, name, points: [[x0, y0], [x1, y0], [x1, y1], [x0, y1]] });
+  const levels = [
+    { id: 'g', name: 'Begane grond', rooms: [room('a', 'Woonkamer', 0, 0, 480, 900)] },
+    { id: 'u', name: '1e verdieping', rooms: [room('b', 'Slaapkamer', 0, 0, 480, 900)] },
+    { id: 't', name: '2e verdieping', rooms: [room('c', 'Zolder', 0, 0, 480, 500), room('d', 'Dakterras', 20, 500, 460, 900)] },
+  ];
+  const form = house.shape({ levels, house: { form: 'plan', roof: 'flat' } }).form;
+  const deck = form.floors[1].roofs.find((r) => r.terrace);
+  const xs = form.floors[2].parapets.flatMap((p) => [p.a[0], p.b[0]]);
+  const left = deck.x - deck.w / 2; const right = deck.x + deck.w / 2;
+  assert.ok(Math.abs(Math.min(...xs) - left) < 0.005, 'the left railing on the left edge of the roof');
+  assert.ok(Math.abs(Math.max(...xs) - right) < 0.005, 'the right railing on the right edge of the roof');
 });
 
 test('the driveway, the battery and the heat pump can be put on a side of the house', () => {

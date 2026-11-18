@@ -845,6 +845,7 @@ class House3D {
     const doors = shape.form ? shape.form.floors[0].openings.filter((o) => o.door) : [];
     const chosen = set.doorId && doors.find((o) => o.id === set.doorId);
     if (chosen) return { x: chosen.x, z: chosen.z, n: chosen.n };
+    if (set.doorAt === 'none') return null; // no front door in the facade: the real one is somewhere else (an inner garage)
     const at = HC.DOOR_AT[set.doorAt];
     const front = (spot) => Object.assign({ n: [0, 1] }, spot);
     if (at != null) return front(this.frontSpot(shape, (at - 0.5) * W, 0.8));
@@ -896,6 +897,7 @@ class House3D {
     this.liftWith = [];
     this.wingRoofs = [];
     this.wingWindows = [];
+    this.doorLamp = null;
     const size = M.tx.wallSize;
     const form = shape.form;
     const entry = this.entry;
@@ -979,7 +981,7 @@ class House3D {
       // The doors and windows drawn in the floor plan, where they are; the front door stays the front door
       const real = shell && shell.openings.length ? shell.openings : null;
       for (const o of real || []) {
-        if (i === 0 && o.n[0] === entry.n[0] && o.n[1] === entry.n[1] && Math.abs(o.z - entry.z) + Math.abs(o.x - entry.x) < 0.5 + o.w / 2) continue;
+        if (i === 0 && entry && o.n[0] === entry.n[0] && o.n[1] === entry.n[1] && Math.abs(o.z - entry.z) + Math.abs(o.x - entry.x) < 0.5 + o.w / 2) continue;
         if (o.passage) { // an open wall: a dark opening from the ground up to the floor above, no frame or glass
           const hole = new THREE.Mesh(new THREE.PlaneGeometry(o.w, f.height - 0.04), M.reveal);
           hole.position.set(o.x + o.n[0] * 0.025, y0 + f.height / 2 - 0.02, o.z + o.n[1] * 0.025);
@@ -1008,7 +1010,7 @@ class House3D {
         for (let c = 0; c < count; c++) {
           const k = (c + 0.5) / count;
           const x = r.a[0] + (r.b[0] - r.a[0]) * k; const z = r.a[1] + (r.b[1] - r.a[1]) * k;
-          if (i === 0 && r.n[0] === entry.n[0] && r.n[1] === entry.n[1] && Math.abs(z - entry.z) + Math.abs(x - entry.x) < 1) continue;
+          if (i === 0 && entry && r.n[0] === entry.n[0] && r.n[1] === entry.n[1] && Math.abs(z - entry.z) + Math.abs(x - entry.x) < 1) continue;
           if (shell.slope && hAt(x, z) < winY - y0 + winH / 2 + 0.1) continue; // under the slope: no room for a window
           add(wide ? 1.25 : 0.9, x + r.n[0] * 0.005, z + r.n[1] * 0.005, Math.atan2(r.n[0], r.n[1]));
         }
@@ -1069,7 +1071,7 @@ class House3D {
         add(0.9, -W / 2 - 0.005, z, -Math.PI / 2);
         add(0.9, W / 2 + 0.005, z, Math.PI / 2);
       }
-      if (i === 0) {
+      if (i === 0 && entry) {
         const door = LOOK.doorPart({ frame: M.frame, glass: windowOf(entry.x, entry.z).glass, metal: M.metal }, set.door || '#2f4a3a');
         const [enx, enz] = entry.n;
         door.position.set(entry.x + enx * 0.005, 0.02, entry.z + enz * 0.005);
@@ -2460,6 +2462,7 @@ class House3D {
       const g = this.lights[place];
       const burning = on(this.outdoor[place]);
       if (g.door) {
+        if (!this.doorLamp) continue;
         this.fadeTo(this.doorLamp.mat, 'emissiveIntensity', burning ? (night ? 1.6 : 0.5) : 0);
         if (this.doorLamp.light) { this.doorLamp.light.visible = burning; this.doorLamp.shine.visible = burning; }
         continue;

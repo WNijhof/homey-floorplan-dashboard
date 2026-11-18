@@ -1,4 +1,8 @@
 {
+  "0.2.26": {
+    "en": "The railing round a roof terrace now stands on the edges of the roof under it (it could stand a few centimetres inside on one side). Front door on the front: choose No front door on the front when the real front door is somewhere else, for example in an inner garage; no door is then drawn in the facade.",
+    "nl": "Het hekje rond een dakterras staat nu op de randen van het dak eronder (het kon aan één kant enkele centimeters naar binnen staan). Voordeur in de voorgevel: kies Geen voordeur in de voorgevel als de echte voordeur ergens anders zit, bijvoorbeeld in een inpandige garage; er wordt dan geen deur in de gevel getekend."
+  },
   "0.2.25": {
     "en": "A garden house or shed on a garden level gets the sloping or gable roof you chose for its room (it was always flat). The railing round a roof terrace is open (posts and rails) instead of a solid wall. Panels per row: three landscape panels now fit next to each other on a roof of 5.8 m.",
     "nl": "Een tuinhuis of schuur op een tuinverdieping krijgt het schuine dak of zadeldak dat je voor zijn kamer koos (het was altijd plat). Het hekje rond een dakterras is open (palen en rails) in plaats van een dichte muur. Panelen per rij: drie liggende panelen passen nu naast elkaar op een dak van 5,8 m."
