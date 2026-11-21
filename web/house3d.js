@@ -383,14 +383,14 @@ class House3D {
     shows.water = !!present.water; shows.gas = !!present.gas;
     const outdoor = HC.outdoorLamps(plan, devices instanceof Map ? devices : null);
     const own = HC.garden(plan);
-    const aircoAt = HC.deviceWallSpot(plan, aircos);
-    const key = JSON.stringify([plan.id, set, shape, shows, !!dark, this.lang, outdoor, levelRooms(plan), HC.outbuildings(plan), own, aircoAt]);
+    const aircoAts = HC.deviceWallSpots(plan, aircos);
+    const key = JSON.stringify([plan.id, set, shape, shows, !!dark, this.lang, outdoor, levelRooms(plan), HC.outbuildings(plan), own, aircoAts]);
     if (key !== this.key) {
       const first = !this.key;
       this.key = key;
       this.outdoor = outdoor;
       this.own = own; // the garden as drawn, or null
-      this.aircoAt = aircoAt;
+      this.aircoAts = aircoAts;
       this.build(set, shape, shows, dark);
       if (first) this.resetCamera();
     }
@@ -522,7 +522,7 @@ class House3D {
 
   // Materials of this house and theme, made once per build.
   makeMaterials(set, dark) {
-    const tx = LOOK.textures(this.renderer, set.facade, set.roofColor, dark);
+    const tx = LOOK.textures(this.renderer, set.facade, set.roofColor, dark, set.facadeColor);
     const tint = dark ? '#8f8f8f' : '#ffffff';
     const frameColor = set.frames === 'white' ? '#f2f2ef' : '#3a3d42';
     const m = {
@@ -983,7 +983,11 @@ class House3D {
       for (const o of real || []) {
         if (i === 0 && entry && o.n[0] === entry.n[0] && o.n[1] === entry.n[1] && Math.abs(o.z - entry.z) + Math.abs(o.x - entry.x) < 0.5 + o.w / 2) continue;
         if (o.passage) { // an open wall: a dark opening from the ground up to the floor above, no frame or glass
-          const hole = new THREE.Mesh(new THREE.PlaneGeometry(o.w, f.height - 0.04), M.reveal);
+          // It belongs to the room behind it (an inner garage, a porch): when a lamp there is on, the opening glows warm,
+          // as a window does, so that the light inside shows from the street
+          const inside = windowOf(o.x - o.n[0] * 0.6, o.z - o.n[1] * 0.6);
+          inside.glass = new THREE.MeshStandardMaterial({ color: '#2b2a29', roughness: 1, emissive: '#ffb765', emissiveIntensity: 0 });
+          const hole = new THREE.Mesh(new THREE.PlaneGeometry(o.w, f.height - 0.04), inside.glass);
           hole.position.set(o.x + o.n[0] * 0.025, y0 + f.height / 2 - 0.02, o.z + o.n[1] * 0.025);
           hole.rotation.y = Math.atan2(o.n[0], o.n[1]);
           fg.add(hole);
@@ -1313,7 +1317,8 @@ class House3D {
       if (set.chimney !== false) {
         let cz = set.objects.solar.layout === 'both' ? 0 : -S / 4; const cx = L / 4; // both halves full of panels: on the ridge
         // A dormer nearly as wide as the roof takes the back (or front) slope: the chimney goes to the other one
-        if (set.dormer && (set.dormerSize === 'full' || set.dormerSize === 'ridge') && cz !== 0) cz = set.dormerAt === 'front' ? -S / 4 : S / 4;
+        // (two of them, one on each slope: the chimney stands on the ridge)
+        if (set.dormer && (set.dormerSize === 'full' || set.dormerSize === 'ridge') && cz !== 0) cz = set.dormerAt === 'both' && set.dormerSize === 'full' ? 0 : set.dormerAt === 'front' ? -S / 4 : S / 4;
         const ch = LOOK.box(0.6, rise * 0.5 + 0.9, 0.6, M.wall, cx, rise * 0.5 + lift - 0.2, cz);
         add(ch);
         if (cz !== 0) chimneyBox = { side: this.dormerSide(turned, cz > 0), x0: cx - 0.3, x1: cx + 0.3 };
@@ -1325,9 +1330,11 @@ class House3D {
     // wide as the roof and up to near the ridge (a ridge raise). The numbers are those of the back slope (z below 0);
     // a dormer at the front is that mirrored. With the ridge front to back the slopes face left and right: 'back' is the left
     // one, 'front' the right one, and the place along the roof counts from the middle towards the back.
-    let dormerBox = null; // the slope with a dormer and how far along the ridge it reaches, for the solar panels
+    // With a dormer on both slopes the back one is built as described and the front one as its mirror image; a ridge raise
+    // lifts one slope only (the back one when both are chosen).
+    const dormers = []; // the slopes with a dormer and how far along the ridge each reaches, for the solar panels
     if (set.dormer && set.roof === 'gable' && set.dormerSize === 'ridge') {
-      dormerBox = { side: this.dormerSide(turned, set.dormerAt === 'front'), x0: -L / 2, x1: L / 2 };
+      dormers.push({ side: this.dormerSide(turned, set.dormerAt === 'front'), x0: -L / 2, x1: L / 2 });
       // A ridge raise: the slope lifted from the eaves up to a ridge higher than the old one, with an upright wall
       // above the old ridge and closed cheeks at the gable ends
       const front = set.dormerAt === 'front';
@@ -1369,15 +1376,15 @@ class House3D {
       const yf = 0.6 * tan + lift;
       const dh = full ? (rise - yf) * 0.85 : Math.min(1.5, (rise - yf) * 0.7);
       const zr = (yf + dh - rise - lift) / tan;
-      if (zr > zf + 0.3) {
-        const front = set.dormerAt === 'front';
+      for (const front of zr > zf + 0.3 ? (set.dormerAt === 'both' ? [false, true] : [set.dormerAt === 'front']) : []) {
         const mz = (z) => (front ? -z : z);
         // where the owner put it, from the middle (+ is right as seen from the front), kept on the roof
         const shift = set.dormerShift != null ? (front && !turned ? set.dormerShift : turned ? set.dormerShift : -set.dormerShift) : null;
         const dx = Math.max(-L / 2 + mA + dw / 2, Math.min(L / 2 - mB - dw / 2, shift != null ? shift : full ? (mA - mB) / 2 : -L / 4));
         const dormer = LOOK.box(dw, yf + dh, zr - zf, M.trim, dx, 0, mz((zf + zr) / 2));
         add(dormer);
-        dormerBox = { side: this.dormerSide(turned, front), x0: dx - dw / 2, x1: dx + dw / 2 };
+        // (top and z: the flat cap, where an outdoor unit can stand)
+        dormers.push({ side: this.dormerSide(turned, front), x0: dx - dw / 2, x1: dx + dw / 2, front, top: yf + dh + 0.14, z: mz((zf + zr) / 2) });
         // one window, or a row of them across a wide dormer, each lit by the room behind it
         const n = full ? Math.max(1, Math.round(dw / 2.4)) : 1;
         const ww = full ? Math.min(1.6, (dw / n) * 0.7) : dw * 0.7;
@@ -1393,8 +1400,49 @@ class House3D {
         rg.add(LOOK.box(dw + capA + capB, 0.14, zr - zf + 0.25, new THREE.MeshStandardMaterial({ color: '#3a3d42', roughness: 0.6 }), dx + (capB - capA) / 2, yf + dh, mz((zf + zr) / 2)));
       }
     }
+    // Roof windows (like a Velux) in a sloping roof: a row of them on the slope(s) the owner chose, a third of the way up,
+    // where the owner put them along the roof, else in the middle or beside a dormer or the chimney on that slope. Each
+    // one lights up with the room under it. The panels keep clear of them, as of a dormer.
+    const skylights = [];
+    if (set.roof !== 'flat' && set.roofWindows > 0) {
+      const raised = set.dormer && set.roof === 'gable' && set.dormerSize === 'ridge' ? this.dormerSide(turned, set.dormerAt === 'front') : null;
+      const fronts = set.roofWindowsAt === 'both' ? [false, true] : [set.roofWindowsAt === 'front'];
+      const n = set.roofWindows; const ww = 0.78; const wh = 1.18; const step = ww + 0.6;
+      const span = n * step - 0.6;
+      const reach = (set.roof === 'hip' ? Math.max(0, L / 2 - S / 2) + S / 4 : L / 2) - 0.4; // a hip roof is narrower higher up
+      for (const front of fronts) {
+        const side = this.dormerSide(turned, front);
+        if (side === raised) continue; // the lifted slope of a ridge raise has windows of its own
+        const taken = dormers.filter((d) => d.side === side).concat(chimneyBox && chimneyBox.side === side ? [chimneyBox] : []);
+        const clear = (c) => taken.every((d) => c + span / 2 + 0.3 <= d.x0 || c - span / 2 - 0.3 >= d.x1);
+        const shift = set.roofWindowShift != null ? (front && !turned ? set.roofWindowShift : turned ? set.roofWindowShift : -set.roofWindowShift) : null;
+        const c0 = shift != null ? shift : [0, -L / 4, L / 4, -L / 3, L / 3].find(clear);
+        if (c0 == null) continue;
+        const c = Math.max(-reach + span / 2, Math.min(reach - span / 2, c0));
+        if (span > 2 * reach) continue;
+        const ze = front ? z1 : z0; const a = 0.33; // the eaves edge of this slope, and how far up the windows are
+        const normal = new THREE.Vector3(0, S / 2 + ov, Math.sign(ze) * (rise + drop)).normalize();
+        const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal);
+        const meshes = [];
+        for (let i = 0; i < n; i++) {
+          const wx = c - span / 2 + ww / 2 + i * step;
+          const wz = ze * (1 - a); const wy = -drop + lift + (rise + drop) * a;
+          const frame = LOOK.box(ww + 0.1, wh + 0.1, 0.07, M.frame, 0, 0, 0);
+          frame.position.set(wx, wy, wz).addScaledVector(normal, 0.02);
+          frame.quaternion.copy(q);
+          add(frame);
+          const win = new THREE.Mesh(new THREE.PlaneGeometry(ww, wh), shining(M.glass(), wx, wz * 0.85));
+          win.position.set(wx, wy, wz).addScaledVector(normal, 0.075);
+          win.quaternion.copy(q);
+          win.userData.pick = pick;
+          rg.add(win);
+          meshes.push(frame, win);
+        }
+        skylights.push({ side, x0: c - span / 2, x1: c + span / 2, meshes });
+      }
+    }
     this.roofGroup = rg;
-    this.roofInfo = { L, S, rise, pitch, turned, ov, lift, dormer: dormerBox, chimney: chimneyBox };
+    this.roofInfo = { L, S, rise, pitch, turned, ov, lift, dormer: dormers[0] || null, dormers, skylights, chimney: chimneyBox };
     return { top, rise };
   }
 
@@ -1746,9 +1794,11 @@ class House3D {
     }).filter(Boolean);
     // A dormer or ridge raise that takes the whole sunny slope: the panels go on the other one
     if (!placed.length && sides.length === 1 && (sides[0] === 'front' || sides[0] === 'back')) {
-      const other = this.panelsOn(sides[0] === 'front' ? 'back' : 'front', total, t, shape);
+      const other = this.panelsOn(sides[0] === 'front' ? 'back' : 'front', total, t, shape) || this.panelsOn(sides[0], total, t, shape, true);
       if (other) placed.push(other);
     }
+    // Roof windows everywhere the panels could go: the panels win
+    if (!placed.length && !wing && sides[0] !== 'top') { const over = this.panelsOn(sides[0], total, t, shape, 'all'); if (over) placed.push(over); }
     if (!placed.length) return;
     // The card and the cable go with the first face
     const { panels, middle, centre } = placed[0];
@@ -1893,13 +1943,14 @@ class House3D {
   }
 
   // Panels on one face of the roof: as many as asked and as fit (0: as many as fit nicely).
-  panelsOn(side, wanted, t, shape) {
+  panelsOn(side, wanted, t, shape, force) {
     const info = this.roofInfo;
     let shiftX = 0; // where the panels sit along the slope: in the middle, or beside a dormer
     const group = new THREE.Group();
     const { panelW, panelH, gap } = this.panelSize();
     let cols; let rows; let along; let up;
     let target = wanted;
+    let free = null; // on a slope with nothing in the way: its length and that of the slope, for the place the owner gave
     // On a flat roof with both directions: rows that lean in turn to the east and the west
     const tent = side === 'top' && this.set.objects.solar.layout === 'both';
     // On a flat roof the panels look at the side the owner chose, else at the one nearest to the south; towards the left or
@@ -1935,12 +1986,26 @@ class House3D {
         const left = a - 0.3 - lo; const right = hi - (b + 0.3);
         return { free: Math.max(left, right), middle: left >= right ? (lo + (a - 0.3)) / 2 : ((b + 0.3) + hi) / 2 };
       };
-      const dm = info.dormer && info.dormer.side === side ? info.dormer : null;
+      // A dormer and a row of roof windows on the same slope: the panels go in the widest free stretch between and
+      // beside them
+      // (force 'all': the last way out, the panels lie over the roof windows, which then go)
+      const under = (info.skylights || []).filter((d) => d.side === side);
+      const taken = (info.dormers || []).concat(force === 'all' ? [] : under).filter((d) => d.side === side);
+      if (force === 'all') for (const d of under) for (const m of d.meshes || []) m.visible = false;
+      const dm = taken.length > 0;
       if (dm) {
-        const room = beside(dm);
-        if (room.free < panelW + gap) return null;
-        length = room.free + 1; // the margin of the formula below
-        shiftX = room.middle;
+        const flip = side === 'back' || (info.turned && side === 'left') ? -1 : 1;
+        const boxes = taken.map((d) => [Math.min(flip * d.x0, flip * d.x1) - 0.3, Math.max(flip * d.x0, flip * d.x1) + 0.3]).sort((p, q) => p[0] - q[0]);
+        const edge = length / 2 - 0.5 - (hipCut * slope) / 2; // (a hip roof gets narrower higher up)
+        let from = -edge; let best = { free: 0, middle: 0 };
+        for (const [a, b] of boxes.concat([[edge, Infinity]])) {
+          if (Math.min(a, edge) - from > best.free) best = { free: Math.min(a, edge) - from, middle: (from + Math.min(a, edge)) / 2 };
+          from = Math.max(from, b);
+        }
+        // A stretch with room for one column only: the panels rather go on the other slope (unless there is none)
+        if (best.free < (force ? 1 : 2) * (panelW + gap)) return null;
+        length = best.free + 1 + hipCut * slope; // the margins of the formula below
+        shiftX = best.middle;
       }
       up = Math.max(1, Math.floor((slope - 0.8) / (panelH + gap)));
       // The chimney on this slope: the panels go beside it when they all fit there, else they stay in the middle
@@ -1952,6 +2017,7 @@ class House3D {
         if (fits >= needed) { length = room.free + 1; shiftX = room.middle; }
       }
       along = Math.max(1, Math.floor((length - 1 - hipCut * slope) / (panelW + gap)));
+      if (!dm) free = { length: length - hipCut * slope, slope, flip: side === 'back' || (info.turned && side === 'left') ? -1 : 1 };
       if (sideways && this.set.roof === 'hip') { along = Math.max(1, Math.floor(along * 0.5)); up = Math.min(up, 2); }
     }
     const perRow = this.set.objects.solar.perRow;
@@ -1959,7 +2025,16 @@ class House3D {
     ({ cols, rows, target } = this.panelGrid(target, along, up));
     // A flat roof: every row leans on its own frame (one tilted plane for all rows is not what stands on a roof)
     const rowStep = side === 'top' && !tent ? panelH * Math.cos(0.26) + (this.set.objects.solar.perRow > 0 ? 0.3 : 0.5) : 0;
-    const { panels, middle: midGlow } = this.panelBlock(t, cols, rows, target, panelW, panelH, gap, shiftX, tent, 0.5, rowStep);
+    // Where the owner put the block: from the middle of the roof (+ is right, seen from the front) and higher up the
+    // slope, kept on the roof
+    const sol = this.set.objects.solar;
+    let start = 0.5;
+    if (free) {
+      const half = Math.max(0, (free.length - 1) / 2 - (cols * (panelW + gap) - gap) / 2);
+      if (sol.shift) shiftX = Math.max(-half, Math.min(half, free.flip * sol.shift));
+      if (sol.up) start = Math.max(0.5, Math.min(0.5 + sol.up, free.slope - 0.3 - rows * (panelH + gap)));
+    }
+    const { panels, middle: midGlow } = this.panelBlock(t, cols, rows, target, panelW, panelH, gap, shiftX, tent, start, rowStep);
     this.liftWith.push(panels);
 
     if (side === 'top') {
@@ -1978,6 +2053,10 @@ class House3D {
       }
       group.position.y = this.roofFrame.y;
       if (shape.form) group.position.set(shape.form.main.x, this.roofFrame.y, shape.form.main.z);
+      // moved by the owner along the front and towards the back, kept on the roof
+      const roofW = shape.form ? shape.form.main.w : shape.width; const roofD = shape.form ? shape.form.main.d : shape.depth;
+      if (sol.shift) group.position.x += Math.max(-roofW / 3, Math.min(roofW / 3, sol.shift));
+      if (sol.up) group.position.z -= Math.min(roofD / 3, sol.up);
       this.root.add(group);
     } else {
       // Slope frame: origin on the eave edge, local -z up the slope, local y out of the roof
@@ -2122,91 +2201,141 @@ class House3D {
     else this.addFlow('use', [p(start, meter.y, D / 2 + 0.06), p(start, 0.04, D / 2 + 0.06), p(start, 0.04, front), p(side, 0.04, front), p(side, 0.04, wallZ), p(wallX + cs * 0.06, 0.8, wallZ)], 'car');
   }
 
-  // The heat pump stands against the side wall on the carport side, towards the back: in view from the front corner.
+  // The heat pump at the front, by the meter cupboard: far from the battery and the charger, with a cable of its own.
+  // Several units (a hybrid set, a second pump) stand in a row beside each other, moved along the front as the owner said.
   buildHeatpump(t, W, D, cs, meter) {
     if (this.set.roof === 'flat' && this.set.objects.heatpump.place === 'roof' && this.roofFrame) return this.buildHeatpumpOnRoof(t, W, D, cs, meter);
-    // At the front, by the meter cupboard: far from the battery and the charger, with a cable of its own
-    const spot = this.frontSpot(this.shape, this.heatSide * (W / 2 - 2.3), 0.6);
-    const { x } = spot; const z = spot.z + 0.27;
-    const g = new THREE.Group();
-    g.add(box(1.05, 0.85, 0.42, mat(t.unit, { roughness: 0.5 }), 0, 0, 0));
-    const fan = this.fan(0.28, -0.2, 0.43, 0.22);
-    g.add(fan.ring, fan.mesh);
-    g.position.set(x, 0, z); // the fan looks away from the wall
-    g.userData.pick = { kind: 'heatpump' };
-    this.root.add(g);
-    this.fans.push(fan);
-    this.heatFan = fan;
-    this.cards.heatpump = this.card('heatpump', null, new THREE.Vector3(x, 1.3, z));
+    const hp = this.set.objects.heatpump;
     const p = (px, py, pz) => new THREE.Vector3(px, py, pz);
-    // low along the wall, the short way
-    const wz = Math.max(meter.z, spot.z + 0.06);
-    this.addFlow('use', [meter, p(meter.x, 0.55, wz), p(x, 0.55, wz), p(x, 0.6, z - 0.2)], 'heatpump');
+    this.heatFans = [];
+    const x0 = this.heatSide * (W / 2 - 2.3) + hp.shift;
+    for (let i = 0; i < hp.count; i++) {
+      // the next units go towards the middle of the front (or away from the edge they would fall off)
+      const along = x0 - this.heatSide * i * 1.25;
+      const spot = this.frontSpot(this.shape, Math.max(-W / 2 + 0.6, Math.min(W / 2 - 0.6, along)), 0.6);
+      const { x } = spot; const z = spot.z + 0.27;
+      const g = new THREE.Group();
+      g.add(box(1.05, 0.85, 0.42, mat(t.unit, { roughness: 0.5 }), 0, 0, 0));
+      const fan = this.fan(0.28, -0.2, 0.43, 0.22);
+      g.add(fan.ring, fan.mesh);
+      g.position.set(x, 0, z); // the fan looks away from the wall
+      g.userData.pick = { kind: 'heatpump' };
+      this.root.add(g);
+      this.fans.push(fan);
+      this.heatFans.push(fan);
+      if (i === 0) this.cards.heatpump = this.card('heatpump', null, new THREE.Vector3(x, 1.3, z));
+      // low along the wall, the short way
+      const wz = Math.max(meter.z, spot.z + 0.06);
+      this.addFlow('use', [meter, p(meter.x, 0.55, wz), p(x, 0.55, wz), p(x, 0.6, z - 0.2)], 'heatpump');
+    }
   }
 
   // A flat heat pump lying on a flat roof, in the back corner, its fan looking up; it lifts away with the roof.
+  // More units lie beside it, towards the middle.
   buildHeatpumpOnRoof(t, W, D, cs, meter) {
+    const hp = this.set.objects.heatpump;
     const main = this.shape.form ? this.shape.form.main : { x: 0, z: 0, w: W, d: D };
     const y0 = this.roofFrame.y;
-    const x = main.x - cs * (main.w / 2 - 0.9); const z = main.z - main.d / 2 + 0.75;
-    const g = new THREE.Group();
-    g.add(box(1.05, 0.85, 0.42, mat(t.unit, { roughness: 0.5 }), 0, 0, 0));
-    const fan = this.fan(0.28, -0.2, 0.43, 0.22);
-    g.add(fan.ring, fan.mesh);
-    g.rotation.x = -Math.PI / 2; // the front with the fan faces the sky
-    g.position.set(x, y0 + 0.21, z + 0.425);
-    g.userData.pick = { kind: 'heatpump' };
-    this.root.add(g);
-    this.liftWith.push(g);
-    this.fans.push(fan);
-    this.heatFan = fan;
-    this.cards.heatpump = this.card('heatpump', null, new THREE.Vector3(x, y0 + 1.4, z));
-    // along the wall to the back, up to the roof edge and over it to the unit
     const p = (px, py, pz) => new THREE.Vector3(px, py, pz);
-    const wall = this.onWall(p(x, 0, z));
-    this.addFlow('use', [...this.cableRoute(meter, p(wall.x, 0.9, wall.z)), p(wall.x, y0 + 0.3, wall.z), p(x, y0 + 0.3, z)], 'heatpump');
+    this.heatFans = [];
+    for (let i = 0; i < hp.count; i++) {
+      const along = main.x - cs * (main.w / 2 - 0.9) + cs * i * 1.25 + hp.shift;
+      const x = Math.max(main.x - main.w / 2 + 0.7, Math.min(main.x + main.w / 2 - 0.7, along)); const z = main.z - main.d / 2 + 0.75;
+      const g = new THREE.Group();
+      g.add(box(1.05, 0.85, 0.42, mat(t.unit, { roughness: 0.5 }), 0, 0, 0));
+      const fan = this.fan(0.28, -0.2, 0.43, 0.22);
+      g.add(fan.ring, fan.mesh);
+      g.rotation.x = -Math.PI / 2; // the front with the fan faces the sky
+      g.position.set(x, y0 + 0.21, z + 0.425);
+      g.userData.pick = { kind: 'heatpump' };
+      this.root.add(g);
+      this.liftWith.push(g);
+      this.fans.push(fan);
+      this.heatFans.push(fan);
+      if (i === 0) this.cards.heatpump = this.card('heatpump', null, new THREE.Vector3(x, y0 + 1.4, z));
+      // along the wall to the back, up to the roof edge and over it to the unit
+      const wall = this.onWall(p(x, 0, z));
+      this.addFlow('use', [...this.cableRoute(meter, p(wall.x, 0.9, wall.z)), p(wall.x, y0 + 0.3, wall.z), p(x, y0 + 0.3, z)], 'heatpump');
+    }
   }
 
-  // The outdoor unit of the air conditioner hangs on a wall of the upper storey: on the front wall above the meter
-  // cupboard, or where the owner put it: at the front left or right, or on a side wall (not against a neighbour).
+  // The outdoor units of the air conditioners. Without a choice of the owner: one on the outer wall nearest to each air
+  // conditioner placed in the plan, else one on the front wall of the upper storey above the meter cupboard. Where the
+  // owner put them: at the front left or right, on a side wall (not against a neighbour), on the flat roof or on top of
+  // the dormer; as many as the owner said, in a row, moved along that wall.
   buildAirco(t, W, D, cs, shape, meter) {
-    // It hangs on the upper storey (on its own walls, not on a lower part that sticks out), or where the air
-    // conditioner is placed in the plan, on the outer wall nearest to it
-    const place = this.set.objects.airco.place;
-    const placed = place === 'auto' ? this.aircoAt : null;
-    const fi = placed ? placed.floor : shape.floors.length > 1 ? 1 : 0;
-    const top = shape.floors[fi];
-    const y = top.base + (placed ? 1.6 : 0.25);
-    const side = place === 'frontleft' || place === 'left' ? -1 : 1;
-    const against = (sd) => this.set.between || (this.set.oneSide && this.set.neighbour === (sd < 0 ? 'left' : 'right'));
-    const front = this.wallSpot(shape, 0, 1, meter.x, 0.4, fi);
-    let x = front ? front.x : meter.x; let z = (front ? front.z : D / 2) + 0.2;
-    let turn = 0; // the unit faces +z; on a side wall it turns to face outwards
-    let card = [0, 0.2]; // the card floats beside the unit's face
-    if (placed) {
-      const [nx, nz] = placed.n;
-      x = placed.x + nx * 0.2; z = placed.z + nz * 0.2; turn = Math.atan2(nx, nz); card = [nx * 0.2, nz * 0.2];
-    } else if (place === 'frontleft' || place === 'frontright') {
-      const spot = this.wallSpot(shape, 0, 1, side * (W / 2 - 0.9), 0.4, fi);
-      x = spot.x; z = spot.z + 0.2;
-    } else if ((place === 'left' || place === 'right') && !against(side)) {
-      const wall = this.wallSpot(shape, side, 0, 0, 0.8, fi);
-      if (wall) { x = wall.x + side * 0.2; z = wall.z; turn = side * Math.PI / 2; card = [side * 0.2, 0]; }
-    }
-    const g = new THREE.Group();
-    g.add(box(0.8, 0.6, 0.36, mat(t.unit, { roughness: 0.5 }), 0, 0, 0));
-    const f2 = this.fan(0.2, -0.12, 0.3, 0.19);
-    g.add(f2.ring, f2.mesh);
-    g.add(box(0.9, 0.04, 0.4, mat(t.post), 0, -0.04, 0));
-    g.position.set(x, y, z);
-    g.rotation.y = turn;
-    g.userData.pick = { kind: 'airco' };
-    this.root.add(g);
-    this.fans.push(f2);
-    this.aircoFan = f2;
-    this.cards.airco = this.card('airco', null, new THREE.Vector3(x + card[0], y + 1.25, z + card[1]));
+    const ac = this.set.objects.airco;
+    const place = ac.place;
+    const spots = place === 'auto' && this.aircoAts && this.aircoAts.length ? this.aircoAts : null;
+    const fi = shape.floors.length > 1 ? 1 : 0;
     const p = (px, py, pz) => new THREE.Vector3(px, py, pz);
-    this.addFlow('use', this.cableRoute(meter, p(x, y + 0.05, z)), 'airco');
+    const against = (sd) => this.set.between || (this.set.oneSide && this.set.neighbour === (sd < 0 ? 'left' : 'right'));
+    this.aircoFans = [];
+    // One unit: where it hangs (in world space, or in the frame of the roof with `roof`), turned to face out
+    const unit = (u, i) => {
+      const g = new THREE.Group();
+      g.add(box(0.8, 0.6, 0.36, mat(t.unit, { roughness: 0.5 }), 0, 0, 0));
+      const f2 = this.fan(0.2, -0.12, 0.3, 0.19);
+      g.add(f2.ring, f2.mesh);
+      g.add(box(0.9, 0.04, 0.4, mat(t.post), 0, -0.04, 0));
+      g.position.set(u.x, u.y, u.z);
+      g.rotation.y = u.turn;
+      g.userData.pick = { kind: 'airco' };
+      (u.roof || this.root).add(g);
+      if (u.lift) this.liftWith.push(g);
+      this.fans.push(f2);
+      this.aircoFans.push({ fan: f2, id: u.id || null });
+      const at = p(u.x, u.y + 0.05, u.z);
+      if (u.roof) { u.roof.updateWorldMatrix(true, false); u.roof.localToWorld(at); }
+      if (i === 0) this.cards.airco = this.card('airco', null, at.clone().add(p(u.card[0], 1.2, u.card[1])));
+      this.addFlow('use', this.cableRoute(meter, at), 'airco');
+    };
+    if (spots) {
+      // one per air conditioner in the plan, on the storey it is on
+      spots.forEach((s, i) => {
+        const y = shape.floors[s.floor] ? shape.floors[s.floor].base + 1.6 : 1.6;
+        const [nx, nz] = s.n;
+        unit({ x: s.x + nx * 0.2, y, z: s.z + nz * 0.2, turn: Math.atan2(nx, nz), card: [nx * 0.2, nz * 0.2], id: s.deviceId }, i);
+      });
+      return;
+    }
+    const n = ac.count;
+    const row = (i) => (i - (n - 1) / 2) * 1.0 + ac.shift; // the units side by side, around the spot (+ moves them along)
+    const tops = this.roofInfo ? (this.roofInfo.dormers || []).filter((d) => d.top) : [];
+    const dm = tops.find((d) => d.front) || tops[0]; // the one at the front, in view
+    if (place === 'roof' && this.roofFrame && this.roofFrame.kind === 'flat') {
+      // standing on the flat roof, at the back, facing the back
+      const main = shape.form ? shape.form.main : { x: 0, z: 0, w: W, d: D };
+      for (let i = 0; i < n; i++) {
+        const x = Math.max(main.x - main.w / 2 + 0.6, Math.min(main.x + main.w / 2 - 0.6, main.x + row(i)));
+        unit({ x, y: this.roofFrame.y + 0.08, z: main.z - main.d / 2 + 0.7, turn: Math.PI, card: [0, -0.2], lift: true }, i);
+      }
+      return;
+    }
+    if (place === 'roof' && dm && this.roofGroup) {
+      // on the flat top of the dormer, facing out over its window (in the frame of the roof, so it lifts with it)
+      const len = dm.x1 - dm.x0;
+      for (let i = 0; i < n; i++) {
+        const x = Math.max(dm.x0 + 0.45, Math.min(dm.x1 - 0.45, (dm.x0 + dm.x1) / 2 + (dm.front ? 1 : -1) * row(i) * (len > 1 ? 1 : 0)));
+        unit({ x, y: dm.top + 0.06, z: dm.z, turn: dm.front ? 0 : Math.PI, card: [0, 0], roof: this.roofGroup }, i);
+      }
+      return;
+    }
+    const top = shape.floors[fi];
+    const y = top.base + 0.25;
+    const side = place === 'frontleft' || place === 'left' ? -1 : 1;
+    if ((place === 'left' || place === 'right') && !against(side)) {
+      for (let i = 0; i < n; i++) {
+        const wall = this.wallSpot(shape, side, 0, row(i), 0.8, fi);
+        if (wall) unit({ x: wall.x + side * 0.2, y, z: wall.z, turn: side * Math.PI / 2, card: [side * 0.2, 0] }, i);
+      }
+      if (this.aircoFans.length) return;
+    }
+    const base = place === 'frontleft' || place === 'frontright' ? side * (W / 2 - 0.9 - (n - 1) * 0.5) : meter.x;
+    for (let i = 0; i < n; i++) {
+      const spot = this.wallSpot(shape, 0, 1, Math.max(-W / 2 + 0.6, Math.min(W / 2 - 0.6, base + row(i))), 0.4, fi);
+      unit({ x: spot ? spot.x : base + row(i), y, z: (spot ? spot.z : D / 2) + 0.2, turn: 0, card: [0, 0.2] }, i);
+    }
   }
 
   // A fan behind a grille around (x, y, z), turning while the unit runs (faces +z in its group).
@@ -2401,14 +2530,15 @@ class House3D {
     } else this.setCard('car', T.car, '–', { idle: true });
     if (e.heating) {
       const h = e.heating.devices[0] || {};
-      if (this.heatFan) this.heatFan.on = (e.heating.watts || 0) > 30;
+      for (const fan of this.heatFans || []) fan.on = (e.heating.watts || 0) > 30;
       this.setCard('heatpump', T.heatpump, (e.heating.watts || 0) > 30 ? fmtW(e.heating.watts, lang) : (typeof h.temperature === 'number' ? `${h.temperature.toLocaleString(lang)}°` : T.idle), { idle: !((e.heating.watts || 0) > 30) });
     } else this.setCard('heatpump', T.heatpump, '–', { idle: true });
     if (e.airco) {
       // Several air conditioners (and a meter on their supply): the card shows the one that is running, with all their power
       const a = e.airco.find((x) => x.on) || e.airco[0];
       const total = e.airco.reduce((s, x) => s + (x.on ? x.watts || 0 : 0), 0);
-      if (this.aircoFan) this.aircoFan.on = a.on === true;
+      // each unit of an air conditioner in the plan turns with that one; the others with the one that runs
+      for (const u of this.aircoFans || []) { const own = u.id && e.airco.find((x) => x.id === u.id); u.fan.on = own ? own.on === true : a.on === true; }
       this.setCard('airco', T.airco, a.on ? (total ? fmtW(total, lang) : T.on) : (typeof a.temperature === 'number' ? `${a.temperature.toLocaleString(lang)}°` : T.off), { idle: !a.on });
     } else {
       // An air conditioner that Energy does not know (a split unit that Homey classes as a heater): the card shows what the device itself says
@@ -2417,7 +2547,7 @@ class House3D {
       if (d) {
         const on = !!(d.caps && d.caps.onoff === true);
         const temp = d.caps && typeof d.caps.measure_temperature === 'number' ? d.caps.measure_temperature : null;
-        if (this.aircoFan) this.aircoFan.on = on;
+        for (const u of this.aircoFans || []) { const own = u.id && devices.get(u.id); u.fan.on = own ? !!(own.caps && own.caps.onoff === true) : on; }
         this.setCard('airco', T.airco, on ? T.on : (temp !== null ? `${temp.toLocaleString(lang)}°` : T.off), { idle: !on });
       } else this.setCard('airco', T.airco, '–', { idle: true });
     }

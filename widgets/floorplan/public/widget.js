@@ -179,7 +179,7 @@
         state.v3d = window.FloorplanView3D.create(box3d, { tap: (kind, id) => tapFor({ kind, id }) });
         setupGestures(box3d);
       }
-      state.v3d.sync({ plan: state.plan, level, devices: state.devices, dark, night: state.energy ? state.energy.night : undefined, furniture: s.furniture !== false, turn: state.turn, values: s.values !== false, names: s.names || 'devices' });
+      state.v3d.sync({ plan: state.plan, level, devices: state.devices, dark, night: state.energy ? state.energy.night : undefined, furniture: s.furniture !== false, turn: state.turn, values: s.values !== false, names: s.names || 'devices', keepCamera: s.keepCamera !== false });
       renderLevels();
       if (state.sheet) renderSheet();
       if (state.quick) renderQuick();
@@ -1290,7 +1290,7 @@
     $('btn-full').addEventListener('click', () => { if (state.links && state.links.dashboard) Homey.popup(state.links.dashboard); });
     $('btn-turn').addEventListener('click', () => {
       state.turn = (state.turn + 1) % 4;
-      if (state.view === '3d' && state.v3d) state.v3d.resetCamera(state.turn);
+      if (state.view === '3d' && state.v3d) { state.v3d.resetCamera(state.turn); state.v3d.saveCamera(); }
       scheduleRender();
     });
     $('levels').addEventListener('click', (ev) => {

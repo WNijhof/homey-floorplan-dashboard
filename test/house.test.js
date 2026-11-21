@@ -304,7 +304,7 @@ test('grid connection, air conditioner, dormer and neighbours get defaults and c
   assert.strictEqual(s.neighbourD, 30, 'kept to 30 m');
   assert.strictEqual(s.neighbourShift, -2);
   assert.strictEqual(s.neighbourRoof, 'flat');
-  const bad = house.settings({ house: { objects: { grid: { place: 'up' }, airco: { place: 'roof' } }, dormerAt: 'side', dormerSize: 'huge', neighbourW: 'wide', neighbourRoof: 'dome' } });
+  const bad = house.settings({ house: { objects: { grid: { place: 'up' }, airco: { place: 'attic' } }, dormerAt: 'side', dormerSize: 'huge', neighbourW: 'wide', neighbourRoof: 'dome' } });
   assert.strictEqual(bad.objects.grid.place, 'auto');
   assert.strictEqual(bad.objects.airco.place, 'auto');
   assert.strictEqual(bad.dormerAt, 'back');
@@ -954,4 +954,43 @@ test('panels on a flat roof look at the south, or at the side the owner chose', 
     assert.strictEqual(plane({}), 0, 'without a choice it looks at the south');
     assert.strictEqual(plane({ slope: 'front' }), 90, 'towards the west: east negative, so +90');
   }
+});
+
+test('0.2.27: dormers on both slopes, roof windows, own facade colour, panel place, several outdoor units', () => {
+  const s = house.settings({ house: {
+    dormer: true, dormerAt: 'both', roofWindows: 3.4, roofWindowsAt: 'front', roofWindowShift: 1.5, facade: 'cladding', facadeColor: '#335577',
+    objects: { solar: { shift: -2, up: 0.8 }, heatpump: { count: 2, shift: 1 }, airco: { place: 'roof', count: 9, shift: -20 } },
+  } });
+  assert.strictEqual(s.dormerAt, 'both');
+  assert.strictEqual(s.roofWindows, 3);
+  assert.strictEqual(s.roofWindowsAt, 'front');
+  assert.strictEqual(s.roofWindowShift, 1.5);
+  assert.strictEqual(s.facade, 'cladding');
+  assert.strictEqual(s.facadeColor, '#335577');
+  assert.strictEqual(s.objects.solar.shift, -2);
+  assert.strictEqual(s.objects.solar.up, 0.8);
+  assert.strictEqual(s.objects.heatpump.count, 2);
+  assert.strictEqual(s.objects.heatpump.shift, 1);
+  assert.strictEqual(s.objects.airco.place, 'roof');
+  assert.strictEqual(s.objects.airco.count, 4, 'at most four units');
+  assert.strictEqual(s.objects.airco.shift, -15, 'kept to 15 m');
+  const d = house.settings({ house: { facade: 'wood', facadeColor: 'blue', roofWindows: -1, roofWindowsAt: 'top' } });
+  assert.strictEqual(d.facade, 'wood');
+  assert.strictEqual(d.facadeColor, '', 'only a #rrggbb colour');
+  assert.strictEqual(d.roofWindows, 0);
+  assert.strictEqual(d.roofWindowsAt, 'back');
+  assert.strictEqual(d.roofWindowShift, null, 'no place: beside what is on the slope');
+  assert.strictEqual(d.objects.heatpump.count, 1);
+  assert.strictEqual(d.objects.airco.count, 1);
+});
+
+test('every placed air conditioner gets its own outdoor unit spot', () => {
+  const plan = stackedPlan();
+  plan.levels[1].items.push({ id: 'i1', kind: 'device', deviceId: 'ac', x: 790, y: 700 }, { id: 'i2', kind: 'device', deviceId: 'ac2', x: 10, y: 700 }, { id: 'i3', kind: 'device', deviceId: 'ac', x: 780, y: 690 });
+  const spots = house.deviceWallSpots(plan, ['ac', 'ac2']);
+  assert.deepStrictEqual(spots.map((s) => s.deviceId), ['ac', 'ac2'], 'one spot per device, also when it is placed twice');
+  assert.deepStrictEqual(spots[0].n, [1, 0]);
+  assert.deepStrictEqual(spots[1].n, [-1, 0], 'the second on the left outer wall');
+  assert.strictEqual(house.deviceWallSpot(plan, ['ac2']).deviceId, 'ac2');
+  assert.deepStrictEqual(house.deviceWallSpots(plan, []), []);
 });

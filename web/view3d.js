@@ -439,6 +439,7 @@ class View3D {
     this.controls.maxPolarAngle = THREE.MathUtils.degToRad(84);
     this.controls.screenSpacePanning = true;
     this.controls.addEventListener('change', () => { this.updateCutaway(); this.request(); });
+    this.controls.addEventListener('end', () => this.saveCamera()); // (after a turn, zoom or move by hand)
 
     this.hemi = new THREE.HemisphereLight('#ffffff', '#888888', 1);
     this.sun = new THREE.DirectionalLight('#fff4e0', 2);
@@ -534,17 +535,19 @@ class View3D {
 
   // Rebuilds the scene when the plan, the level or the theme changed; otherwise only updates live states.
   // night: the real time of day, from where the Homey is; else the theme of the page decides.
-  sync({ plan, level, devices, dark: pageDark, night, furniture, turn, values, names }) {
+  sync({ plan, level, devices, dark: pageDark, night, furniture, turn, values, names, keepCamera }) {
     const dark = typeof night === 'boolean' ? night : pageDark;
     this.names = names || 'devices';
-    const key = [plan.id, level.id, plan.updatedAt || '', dark ? 'd' : 'l', furniture !== false, levelHash(level), names || 'devices', JSON.stringify((plan.house && [plan.house.facade, plan.house.roofColor]) || '')].join('|');
+    const key = [plan.id, level.id, plan.updatedAt || '', dark ? 'd' : 'l', furniture !== false, levelHash(level), names || 'devices', JSON.stringify((plan.house && [plan.house.facade, plan.house.roofColor, plan.house.facadeColor]) || '')].join('|');
     this.devices = devices;
     this.values = values !== false;
     if (key !== this.key) {
       const first = !this.key || !this.key.startsWith(`${plan.id}|${level.id}|`);
       this.key = key;
       this.build(plan, level, dark, furniture !== false);
-      if (first) this.resetCamera(turn);
+      // A storey opens the way it was left on this screen, when that is kept; else from the chosen turn
+      this.cameraKey = keepCamera ? `${plan.id}|${level.id}` : null;
+      if (first && !this.restoreCamera()) this.resetCamera(turn);
     }
     this.updateLive();
   }
@@ -718,7 +721,7 @@ class View3D {
     };
     // The outside of outer walls in the facade of the house view (brick or plaster)
     const hs = window.HouseCore ? window.HouseCore.settings(plan) : { facade: 'brick', roofColor: 'anthracite' };
-    const facade = LOOK.textures(this.renderer, hs.facade, hs.roofColor, t.night);
+    const facade = LOOK.textures(this.renderer, hs.facade, hs.roofColor, t.night, hs.facadeColor);
     const levelWalls = core.levelWalls(level);
     // Under a sloping roof the tops of the walls follow the ceiling; a wall then goes in parts, each with a straight top.
     const sloped = !!core.slopeOf(level);
@@ -1558,6 +1561,37 @@ class View3D {
     this.updateCutaway();
     if (t >= 1) this.flight = null;
     return t < 1;
+  }
+
+  // The camera of each storey as it was left (by hand), kept in this browser: position and target, with the size of
+  // the storey then, so that a storey drawn much bigger or smaller opens from the turn again
+  saveCamera() {
+    if (!this.cameraKey || !this.bounds || this.flight) return;
+    try {
+      const all = JSON.parse(localStorage.getItem('fp3-cameras') || '{}');
+      all[this.cameraKey] = { p: this.camera.position.toArray().map((n) => Math.round(n * 100) / 100), t: this.controls.target.toArray().map((n) => Math.round(n * 100) / 100), s: Math.round(this.bounds.size * 100) / 100 };
+      const keys = Object.keys(all);
+      if (keys.length > 40) delete all[keys[0]];
+      localStorage.setItem('fp3-cameras', JSON.stringify(all));
+    } catch (e) { /* no storage here: it opens from the turn */ }
+  }
+
+  restoreCamera() {
+    if (!this.cameraKey || !this.bounds) return false;
+    let c = null;
+    try { c = JSON.parse(localStorage.getItem('fp3-cameras') || '{}')[this.cameraKey]; } catch (e) { return false; }
+    if (!c || !Array.isArray(c.p) || !Array.isArray(c.t) || c.p.length !== 3 || c.t.length !== 3 || ![...c.p, ...c.t].every(Number.isFinite)) return false;
+    if (Math.abs(c.s - this.bounds.size) > Math.max(0.5, this.bounds.size * 0.1)) return false;
+    this.flight = null; this.home = null;
+    this.setShift(0);
+    this.controls.minDistance = 1.5;
+    this.controls.maxDistance = this.bounds.size * 4;
+    this.controls.target.fromArray(c.t);
+    this.camera.position.fromArray(c.p);
+    this.controls.update();
+    this.updateCutaway();
+    this.request();
+    return true;
   }
 
   resetCamera(turn) {

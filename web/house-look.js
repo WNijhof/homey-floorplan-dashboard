@@ -196,6 +196,33 @@ function panelCanvas() {
   return c;
 }
 
+// Facade boards (planks or panels like Keralit) of the given height, 1 m high and 1 m wide, with a shadow line between
+// them. upright: vertical wooden boards instead of lying panels. Returns the colour and the bump canvas.
+function boardCanvas(base, boards, seed, upright) {
+  const S = 256;
+  const [c, g] = canvas(S, S);
+  const [b, bg] = canvas(S, S);
+  const r = rng(seed);
+  const step = S / boards;
+  for (let i = 0; i < boards; i++) {
+    const p = i * step;
+    const tone = shade(base, (r() - 0.5) * (upright ? 0.07 : 0.03));
+    const grad = upright ? g.createLinearGradient(p, 0, p + step, 0) : g.createLinearGradient(0, p, 0, p + step);
+    grad.addColorStop(0, shade(tone, 0.04)); grad.addColorStop(1, shade(tone, -0.05));
+    g.fillStyle = grad;
+    if (upright) g.fillRect(p, 0, step, S); else g.fillRect(0, p, S, step);
+    if (upright) for (let k = 0; k < 6; k++) { g.fillStyle = 'rgba(0,0,0,0.06)'; g.fillRect(p + r() * step, 0, 1, S); }
+    // the shadow line under (or beside) each board
+    g.fillStyle = 'rgba(0,0,0,0.38)';
+    if (upright) g.fillRect(p, 0, 2, S); else g.fillRect(0, p + step - 3, S, 3);
+    bg.fillStyle = '#d0d0d0';
+    if (upright) bg.fillRect(p, 0, step, S); else bg.fillRect(0, p, S, step);
+    bg.fillStyle = '#303030';
+    if (upright) bg.fillRect(p, 0, 2, S); else bg.fillRect(0, p + step - 3, S, 3);
+  }
+  return [c, b];
+}
+
 function grilleCanvas() {
   const [c, g] = canvas(128, 128);
   g.fillStyle = '#d9dcdf'; g.fillRect(0, 0, 128, 128);
@@ -209,17 +236,31 @@ export const FACADES = {
   yellowbrick: { base: '#c9a46a', mortar: '#e3dccf' },
   plaster: { plaster: '#ece8e0' },
   darkplaster: { plaster: '#3f4348' }, // the lines of the power stand out on it
+  cladding: { boards: '#d8d6d0', count: 6 }, // lying panels like Keralit, about 17 cm high
+  wood: { boards: '#7a5a3e', count: 7, upright: true }, // upright wooden boards
+};
+// The colour the owner chose for the facade (#rrggbb), on brick, plaster or boards alike
+const recolour = (f, color) => {
+  if (!color || !/^#[0-9a-f]{6}$/i.test(color)) return f;
+  if (f.plaster) return { plaster: color };
+  if (f.boards) return Object.assign({}, f, { boards: color });
+  return { base: color, mortar: f.mortar };
 };
 export const ROOFS = { anthracite: '#3c3f44', red: '#9a4a32', black: '#232427' };
 
 /** All textures for a theme; cached per facade and roof colour. */
 const cache = new Map();
-export function textures(renderer, facade, roofColor, dark) {
-  const key = [facade, roofColor, dark].join('|');
+export function textures(renderer, facade, roofColor, dark, color) {
+  const key = [facade, roofColor, dark, color || ''].join('|');
   if (cache.has(key)) return cache.get(key);
-  const f = FACADES[facade] || FACADES.brick;
+  const f = recolour(FACADES[facade] || FACADES.brick, color);
   const out = {};
-  if (f.plaster) {
+  if (f.boards) {
+    const [c, b] = boardCanvas(f.boards, f.count, 13, f.upright);
+    out.wall = texture(c, renderer);
+    out.wallBump = texture(b, renderer, false);
+    out.wallSize = [1, 1];
+  } else if (f.plaster) {
     out.wall = texture(noiseCanvas(f.plaster, 0.04, 256, 7), renderer);
     out.wallBump = null;
     out.wallSize = [2, 2];
@@ -238,7 +279,7 @@ export function textures(renderer, facade, roofColor, dark) {
   out.panel = texture(panelCanvas(), renderer);
   out.grille = texture(grilleCanvas(), renderer);
   // smooth walls get a smooth plinth
-  out.plinth = texture(f.plaster ? noiseCanvas(shade(f.plaster, -0.1), 0.04, 256, 23) : brickCanvas(shade(f.base, -0.12), f.mortar, 23)[0], renderer);
+  out.plinth = texture(f.boards ? noiseCanvas('#5b5d60', 0.04, 256, 23) : f.plaster ? noiseCanvas(shade(f.plaster, -0.1), 0.04, 256, 23) : brickCanvas(shade(f.base, -0.12), f.mortar, 23)[0], renderer);
   cache.set(key, out);
   return out;
 }

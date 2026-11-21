@@ -1291,7 +1291,14 @@
         if (!view.is3d) {
           const q = wallQuad({ a: ends[0], b: ends[1] }, ow);
           floor.push(`<polygon class="fp-opening" data-kind="opening" data-id="${esc(o.id)}"${sel} points="${ptsAttr(q)}" fill="${pal.floor}" stroke="${pal.wall}" stroke-width="1.5"/>`);
-          floor.push(`<line x1="${f1(ends[0][0])}" y1="${f1(ends[0][1])}" x2="${f1(ends[1][0])}" y2="${f1(ends[1][1])}" stroke="${isOpen ? pal.alarm : glassCol}" stroke-width="${f1(ow * 0.35)}" pointer-events="none"/>`);
+          if (o.slide) {
+            // a sliding door: two panes side by side, the one sliding just in front of the other
+            const mid = add(ends[0], mul(u, half));
+            for (const [p, q, s] of [[ends[0], add(mid, mul(u, half * 0.1)), -1], [add(mid, mul(u, -half * 0.1)), ends[1], 1]]) {
+              const off = mul(nrm, s * ow * 0.2);
+              floor.push(`<line x1="${f1(p[0] + off[0])}" y1="${f1(p[1] + off[1])}" x2="${f1(q[0] + off[0])}" y2="${f1(q[1] + off[1])}" stroke="${isOpen ? pal.alarm : glassCol}" stroke-width="${f1(ow * 0.25)}" pointer-events="none"/>`);
+            }
+          } else floor.push(`<line x1="${f1(ends[0][0])}" y1="${f1(ends[0][1])}" x2="${f1(ends[1][0])}" y2="${f1(ends[1][1])}" stroke="${isOpen ? pal.alarm : glassCol}" stroke-width="${f1(ow * 0.35)}" pointer-events="none"/>`);
           if (closed > 0.02) {
             const side = mul(nrm, (o.blindSide || 1) * (ow / 2 + 3));
             const a = add(ends[0], side); const b = add(ends[0], add(side, mul(u, half * 2 * Math.max(closed, 0.02))));

@@ -21,7 +21,7 @@
   const GRID_PLACES = ['auto', 'left', 'right', 'sideleft', 'sideright', 'room'];
   const METER_ROOM = /(meterkast|meter ?(cupboard|box|cabinet|room|kast)|meterruimte|technische ruimte|utility)/i;
   // auto: on the outer wall nearest to where the air conditioner is placed in the plan, else on the front above the meter cupboard
-  const AIRCO_PLACES = ['auto', 'frontleft', 'frontright', 'left', 'right'];
+  const AIRCO_PLACES = ['auto', 'frontleft', 'frontright', 'left', 'right', 'roof']; // roof: on the flat roof or on the dormer
   const PHOTO_KINDS = ['home', 'level'].concat(OBJECTS);
   const PLACES = ['door', 'path', 'drive', 'garden'];
   // Which lamps are outside, from their name; every place can also be chosen in the editor.
@@ -60,12 +60,18 @@
     objects.solar.perRow = Math.round(clamp(o.solar && o.solar.perRow, 0, 30, 0)); // panels in a row (3 3 3 1 for 10 panels at 3); 0: as many as fit
     objects.solar.roof = pick(o.solar && o.solar.roof, ['house', 'wing'], 'house'); // wing: on the roof of a room with its own gable roof
     objects.solar.slope = pick(o.solar && o.solar.slope, ['auto', 'left', 'right', 'front', 'back'], 'auto'); // which slope of that roof, or the side the panels on a flat roof look at
+    objects.solar.shift = clamp(o.solar && o.solar.shift, -15, 15, 0); // metres from the middle of the roof (+ is right, seen from the front)
+    objects.solar.up = clamp(o.solar && o.solar.up, 0, 10, 0); // metres higher up the slope (on a flat roof: towards the back)
     objects.battery.place = pick(o.battery && o.battery.place, BATTERY_PLACES, 'carport');
     objects.battery.side = pick(o.battery && o.battery.side, ['auto', 'left', 'right'], 'auto'); // the wall it stands against
     objects.heatpump.side = pick(o.heatpump && o.heatpump.side, ['auto', 'left', 'right'], 'auto'); // the side of the front it stands at
     objects.heatpump.place = pick(o.heatpump && o.heatpump.place, ['ground', 'roof'], 'ground'); // roof: lying flat on a flat roof
+    objects.heatpump.count = Math.round(clamp(o.heatpump && o.heatpump.count, 1, 4, 1)); // outdoor units side by side
+    objects.heatpump.shift = clamp(o.heatpump && o.heatpump.shift, -15, 15, 0); // metres along the wall (+ is right, seen from the front)
     objects.grid.place = pick(o.grid && o.grid.place, GRID_PLACES, 'auto');
     objects.airco.place = pick(o.airco && o.airco.place, AIRCO_PLACES, 'auto');
+    objects.airco.count = Math.round(clamp(o.airco && o.airco.count, 1, 4, 1)); // outdoor units in a row (auto: one per air conditioner in the plan)
+    objects.airco.shift = clamp(o.airco && o.airco.shift, -15, 15, 0); // metres along the wall (+ is right seen from the front, on a side wall towards the back)
     // Where a garage or shed (a level of its own) stands: beside the house, at the back of the garden, or not shown
     const outbuildings = {};
     if (h.outbuildings && typeof h.outbuildings === 'object') {
@@ -94,7 +100,7 @@
       pitch: clamp(h.pitch, 15, 55, 40),
       facing: clamp(h.facing, 0, 359, 180), // compass direction the front looks at: 180 is south
       dormer: h.dormer === true,
-      dormerAt: pick(h.dormerAt, ['back', 'front'], 'back'), // the roof slope the dormer is on
+      dormerAt: pick(h.dormerAt, ['back', 'front', 'both'], 'back'), // the roof slope the dormer is on (both: one on each)
       // full: nearly as wide as the roof and up to near the ridge; ridge: a ridge raise (nokverhoging), the slope lifted
       // to a higher ridge with an upright wall above the old one
       dormerSize: pick(h.dormerSize, ['normal', 'wide', 'full', 'ridge'], 'normal'),
@@ -102,6 +108,10 @@
       dormerShift: clamp(h.dormerShift, -15, 15, null), // metres from the middle of the roof (+ is right); null: on the left quarter
       ridgeRaise: clamp(h.ridgeRaise, 0.3, 3, 1), // how far a ridge raise lifts the ridge, in metres
       chimney: h.chimney !== false, // a gable roof gets a chimney unless it is switched off
+      // Roof windows (like a Velux) in a sloping roof: how many in a row, on which slope, and metres from the middle
+      roofWindows: Math.round(clamp(h.roofWindows, 0, 8, 0)),
+      roofWindowsAt: pick(h.roofWindowsAt, ['back', 'front', 'both'], 'back'),
+      roofWindowShift: clamp(h.roofWindowShift, -15, 15, null),
       // The neighbours: as wide and deep as the house (0) or the size of the real ones, in metres, with the front in line
       // with the house plus a shift (positive: towards the front), and a roof of their own
       neighbourW: clamp(h.neighbourW, 0, 30, 0),
@@ -120,7 +130,8 @@
       extension: pick(h.extension, ['none', 'back', 'side'], 'none'),
       carport: pick(h.carport, ['none', 'left', 'right'], 'none'),
       driveSide: pick(h.driveSide, ['auto', 'left', 'right'], 'auto'), // the side of the drive, the car and the charger when there is no carport
-      facade: pick(h.facade, ['darkplaster', 'brick', 'darkbrick', 'yellowbrick', 'plaster'], 'darkplaster'),
+      facade: pick(h.facade, ['darkplaster', 'brick', 'darkbrick', 'yellowbrick', 'plaster', 'cladding', 'wood'], 'darkplaster'),
+      facadeColor: typeof h.facadeColor === 'string' && /^#[0-9a-f]{6}$/i.test(h.facadeColor) ? h.facadeColor : '', // own colour of the facade; '': that of the chosen facade
       scene: pick(h.scene, ['garden', 'studio'], 'garden'), // in its garden, or the house alone
       nightLight: pick(h.nightLight, ['dark', 'normal', 'bright'], 'normal'), // how light the house is after sunset
       roofColor: pick(h.roofColor, ['anthracite', 'red', 'black'], 'anthracite'),
@@ -941,16 +952,22 @@
 
   /** Where a device is placed in the plan on a storey of the house, on the outer wall nearest to it (see wallSpotOf). */
   function deviceWallSpot(plan, ids) {
+    return deviceWallSpots(plan, ids)[0] || null;
+  }
+
+  // The same for every one of those devices placed in the plan (once each), with its deviceId
+  function deviceWallSpots(plan, ids) {
     const want = new Set(ids || []);
-    if (!want.size) return null;
+    const out = [];
+    if (!want.size) return out;
     for (const l of (plan && plan.levels) || []) {
       for (const it of l.items || []) {
         if (it.kind !== 'device' || !want.has(it.deviceId) || !Number.isFinite(it.x)) continue;
         const spot = wallSpotOf(plan, l.id, it.x, it.y);
-        if (spot) return spot;
+        if (spot) { out.push(Object.assign({ deviceId: it.deviceId }, spot)); want.delete(it.deviceId); }
       }
     }
-    return null;
+    return out;
   }
 
   // The outdoor lamps placed in the plan, where they stand around the house (see outdoorLamps)
@@ -1393,5 +1410,5 @@
     return { svg: ground + parts.join('') + tags.join('') + cards.svg, viewBox: vb };
   }
 
-  return { wallSpotOf, meterRoomSpot, deviceWallSpot, aircoIds, levelRole, ROLES, stackOf, STACK_X, STACK_Y, settings, shape, shows, sunnySide, flatSide, solarSides, sunPosition, isNight, outdoorLamps, roomBehind, weatherKind, drawing, photoView, freeSide, outbuildingKind, outbuildings, yard, garden, OBJECTS, TYPES, ROOFS, PLACES, OUT_PLACES, OUT_ROOFS, DOOR_AT, ROOM_DORMERS, ROOM_FALLS };
+  return { wallSpotOf, meterRoomSpot, deviceWallSpot, deviceWallSpots, aircoIds, levelRole, ROLES, stackOf, STACK_X, STACK_Y, settings, shape, shows, sunnySide, flatSide, solarSides, sunPosition, isNight, outdoorLamps, roomBehind, weatherKind, drawing, photoView, freeSide, outbuildingKind, outbuildings, yard, garden, OBJECTS, TYPES, ROOFS, PLACES, OUT_PLACES, OUT_ROOFS, DOOR_AT, ROOM_DORMERS, ROOM_FALLS };
 }));

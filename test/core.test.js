@@ -350,3 +350,16 @@ test('the step of a target temperature: chosen for the room, else the device, el
   assert.strictEqual(core.tempStep(plan, 'tado', { step: 0.1 }, { tempStep: 0.5 }), 0.5, 'a room choice beats the device');
   assert.strictEqual(core.tempStep(null, 'x', null), 0.5);
 });
+
+test('a sliding door is a window to the floor drawn with two panes', () => {
+  const { samplePlan, sampleDevices } = require('./sample');
+  const plan = samplePlan();
+  const lv = plan.levels[0];
+  const w = lv.openings.find((o) => o.type === 'window');
+  const lines = (s) => (s.match(/<line/g) || []).length;
+  const before = lines(core.render({ plan, level: lv, devices: sampleDevices(), view: { mode: '2d' }, palette: core.LIGHT_PALETTE }).svg);
+  Object.assign(w, { slide: true, sill: 0, top: 220 });
+  const out = core.render({ plan, level: lv, devices: sampleDevices(), view: { mode: '2d' }, palette: core.LIGHT_PALETTE }).svg;
+  assert.strictEqual(lines(out), before + 1, 'two panes instead of one glass line');
+  assert.ok(!/NaN/.test(out + core.render({ plan, level: lv, devices: sampleDevices(), view: { mode: 'steep' }, palette: core.LIGHT_PALETTE }).svg));
+});
